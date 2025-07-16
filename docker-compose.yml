@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15
+    container_name: pos-cesariel-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pos_cesariel
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - pos-cesariel-network
+
+  # Adminer para administrar la base de datos
+  adminer:
+    image: adminer
+    container_name: pos-cesariel-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    networks:
+      - pos-cesariel-network
+
+  # Backend FastAPI
+  backend:
+    build: ./backend
+    container_name: pos-cesariel-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@db:5432/pos_cesariel
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=pos_cesariel
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - CLOUDINARY_CLOUD_NAME=dgnflxfgh
+      - CLOUDINARY_API_KEY=699583869153912
+      - CLOUDINARY_API_SECRET=t9aXNi4rXvr8JGQmL9m0YMM8piU
+    depends_on:
+      - db
+    networks:
+      - pos-cesariel-network
+
+  # Frontend Next.js (POS Admin)
+  frontend:
+    build: ./frontend/pos-cesariel
+    container_name: pos-cesariel-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/pos-cesariel:/app
+      - /app/node_modules  # Evita sobrescribir node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    networks:
+      - pos-cesariel-network
+
+  # E-commerce Frontend Next.js
+  ecommerce:
+    build: ./ecommerce
+    container_name: pos-cesariel-ecommerce
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./ecommerce:/app
+      - /app/node_modules  # Evita sobrescribir node_modules
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - PORT=3001
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    networks:
+      - pos-cesariel-network
+
+volumes:
+  postgres_data:
+
+networks:
+  pos-cesariel-network:
+    driver: bridge
