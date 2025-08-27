@@ -21,7 +21,7 @@ from schemas import (
     WhatsAppSaleWithDetails, EcommerceSalesReport,
     SaleStatusUpdate
 )
-from auth import get_current_user
+from auth_compat import get_current_user
 import os
 from datetime import datetime
 import uuid

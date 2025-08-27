@@ -1,121 +1,197 @@
+"""
+Aplicación principal del backend POS Cesariel.
+
+Esta es la aplicación FastAPI principal que configura el servidor,
+middleware, rutas y conexión a base de datos para el sistema POS.
+
+El sistema POS Cesariel es una solución completa que incluye:
+- Backend API con FastAPI para operaciones CRUD y lógica de negocio
+- Frontend administrativo (Next.js) para gestión de inventario, ventas y usuarios
+- Frontend e-commerce (Next.js) para tienda online integrada
+- Base de datos PostgreSQL con SQLAlchemy ORM
+- Sistema de autenticación JWT con roles diferenciados
+- Comunicación en tiempo real via WebSockets
+- Integración con servicios de terceros (Cloudinary, WhatsApp)
+
+Arquitectura:
+- API REST: Endpoints organizados por módulos funcionales
+- Multi-tenant: Soporte para múltiples sucursales
+- Role-based access: Admin, Manager, Seller, E-commerce
+- Real-time sync: Inventario sincronizado entre POS y e-commerce
+"""
+
+# Importaciones principales de FastAPI
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from dotenv import load_dotenv
+
+# Configuración de base de datos y aplicación
 from database import engine, Base
-from routers import auth, branches, users, categories, products, sales, websockets, config, ecommerce_advanced, ecommerce_public, content_management
+from config.settings import settings
 
-# Cargar variables de entorno
-load_dotenv()
-
-# Crear tablas en la base de datos
-Base.metadata.create_all(bind=engine)
-
-# Crear la instancia de FastAPI
-app = FastAPI(
-    title="Backend POS Cesariel",
-    description="API para el sistema de punto de venta multisucursal con e-commerce",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+# Importación de todos los routers modulares del sistema
+from routers import (
+    auth,                  # Autenticación JWT y gestión de sesiones
+    branches,              # Gestión de sucursales multisede
+    users,                 # Administración de usuarios y permisos
+    categories,            # Categorización de productos
+    products,              # CRUD de productos, inventario y stock
+    sales,                 # Ventas, reportes y analytics
+    websockets,            # Comunicación en tiempo real
+    config,                # Configuración general del sistema
+    ecommerce_advanced,    # Funcionalidades avanzadas de e-commerce
+    ecommerce_public,      # API pública para la tienda online
+    content_management     # Gestión de contenido y banners
 )
 
-# Configurar CORS
+# Inicialización automática de la base de datos
+# Crea todas las tablas definidas en models.py si no existen
+Base.metadata.create_all(bind=engine)
+
+# Crear la instancia principal de FastAPI con configuración centralizada
+# La configuración se obtiene desde config/settings.py basada en variables de entorno
+app = FastAPI(
+    title=settings.app_name,
+    description=settings.app_description,
+    version=settings.app_version,
+    docs_url="/docs" if settings.debug_mode else None,  # Swagger UI solo en desarrollo
+    redoc_url="/redoc" if settings.debug_mode else None,  # ReDoc solo en desarrollo
+    debug=settings.debug_mode  # Habilita logs detallados y recarga automática
+)
+
+# Configuración de middleware CORS para comunicación entre frontend y backend
+# Permite las solicitudes desde los dos frontends del sistema (POS admin y E-commerce)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # POS Frontend en desarrollo
-        "http://frontend:3000",   # POS Frontend en Docker
-        "http://localhost:3001",  # E-commerce en desarrollo
-        "http://ecommerce:3001",  # E-commerce en Docker
-        "*"  # En desarrollo, permitir todos los orígenes
+        "http://localhost:3000",  # POS Frontend administrativo en desarrollo local
+        "http://frontend:3000",   # POS Frontend administrativo en contenedor Docker
+        "http://localhost:3001",  # E-commerce frontend en desarrollo local
+        "http://ecommerce:3001",  # E-commerce frontend en contenedor Docker
+        "*"  # DESARROLLO: Permitir todos los orígenes (CAMBIAR EN PRODUCCIÓN)
     ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,  # Permitir cookies y headers de autenticación
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Métodos HTTP permitidos
+    allow_headers=["*"],  # Headers permitidos (Authorization, Content-Type, etc.)
 )
 
-# Incluir routers
-app.include_router(auth.router)
-app.include_router(branches.router)
-app.include_router(users.router)
-app.include_router(categories.router)
-app.include_router(products.router)
-app.include_router(sales.router)
-app.include_router(websockets.router)
-app.include_router(config.router)
-app.include_router(ecommerce_advanced.router)
-app.include_router(ecommerce_public.router)
-app.include_router(content_management.router)
+# Registro de routers modulares - Cada router maneja un conjunto específico de endpoints
+# Los routers están organizados por funcionalidad para mantener el código modular y escalable
 
-# Ruta de prueba
-@app.get("/")
+# ===== ROUTERS CORE DEL SISTEMA =====
+app.include_router(auth.router)           # /auth/* - Login, logout, verificación de tokens
+app.include_router(branches.router)       # /branches/* - Gestión de sucursales multisede
+app.include_router(users.router)          # /users/* - CRUD usuarios, permisos, roles
+app.include_router(categories.router)     # /categories/* - Categorización de productos
+
+# ===== ROUTERS DE INVENTARIO Y VENTAS =====
+app.include_router(products.router)       # /products/* - CRUD productos, stock, talles, importación
+app.include_router(sales.router)          # /sales/* - Ventas POS, reportes, dashboard
+
+# ===== COMUNICACIÓN EN TIEMPO REAL =====
+# app.include_router(websockets.router)   # DESHABILITADO: WebSockets para sincronización en tiempo real
+
+# ===== CONFIGURACIÓN Y ADMINISTRACIÓN =====
+app.include_router(config.router)         # /config/* - Configuración general del sistema
+
+# ===== E-COMMERCE INTEGRADO =====
+app.include_router(ecommerce_advanced.router)  # /ecommerce-advanced/* - Admin e-commerce con autenticación
+app.include_router(ecommerce_public.router)    # /ecommerce/* - API pública para tienda online
+app.include_router(content_management.router)  # /content/* - Gestión de banners y contenido CMS
+
+# Rutas principales del sistema
+@app.get("/", tags=["Sistema"])
 async def root():
+    """
+    Endpoint raíz que proporciona información general del sistema.
+    
+    Returns:
+        dict: Información sobre el sistema y sus características principales
+    """
     return {
         "message": "Backend POS Cesariel funcionando correctamente",
+        "version": settings.app_version,
+        "environment": settings.environment,
         "features": [
-            "Autenticación JWT",
-            "Gestión de sucursales",
-            "Gestión de usuarios",
-            "Inventario centralizado",
-            "Ventas POS y E-commerce",
-            "Reportes y dashboard",
-            "WebSockets en tiempo real",
-            "Sistema de talles multisucursal",
-            "E-commerce avanzado con imágenes",
-            "Gestión de banners",
-            "Ventas WhatsApp",
-            "Configuración de redes sociales"
-        ]
+            "🔐 Autenticación JWT con roles",
+            "🏢 Gestión multisucursal",
+            "👥 Administración de usuarios",
+            "📦 Inventario centralizado",
+            "💰 Ventas POS y E-commerce",
+            "📊 Reportes y dashboard",
+            "⚡ WebSockets en tiempo real",
+            "📏 Sistema de talles multisucursal",
+            "🛒 E-commerce avanzado con imágenes",
+            "🎨 Gestión de banners y contenido",
+            "📱 Integración WhatsApp",
+            "🌐 Configuración de redes sociales"
+        ],
+        "api_docs": "/docs" if settings.debug_mode else "No disponible en producción"
     }
 
-# Ruta de health check
-@app.get("/health")
+
+@app.get("/health", tags=["Sistema"])
 async def health_check():
+    """
+    Endpoint de verificación de salud del sistema.
+    
+    Returns:
+        dict: Estado de salud del sistema incluyendo conectividad de BD
+    """
     return {
         "status": "healthy", 
-        "service": "Backend POS Cesariel",
-        "database_url": os.getenv("DATABASE_URL", "No configurada"),
-        "environment": os.getenv("ENV", "No configurado")
+        "service": settings.app_name,
+        "version": settings.app_version,
+        "environment": settings.environment,
+        "database_configured": bool(settings.database_url),
+        "timestamp": os.environ.get("START_TIME", "No disponible")
     }
 
-# Ruta de prueba de base de datos
-@app.get("/db-test")
+
+@app.get("/db-test", tags=["Sistema"])
 async def test_database():
+    """
+    Endpoint para probar la conectividad con la base de datos.
+    
+    Returns:
+        dict: Resultado de la prueba de conexión a la BD
+    """
     try:
         from database import get_db
+        from sqlalchemy import text
+        
         db = next(get_db())
         # Probar conexión ejecutando una consulta simple
-        from sqlalchemy import text
         result = db.execute(text("SELECT 1"))
+        db.close()
+        
         return {
             "status": "ok",
             "message": "Conexión a base de datos exitosa",
-            "database_url": os.getenv("DATABASE_URL", "No configurada")
+            "database_host": settings.db_host,
+            "database_name": settings.db_name,
+            "timestamp": settings.get_current_timestamp() if hasattr(settings, 'get_current_timestamp') else None
         }
     except Exception as e:
         return {
             "status": "error",
-            "message": f"Error de conexión: {str(e)}"
+            "message": f"Error de conexión a base de datos: {str(e)}",
+            "database_configured": bool(settings.database_url)
         }
 
-# Ruta de dashboard stats (redirección a sales/reports/dashboard)
-@app.get("/dashboard/stats")
-async def dashboard_stats_redirect():
-    from fastapi import Depends
-    from sqlalchemy.orm import Session
-    from database import get_db
-    from auth import get_current_active_user
-    from models import User
-    from routers.sales import get_dashboard_stats
-    
-    # Esta es una función wrapper que redirige a la función real
-    return {"message": "Use /sales/reports/dashboard endpoint instead"}
 
+# Punto de entrada para ejecutar el servidor
 if __name__ == "__main__":
     import uvicorn
+    
+    print(f"🚀 Iniciando {settings.app_name} v{settings.app_version}")
+    print(f"🌐 Entorno: {settings.environment}")
+    print(f"🗄️  Base de datos: {settings.db_host}:{settings.db_port}")
+    
     uvicorn.run(
-        app, 
-        host=os.getenv("HOST", "0.0.0.0"), 
-        port=int(os.getenv("PORT", 8000))
+        "main:app",
+        host=settings.host,
+        port=settings.port,
+        reload=settings.debug_mode,
+        log_level="debug" if settings.debug_mode else "info"
     )

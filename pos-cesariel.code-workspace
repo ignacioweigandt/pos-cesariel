@@ -1,0 +1,55 @@
+{
+  "folders": [
+    {
+      "name": "Root",
+      "path": "."
+    },
+    {
+      "name": "Backend (FastAPI)",
+      "path": "./backend"
+    },
+    {
+      "name": "Frontend POS Admin",
+      "path": "./frontend/pos-cesariel"
+    },
+    {
+      "name": "Frontend E-commerce", 
+      "path": "./ecommerce"
+    }
+  ],
+  "settings": {
+    "typescript.preferences.includePackageJsonAutoImports": "auto",
+    "typescript.suggest.autoImports": true,
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "eslint.workingDirectories": [
+      "./frontend/pos-cesariel",
+      "./ecommerce"
+    ],
+    "python.defaultInterpreterPath": "./backend/venv/bin/python",
+    "python.terminal.activateEnvironment": true,
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/venv": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-typescript-next",
+      "dbaeumer.vscode-eslint",
+      "bradlc.vscode-tailwindcss",
+      "esbenp.prettier-vscode",
+      "ms-python.python",
+      "ms-python.flake8",
+      "ms-python.black-formatter"
+    ]
+  }
+}

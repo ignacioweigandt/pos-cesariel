@@ -69,10 +69,15 @@ class ConnectionManager:
     async def send_personal_message(self, message: Dict[str, Any], websocket: WebSocket):
         """Envía un mensaje a una conexión específica"""
         try:
+            # Check if websocket is still connected before sending
+            if websocket not in self.all_connections:
+                return
             await websocket.send_text(json.dumps(message))
         except Exception as e:
-            logger.error(f"Error enviando mensaje personal: {e}")
-            self.disconnect(websocket)
+            # Log error but don't disconnect here to avoid infinite loops
+            logger.debug(f"Error enviando mensaje personal: {e}")
+            # Remove from connections silently
+            self._silent_disconnect(websocket)
 
     async def broadcast_to_branch(self, message: Dict[str, Any], branch_id: int):
         """Envía un mensaje a todas las conexiones de una sucursal"""
@@ -82,12 +87,12 @@ class ConnectionManager:
                 try:
                     await connection.send_text(json.dumps(message))
                 except Exception as e:
-                    logger.error(f"Error enviando mensaje a sucursal {branch_id}: {e}")
+                    logger.debug(f"Error enviando mensaje a sucursal {branch_id}: {e}")
                     disconnected.append(connection)
             
-            # Limpiar conexiones desconectadas
+            # Limpiar conexiones desconectadas silenciosamente
             for connection in disconnected:
-                self.disconnect(connection)
+                self._silent_disconnect(connection)
 
     async def broadcast_to_all(self, message: Dict[str, Any]):
         """Envía un mensaje a todas las conexiones activas"""
@@ -96,12 +101,12 @@ class ConnectionManager:
             try:
                 await connection.send_text(json.dumps(message))
             except Exception as e:
-                logger.error(f"Error enviando broadcast: {e}")
+                logger.debug(f"Error enviando broadcast: {e}")
                 disconnected.append(connection)
         
-        # Limpiar conexiones desconectadas
+        # Limpiar conexiones desconectadas silenciosamente
         for connection in disconnected:
-            self.disconnect(connection)
+            self._silent_disconnect(connection)
 
     async def broadcast_to_other_branches(self, message: Dict[str, Any], exclude_branch_id: int):
         """Envía un mensaje a todas las sucursales excepto la especificada"""
@@ -120,6 +125,31 @@ class ConnectionManager:
     def get_branch_connection_count(self, branch_id: int) -> int:
         """Retorna el número de conexiones para una sucursal específica"""
         return len(self.active_connections.get(branch_id, []))
+    
+    def _silent_disconnect(self, websocket: WebSocket):
+        """Desconecta silenciosamente sin logging para evitar loops infinitos"""
+        try:
+            # Remover de todas las conexiones
+            if websocket in self.all_connections:
+                self.all_connections.remove(websocket)
+            
+            # Remover de conexiones por sucursal
+            branch_id = self.connection_branch_map.get(websocket)
+            if branch_id and branch_id in self.active_connections:
+                if websocket in self.active_connections[branch_id]:
+                    self.active_connections[branch_id].remove(websocket)
+                
+                # Limpiar lista vacía
+                if not self.active_connections[branch_id]:
+                    del self.active_connections[branch_id]
+            
+            # Remover del mapeo
+            if websocket in self.connection_branch_map:
+                del self.connection_branch_map[websocket]
+                
+        except Exception:
+            # Silent fail - no logging to avoid infinite loops
+            pass
 
 # Instancia global del manager
 manager = ConnectionManager()

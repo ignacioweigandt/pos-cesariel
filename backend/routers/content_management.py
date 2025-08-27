@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from database import get_db
-from auth import get_current_user
+from auth_compat import get_current_user
 from models import User, StoreBanner, SocialMediaConfig, EcommerceConfig
 from schemas import (
     StoreBannerCreate, StoreBannerUpdate, StoreBanner as StoreBannerSchema,

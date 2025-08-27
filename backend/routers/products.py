@@ -13,7 +13,7 @@ from schemas import (
     BulkImportResponse, ProductImportData, BranchStock as BranchStockSchema,
     ProductSize as ProductSizeSchema, UpdateSizeStocks, ProductWithMultiBranchStock
 )
-from auth import get_current_active_user, require_manager_or_admin
+from auth_compat import get_current_active_user, require_manager_or_admin
 from websocket_manager import notify_inventory_change, notify_low_stock
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -855,6 +855,18 @@ async def get_available_sizes_for_pos(
         ]
     }
 
+def calculate_total_stock_from_sizes(db: Session, product_id: int, branch_id: int) -> int:
+    """
+    Calcula el stock total sumando todos los talles de un producto en una sucursal específica
+    """
+    sizes = db.query(ProductSize).filter(
+        ProductSize.product_id == product_id,
+        ProductSize.branch_id == branch_id
+    ).all()
+    
+    total_stock = sum(size.stock_quantity for size in sizes)
+    return total_stock
+
 @router.post("/{product_id}/sizes")
 async def manage_product_sizes(
     product_id: int,
@@ -895,9 +907,32 @@ async def manage_product_sizes(
             )
             db.add(new_size)
     
+    # Commit los cambios de talles primero
     db.commit()
     
-    return {"message": "Stock de talles actualizado correctamente"}
+    # Calcular y actualizar el stock general del producto
+    old_stock = product.stock_quantity
+    total_stock = calculate_total_stock_from_sizes(db, product_id, branch_id)
+    product.stock_quantity = total_stock
+    product.updated_at = datetime.now()
+    
+    # Commit el cambio del stock general
+    db.commit()
+    
+    # Notificar cambio de inventario via WebSocket
+    await notify_inventory_change(
+        product_id=product_id,
+        old_stock=old_stock,
+        new_stock=total_stock,
+        branch_id=branch_id,
+        user_name=current_user.full_name
+    )
+    
+    return {
+        "message": "Stock de talles actualizado correctamente",
+        "total_stock": total_stock,
+        "updated_sizes": len(size_data.sizes)
+    }
 
 @router.get("/{product_id}/sizes")
 async def get_product_sizes(

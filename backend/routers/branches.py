@@ -4,7 +4,7 @@ from typing import List
 from database import get_db
 from models import Branch, User
 from schemas import Branch as BranchSchema, BranchCreate, BranchUpdate
-from auth import get_current_active_user, require_admin, require_manager_or_admin
+from auth_compat import get_current_active_user, require_admin, require_manager_or_admin
 
 router = APIRouter(prefix="/branches", tags=["branches"])
 

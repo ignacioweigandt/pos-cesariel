@@ -15,7 +15,6 @@ from schemas import (
 from cloudinary_config import upload_image_to_cloudinary, delete_image_from_cloudinary, extract_public_id_from_url
 import logging
 import os
-from decimal import Decimal
 
 logger = logging.getLogger(__name__)
 
@@ -24,142 +23,6 @@ router = APIRouter(
     tags=["config"],
     responses={404: {"description": "Not found"}},
 )
-
-# Almacén global para configuraciones de pago (temporal hasta implementar BD real)
-_payment_configs_store = None
-
-def get_default_payment_configs():
-    """Obtener configuraciones por defecto"""
-    return [
-        # Efectivo
-        {
-            "id": 1,
-            "payment_type": "efectivo",
-            "card_type": None,
-            "installments": 1,
-            "surcharge_percentage": Decimal("0.00"),
-            "is_active": True,
-            "description": "Pago en efectivo sin recargo",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        # Transferencia
-        {
-            "id": 2,
-            "payment_type": "transferencia",
-            "card_type": None,
-            "installments": 1,
-            "surcharge_percentage": Decimal("0.00"),
-            "is_active": True,
-            "description": "Transferencia bancaria sin recargo",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        # Tarjetas Bancarizadas
-        {
-            "id": 3,
-            "payment_type": "tarjeta",
-            "card_type": "bancarizadas",
-            "installments": 1,
-            "surcharge_percentage": Decimal("0.00"),
-            "is_active": True,
-            "description": "Tarjetas bancarizadas - 1 cuota",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        {
-            "id": 4,
-            "payment_type": "tarjeta",
-            "card_type": "bancarizadas",
-            "installments": 3,
-            "surcharge_percentage": Decimal("8.00"),
-            "is_active": True,
-            "description": "Tarjetas bancarizadas - 3 cuotas",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        {
-            "id": 5,
-            "payment_type": "tarjeta",
-            "card_type": "bancarizadas",
-            "installments": 6,
-            "surcharge_percentage": Decimal("14.00"),
-            "is_active": True,
-            "description": "Tarjetas bancarizadas - 6 cuotas",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        {
-            "id": 6,
-            "payment_type": "tarjeta",
-            "card_type": "bancarizadas",
-            "installments": 9,
-            "surcharge_percentage": Decimal("20.00"),
-            "is_active": True,
-            "description": "Tarjetas bancarizadas - 9 cuotas",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        {
-            "id": 7,
-            "payment_type": "tarjeta",
-            "card_type": "bancarizadas",
-            "installments": 12,
-            "surcharge_percentage": Decimal("26.00"),
-            "is_active": True,
-            "description": "Tarjetas bancarizadas - 12 cuotas",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        # Tarjetas No Bancarizadas
-        {
-            "id": 8,
-            "payment_type": "tarjeta",
-            "card_type": "no_bancarizadas",
-            "installments": 1,
-            "surcharge_percentage": Decimal("15.00"),
-            "is_active": True,
-            "description": "Tarjetas no bancarizadas",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        },
-        # Tarjeta Naranja
-        {
-            "id": 9,
-            "payment_type": "tarjeta",
-            "card_type": "tarjeta_naranja",
-            "installments": 1,
-            "surcharge_percentage": Decimal("15.00"),
-            "is_active": True,
-            "description": "Tarjeta Naranja",
-            "created_at": "2024-01-01T00:00:00",
-            "updated_at": "2024-01-01T00:00:00"
-        }
-    ]
-
-def initialize_payment_configs():
-    """Inicializar el almacén de configuraciones si no existe"""
-    global _payment_configs_store
-    if _payment_configs_store is None:
-        _payment_configs_store = get_default_payment_configs()
-    return _payment_configs_store
-
-def get_payment_configs():
-    """Obtener configuraciones actuales"""
-    return initialize_payment_configs()
-
-def update_payment_config_in_store(config_id: int, updates: dict):
-    """Actualizar una configuración específica en el almacén"""
-    global _payment_configs_store
-    configs = initialize_payment_configs()
-    
-    for config in configs:
-        if config["id"] == config_id:
-            config.update(updates)
-            config["updated_at"] = "2024-01-01T00:00:00"  # Simular timestamp
-            return config
-    
-    return None
 
 def admin_or_manager_required(current_user: User = Depends(get_current_active_user)):
     """Verificar que el usuario sea admin o manager"""
@@ -290,10 +153,7 @@ async def get_system_config(
                 "reports": True,
                 "websockets": True
             },
-            "default_currency": "ARS",
-            "currency_symbol": "$",
-            "currency_position": "before",
-            "decimal_places": 2,
+            "default_currency": "USD",
             "default_tax_rate": 0.0,
             "max_upload_size": "10MB",
             "session_timeout": 30  # minutos
@@ -303,74 +163,6 @@ async def get_system_config(
         return system_config
     except Exception as e:
         logger.error(f"Error obteniendo configuración del sistema: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error interno del servidor"
-        )
-
-@router.put("/system")
-async def update_system_config(
-    config_data: dict,
-    current_user: User = Depends(admin_or_manager_required)
-):
-    """Actualizar configuración general del sistema"""
-    try:
-        # Por ahora, validamos solo los campos de moneda que necesitamos
-        allowed_fields = {
-            "default_currency", "currency_symbol", "currency_position", 
-            "decimal_places", "default_tax_rate", "session_timeout"
-        }
-        
-        # Filtrar solo campos permitidos
-        filtered_data = {k: v for k, v in config_data.items() if k in allowed_fields}
-        
-        # Validaciones básicas
-        if "decimal_places" in filtered_data:
-            if not 0 <= filtered_data["decimal_places"] <= 2:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Los decimales deben estar entre 0 y 2"
-                )
-        
-        if "currency_position" in filtered_data:
-            if filtered_data["currency_position"] not in ["before", "after"]:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="La posición de moneda debe ser 'before' o 'after'"
-                )
-        
-        # Obtener configuración actual y actualizar con nuevos datos
-        current_config = {
-            "app_name": "POS Cesariel",
-            "version": "1.0.0",
-            "environment": "development",
-            "features": {
-                "pos": True,
-                "ecommerce": True,
-                "multi_branch": True,
-                "inventory": True,
-                "reports": True,
-                "websockets": True
-            },
-            "default_currency": "ARS",
-            "currency_symbol": "$",
-            "currency_position": "before",
-            "decimal_places": 2,
-            "default_tax_rate": 0.0,
-            "max_upload_size": "10MB",
-            "session_timeout": 30
-        }
-        
-        # Actualizar con los nuevos datos
-        current_config.update(filtered_data)
-        
-        logger.info(f"Usuario {current_user.username} actualizó configuración del sistema: {filtered_data}")
-        return current_config
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error actualizando configuración del sistema: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno del servidor"
@@ -579,22 +371,146 @@ async def get_backup_config(
 # =================== PAYMENT CONFIG ===================
 
 @router.get("/payment-config", response_model=List[PaymentConfigSchema])
-async def get_payment_configs_endpoint(
+async def get_payment_configs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Obtener configuraciones de pagos y recargos"""
+    """Obtener configuraciones de pagos y recargos - versión simplificada"""
     try:
-        # Usar el almacén global que persiste los cambios
-        configs = get_payment_configs()
+        # Return default payment configurations for now to fix timeout issues
+        # TODO: Implement actual database queries once performance is optimized
+        from decimal import Decimal
         
-        logger.info(f"Usuario {current_user.username} obtuvo configuraciones de pago ({len(configs)} configuraciones)")
-        return configs
+        default_configs = [
+            {
+                "id": 1,
+                "payment_type": "efectivo",
+                "card_type": None,
+                "installments": 1,
+                "surcharge_percentage": Decimal("0.00"),
+                "is_active": True,
+                "description": "Pago en efectivo",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00"
+            },
+            {
+                "id": 2,
+                "payment_type": "tarjeta",
+                "card_type": "debito",
+                "installments": 1,
+                "surcharge_percentage": Decimal("2.50"),
+                "is_active": True,
+                "description": "Tarjeta de débito",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00"
+            },
+            {
+                "id": 3,
+                "payment_type": "tarjeta",
+                "card_type": "credito",
+                "installments": 1,
+                "surcharge_percentage": Decimal("3.50"),
+                "is_active": True,
+                "description": "Tarjeta de crédito 1 cuota",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00"
+            }
+        ]
+        
+        return default_configs
         
     except Exception as e:
         logger.error(f"Error obteniendo payment configs: {str(e)}")
         # Return empty list on any error
         return []
+        
+        # Si no hay configuraciones, crear las por defecto
+        if not configs:
+            default_configs = [
+                # Efectivo
+                PaymentConfig(
+                    payment_type="efectivo",
+                    installments=1,
+                    surcharge_percentage=0,
+                    description="Pago en efectivo sin recargo"
+                ),
+                # Transferencia
+                PaymentConfig(
+                    payment_type="transferencia",
+                    installments=1,
+                    surcharge_percentage=0,
+                    description="Transferencia bancaria sin recargo"
+                ),
+                # Tarjetas Bancarizadas
+                PaymentConfig(
+                    payment_type="tarjeta",
+                    card_type="bancarizadas",
+                    installments=1,
+                    surcharge_percentage=0,
+                    description="Tarjetas bancarizadas - 1 cuota"
+                ),
+                PaymentConfig(
+                    payment_type="tarjeta",
+                    card_type="bancarizadas",
+                    installments=3,
+                    surcharge_percentage=8,
+                    description="Tarjetas bancarizadas - 3 cuotas"
+                ),
+                PaymentConfig(
+                    payment_type="tarjeta",
+                    card_type="bancarizadas",
+                    installments=6,
+                    surcharge_percentage=14,
+                    description="Tarjetas bancarizadas - 6 cuotas"
+                ),
+                PaymentConfig(
+                    payment_type="tarjeta",
+                    card_type="bancarizadas",
+                    installments=9,
+                    surcharge_percentage=20,
+                    description="Tarjetas bancarizadas - 9 cuotas"
+                ),
+                PaymentConfig(
+                    payment_type="tarjeta",
+                    card_type="bancarizadas",
+                    installments=12,
+                    surcharge_percentage=26,
+                    description="Tarjetas bancarizadas - 12 cuotas"
+                ),
+                # Tarjetas No Bancarizadas
+                PaymentConfig(
+                    payment_type="tarjeta",
+                    card_type="no_bancarizadas",
+                    installments=1,
+                    surcharge_percentage=15,
+                    description="Tarjetas no bancarizadas"
+                ),
+                # Tarjeta Naranja
+                PaymentConfig(
+                    payment_type="tarjeta",
+                    card_type="tarjeta_naranja",
+                    installments=1,
+                    surcharge_percentage=15,
+                    description="Tarjeta Naranja"
+                ),
+            ]
+            
+            for config in default_configs:
+                db.add(config)
+            
+            db.commit()
+            
+            # Recargar configuraciones
+            configs = db.query(PaymentConfig).filter(PaymentConfig.is_active == True).all()
+        
+        logger.info(f"Usuario {current_user.username} obtuvo configuraciones de pago")
+        return configs
+    except Exception as e:
+        logger.error(f"Error obteniendo configuraciones de pago: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno del servidor"
+        )
 
 @router.post("/payment-config", response_model=PaymentConfigSchema)
 async def create_payment_config(
@@ -628,34 +544,28 @@ async def update_payment_config(
 ):
     """Actualizar configuración de pago"""
     try:
-        # Obtener datos de actualización
-        update_data = config_data.dict(exclude_unset=True)
-        
-        # Validar surcharge_percentage si se proporciona
-        if 'surcharge_percentage' in update_data:
-            if update_data['surcharge_percentage'] < 0 or update_data['surcharge_percentage'] > 100:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="El porcentaje de recargo debe estar entre 0 y 100"
-                )
-            update_data['surcharge_percentage'] = Decimal(str(update_data['surcharge_percentage']))
-        
-        # Actualizar en el almacén global
-        updated_config = update_payment_config_in_store(config_id, update_data)
-        
-        if not updated_config:
+        config = db.query(PaymentConfig).filter(PaymentConfig.id == config_id).first()
+        if not config:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Configuración de pago no encontrada"
             )
         
-        logger.info(f"Usuario {current_user.username} actualizó configuración de pago ID: {config_id} con datos: {update_data}")
-        return updated_config
+        # Actualizar solo los campos proporcionados
+        update_data = config_data.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(config, field, value)
         
+        db.commit()
+        db.refresh(config)
+        
+        logger.info(f"Usuario {current_user.username} actualizó configuración de pago ID: {config_id}")
+        return config
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error actualizando configuración de pago: {e}")
+        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno del servidor"

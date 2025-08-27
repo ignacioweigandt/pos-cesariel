@@ -4,7 +4,7 @@ from typing import List
 from database import get_db
 from models import Category, User
 from schemas import Category as CategorySchema, CategoryCreate, CategoryUpdate
-from auth import get_current_active_user, require_manager_or_admin
+from auth_compat import get_current_active_user, require_manager_or_admin
 
 router = APIRouter(prefix="/categories", tags=["categories"])
 

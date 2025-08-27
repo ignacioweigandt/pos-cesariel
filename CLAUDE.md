@@ -20,10 +20,13 @@ The project uses Docker Compose for orchestration with volume mounts for hot rel
 - **Models**: SQLAlchemy ORM models in `backend/models.py` with core entities: User, Branch, Product, Sale, Category, InventoryMovement, EcommerceConfig, PaymentConfig
 - **Schemas**: Pydantic models in `backend/schemas.py` for API request/response validation
 - **Routers**: Organized API endpoints in `backend/routers/` (auth, branches, users, categories, products, sales, websockets, config, content_management, ecommerce_advanced, ecommerce_public)
+- **Services**: Business logic layer in `backend/services/` (auth_service.py)
+- **Configuration**: Application settings and environment management in `backend/config/`
+- **Exceptions**: Custom exception handling in `backend/exceptions/`
+- **Utils**: Shared utilities and validators in `backend/utils/`
 - **Authentication**: JWT-based auth with role-based access control (ADMIN, MANAGER, SELLER, ECOMMERCE)
 - **WebSockets**: Real-time updates via WebSocket manager for inventory synchronization
 - **Image Management**: Cloudinary integration for product images and store assets
-- **Configuration**: Comprehensive system configuration management with database persistence
 
 ### Key Frontend Components
 
@@ -36,7 +39,7 @@ The project uses Docker Compose for orchestration with volume mounts for hot rel
 
 #### E-commerce Frontend (`ecommerce/`)
 - **State Management**: React Context for cart and customer data
-- **API Client**: Axios with 10s timeout and fallback data
+- **API Client**: Centralized API service layer in `ecommerce/services/` with 10s timeout and fallback data
 - **UI Framework**: Tailwind CSS with shadcn/ui and Radix UI components
 - **Architecture**: App Router with TypeScript, data service layer with caching
 - **Integration**: Connects to POS backend, creates sales in POS system
@@ -90,6 +93,14 @@ npm run dev              # Development server with Turbopack
 npm run build            # Production build
 npm run start            # Start production server
 npm run lint             # Run linting
+
+# Testing
+npm test                 # Run all tests (Jest + RTL)
+npm run test:watch       # Watch mode
+npm run test:coverage    # With coverage
+npm run test:e2e         # Cypress E2E tests
+npm run test:lighthouse  # Performance audit
+npm run test:load        # Load testing
 ```
 
 ### E-commerce Frontend (Next.js)
@@ -99,6 +110,12 @@ npm run dev              # Development server (port 3001)
 npm run build            # Production build
 npm run start            # Start production server (port 3001)
 npm run lint             # Run linting
+
+# Testing
+npm test                 # Run all tests (Jest + RTL)
+npm run test:watch       # Watch mode
+npm run test:coverage    # With coverage
+npm run test:e2e         # Cypress E2E tests
 ```
 
 ### Backend (FastAPI)
@@ -106,6 +123,13 @@ npm run lint             # Run linting
 # Inside backend container
 python main.py           # Start FastAPI server
 # Auto-reload enabled in development
+
+# Run tests
+pytest                   # Run all tests
+pytest -v               # Verbose output
+pytest -x               # Stop on first failure
+pytest -m unit          # Unit tests only
+pytest --cov=.          # With coverage report
 ```
 
 ### Database Access
@@ -119,16 +143,16 @@ psql -h localhost -p 5432 -U postgres -d pos_cesariel
 ### Initial Setup
 ```bash
 # Automated setup (recommended)
-./setup.sh
+./setup.sh                   # Handles full system setup, data initialization, and dependency installation
 
 # System health verification
-./check_system.sh           # Complete system status check
+./check_system.sh            # Complete system status check - use when troubleshooting issues
 
-# Manual setup
+# Manual setup (if automated setup fails)
 make dev
 make shell-backend
 python init_data.py          # Creates test users and sample data
-python init_content_data.py  # Creates default content and configurations
+python init_content_data.py  # Creates default content and configurations (if available)
 ```
 
 ## Key Configuration
@@ -190,10 +214,10 @@ python init_content_data.py  # Creates default content and configurations
 ## Development Practices
 
 ### Code Organization
-- Backend follows FastAPI best practices with separated concerns (models, schemas, routers)
+- Backend follows FastAPI best practices with layered architecture: models, schemas, routers, services, utils, config, exceptions
 - Frontend uses TypeScript with strict typing
 - State management via Zustand with persistence for auth and app state
-- API client centralized in `frontend/pos-cesariel/lib/api.ts`
+- API clients centralized in `frontend/pos-cesariel/lib/api.ts` and `ecommerce/services/`
 
 ### Authentication Flow
 1. User logs in via `/auth/login` endpoint
@@ -253,6 +277,18 @@ npm run test:performance # Alias for lighthouse
 
 # Load tests (Artillery)
 npm run test:load        # Load testing with artillery.yml
+```
+
+### E-commerce Frontend Testing
+```bash
+# Inside e-commerce container or locally
+npm test                 # Run all tests (Jest + React Testing Library)
+npm run test:watch       # Watch mode
+npm run test:coverage    # With coverage reporting
+
+# End-to-end tests (Cypress)
+npm run test:e2e         # Headless mode
+npm run test:e2e:open    # Interactive mode
 ```
 
 ### Test Configuration Notes
@@ -329,6 +365,10 @@ For comprehensive information, refer to:
 - `ecommerce/CLAUDE.md` - E-commerce frontend specific guidance
 - `ECOMMERCE_FRONTEND_SPECS.md` - Detailed e-commerce frontend specifications
 - `INTEGRATION.md`, `INTEGRATION_STATUS.md` - Integration status and troubleshooting
+- `docs/` directory - Comprehensive project documentation including:
+  - `docs/arquitectura/` - Detailed architecture documentation for each component
+  - `docs/metricas/` - Project statistics and metrics
+  - `docs/presentacion/` - Executive summary and demonstration guide
 
 ## Project Structure
 
@@ -342,6 +382,19 @@ pos-cesariel/
 │   ├── auth.py                 # Authentication utilities
 │   ├── websocket_manager.py    # WebSocket real-time updates
 │   ├── init_data.py            # Test data initialization
+│   ├── config/                 # Application configuration
+│   │   ├── __init__.py
+│   │   └── settings.py        # Environment and app settings
+│   ├── services/               # Business logic layer
+│   │   ├── __init__.py
+│   │   └── auth_service.py    # Authentication business logic
+│   ├── exceptions/             # Custom exception handling
+│   │   ├── __init__.py
+│   │   └── custom_exceptions.py
+│   ├── utils/                  # Shared utilities
+│   │   ├── __init__.py
+│   │   ├── helpers.py         # General helper functions
+│   │   └── validators.py      # Data validation utilities
 │   ├── routers/                # API endpoint routers
 │   │   ├── auth.py            # Authentication endpoints
 │   │   ├── products.py        # Product CRUD + import
@@ -383,9 +436,26 @@ pos-cesariel/
 │   │   ├── productos/        # Product catalog pages
 │   │   └── carrito/          # Shopping cart
 │   ├── components/ui/         # shadcn/ui components
+│   ├── services/              # Centralized API service layer
+│   │   ├── api-service.ts    # API client and data service
+│   │   └── index.ts          # Service exports
 │   ├── package.json
 │   ├── CLAUDE.md             # E-commerce specific guidance
 │   └── Dockerfile
+├── docs/                        # Comprehensive project documentation
+│   ├── arquitectura/           # Architecture documentation
+│   │   ├── CODIGO_BACKEND.md  # Backend code architecture
+│   │   ├── CODIGO_FRONTEND_ECOMMERCE.md # E-commerce frontend
+│   │   ├── CODIGO_FRONTEND_POS.md # POS frontend architecture
+│   │   └── FLUJOS_DE_TRABAJO.md # Workflow documentation
+│   ├── casos-de-uso/           # Use case documentation
+│   ├── diagramas/              # System diagrams
+│   ├── manual-usuario/         # User manual
+│   ├── metricas/               # Project metrics
+│   │   └── ESTADISTICAS_PROYECTO.md # Project statistics
+│   └── presentacion/          # Presentation materials
+│       ├── GUION_DEMOSTRACION.md # Demo script
+│       └── RESUMEN_EJECUTIVO_TESIS.md # Executive summary
 ├── docker-compose.yml           # Multi-service orchestration
 ├── Makefile                    # Development commands
 ├── setup.sh                    # Automated setup script
