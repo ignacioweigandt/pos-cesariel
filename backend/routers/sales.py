@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, or_
 from typing import List, Optional
 from datetime import datetime, date
 from decimal import Decimal
 from database import get_db
-from models import Sale, SaleItem, Product, User, InventoryMovement, SaleType, OrderStatus, ProductSize
+from models import Sale, SaleItem, Product, User, InventoryMovement, SaleType, OrderStatus, ProductSize, BranchStock
 from schemas import Sale as SaleSchema, SaleCreate, SaleStatusUpdate, SalesReport, DashboardStats, DailySales, ChartData
 from auth_compat import get_current_active_user, require_manager_or_admin
 from websocket_manager import notify_new_sale, notify_inventory_change, notify_low_stock, notify_dashboard_update
@@ -32,9 +32,15 @@ async def get_sales(
 ):
     query = db.query(Sale)
     
-    # Filter by branch if not admin
+    # Filter by branch if not admin, but always show ECOMMERCE sales
     if current_user.role.value.upper() != "ADMIN":
-        query = query.filter(Sale.branch_id == current_user.branch_id)
+        # Include both sales from user's branch AND all ecommerce sales
+        query = query.filter(
+            or_(
+                Sale.branch_id == current_user.branch_id,
+                Sale.sale_type == SaleType.ECOMMERCE
+            )
+        )
     elif branch_id:
         query = query.filter(Sale.branch_id == branch_id)
     
@@ -114,11 +120,19 @@ async def create_sale(
                         detail=f"Insufficient stock for product {product.name} size {item.size}. Available: {size_stock.stock_quantity}, Requested: {item.quantity}"
                     )
             else:
-                # Check general stock for products without sizes
-                if product.stock_quantity < item.quantity:
+                # Check stock de la sucursal específica para productos sin talles
+                branch_id = sale.branch_id if sale.branch_id else (current_user.branch_id if current_user.branch_id else 1)
+                branch_stock = db.query(BranchStock).filter(
+                    BranchStock.product_id == item.product_id,
+                    BranchStock.branch_id == branch_id
+                ).first()
+                
+                available_stock = branch_stock.stock_quantity if branch_stock else 0
+                
+                if available_stock < item.quantity:
                     raise HTTPException(
                         status_code=400,
-                        detail=f"Insufficient stock for product {product.name}. Available: {product.stock_quantity}, Requested: {item.quantity}"
+                        detail=f"Insufficient stock for product {product.name} in this branch. Available: {available_stock}, Requested: {item.quantity}"
                     )
     
         # Calculate totals
@@ -186,8 +200,14 @@ async def create_sale(
                     new_size_stock = old_size_stock - item.quantity
                     size_stock.stock_quantity = new_size_stock
                     
-                    # Also update general product stock
-                    product.stock_quantity = product.stock_quantity - item.quantity
+                    # Actualizar BranchStock correspondiente  
+                    branch_stock = db.query(BranchStock).filter(
+                        BranchStock.product_id == item.product_id,
+                        BranchStock.branch_id == db_sale.branch_id
+                    ).first()
+                    
+                    if branch_stock:
+                        branch_stock.stock_quantity -= item.quantity
                     
                     # Create inventory movement for size stock
                     inventory_movement = InventoryMovement(
@@ -202,10 +222,22 @@ async def create_sale(
                     )
                     db.add(inventory_movement)
             else:
-                # Update general product stock for products without sizes
-                old_stock = product.stock_quantity
-                new_stock = old_stock - item.quantity
-                product.stock_quantity = new_stock
+                # Actualizar BranchStock para productos sin talles
+                branch_stock = db.query(BranchStock).filter(
+                    BranchStock.product_id == item.product_id,
+                    BranchStock.branch_id == db_sale.branch_id
+                ).first()
+                
+                if branch_stock:
+                    old_stock = branch_stock.stock_quantity
+                    new_stock = old_stock - item.quantity
+                    branch_stock.stock_quantity = new_stock
+                else:
+                    # Si no existe BranchStock, no se puede procesar la venta
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"No stock record found for product {product.name} in this branch"
+                    )
                 
                 # Create inventory movement
                 inventory_movement = InventoryMovement(
@@ -219,6 +251,15 @@ async def create_sale(
                     notes=f"Sale {sale_number}"
                 )
                 db.add(inventory_movement)
+        
+        # Recalcular stock global de todos los productos modificados
+        processed_products = set()
+        for item in sale.items:
+            if item.product_id not in processed_products:
+                product = db.query(Product).filter(Product.id == item.product_id).first()
+                if product:
+                    product.stock_quantity = product.calculate_total_stock()
+                    processed_products.add(item.product_id)
         
         db.commit()
         db.refresh(db_sale)

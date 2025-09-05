@@ -590,3 +590,70 @@ class EcommerceSalesReport(BaseModel):
     pending_orders: int
     completed_orders: int
     recent_sales: List[WhatsAppSaleWithDetails] = []
+
+# Branch Stock Schemas
+class BranchStockBase(BaseModel):
+    branch_id: int
+    product_id: int
+    stock_quantity: int = 0
+    min_stock: int = 0
+    # reserved_stock: int = 0
+
+class BranchStockCreate(BranchStockBase):
+    pass
+
+class BranchStockUpdate(BaseModel):
+    stock_quantity: Optional[int] = None
+    min_stock: Optional[int] = None
+    # reserved_stock: Optional[int] = None
+
+class BranchStock(BranchStockBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# Stock Management Schemas
+class StockAdjustmentRequest(BaseModel):
+    branch_id: int
+    quantity: int
+    reason: str = "Manual adjustment"
+
+class StockTransferRequest(BaseModel):
+    from_branch_id: int
+    to_branch_id: int
+    quantity: int
+    reason: str = "Stock transfer"
+
+class BranchStockInfo(BaseModel):
+    branch_id: int
+    branch_name: str
+    stock_quantity: int
+    available_stock: int
+    # reserved_stock: int
+    min_stock: int
+    low_stock: bool
+
+class ProductStockByBranch(BaseModel):
+    id: int
+    name: str
+    sku: str
+    branches: List[BranchStockInfo]
+    total_stock: int
+    total_available: int
+
+# Stock Operation Response Schemas
+class StockAdjustmentResponse(BaseModel):
+    success: bool
+    message: str
+    old_stock: int
+    new_stock: int
+    total_product_stock: int
+
+class StockTransferResponse(BaseModel):
+    success: bool
+    message: str
+    from_branch: dict
+    to_branch: dict

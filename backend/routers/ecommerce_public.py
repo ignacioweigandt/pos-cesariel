@@ -1,11 +1,12 @@
 # Rutas públicas para e-commerce (sin autenticación)
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, exists, or_
 from typing import List, Optional
 from datetime import datetime
 import uuid
 from database import get_db
-from models import Product, Category, Sale, SaleItem, InventoryMovement, User, Branch, SaleType, StoreBanner, SocialMediaConfig, EcommerceConfig, WhatsAppSale, ProductSize, WhatsAppConfig, ProductImage
+from models import Product, Category, Sale, SaleItem, InventoryMovement, User, Branch, SaleType, StoreBanner, SocialMediaConfig, EcommerceConfig, WhatsAppSale, ProductSize, WhatsAppConfig, ProductImage, BranchStock
 from schemas import SaleCreate
 from websocket_manager import notify_new_sale
 
@@ -112,23 +113,41 @@ def get_ecommerce_products(
             else:
                 query = query.filter(Product.ecommerce_price.is_(None))
             
+        # Para e-commerce, filtrar productos con stock disponible en cualquier sucursal
         if in_stock:
-            query = query.filter(Product.stock_quantity > 0)
+            # Subconsulta para obtener productos con stock total > 0 sumando todas las sucursales
+            from sqlalchemy import exists, or_
+            has_branch_stock = exists().where(
+                and_(
+                    BranchStock.product_id == Product.id,
+                    BranchStock.stock_quantity > 0
+                )
+            )
+            # También incluir productos con stock global > 0 (compatibilidad)
+            query = query.filter(
+                or_(
+                    has_branch_stock,
+                    Product.stock_quantity > 0
+                )
+            )
         
         # Ordenar por productos con ecommerce_price primero (destacados), luego por nombre
         query = query.order_by(Product.ecommerce_price.desc().nullslast(), Product.name)
         
         products = query.offset(offset).limit(limit).all()
         
-        # Convertir a diccionario para la respuesta
+        # Convertir a diccionario para la respuesta con stock agregado
         result = []
         for product in products:
+            # Calcular stock total de todas las sucursales para e-commerce
+            total_stock = product.calculate_total_available_stock()
+            
             result.append({
                 "id": product.id,
                 "name": product.name,
                 "description": product.description,
                 "price": float(product.ecommerce_price) if product.ecommerce_price else float(product.price),
-                "stock": product.stock_quantity,
+                "stock": total_stock,
                 "featured": product.ecommerce_price is not None,
                 "is_active": product.is_active,
                 "show_in_ecommerce": product.show_in_ecommerce,
@@ -158,12 +177,15 @@ def get_ecommerce_product(product_id: int, db: Session = Depends(get_db)):
         if not product:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
             
+        # Calcular stock agregado para e-commerce
+        total_stock = product.calculate_total_available_stock()
+        
         return {
             "id": product.id,
             "name": product.name,
             "description": product.description,
             "price": float(product.ecommerce_price) if product.ecommerce_price else float(product.price),
-            "stock": product.stock_quantity,
+            "stock": total_stock,
             "featured": product.ecommerce_price is not None,
             "is_active": product.is_active,
             "show_in_ecommerce": product.show_in_ecommerce,
@@ -505,11 +527,12 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                         detail=f"Stock insuficiente para producto {product.name} talle {item.size}. Disponible: {size_stock.stock_quantity}, Solicitado: {item.quantity}"
                     )
             else:
-                # Check general stock for products without sizes
-                if product.stock_quantity < item.quantity:
+                # Check stock agregado de todas las sucursales para productos sin talles
+                total_available_stock = product.calculate_total_available_stock()
+                if total_available_stock < item.quantity:
                     raise HTTPException(
                         status_code=400, 
-                        detail=f"Stock insuficiente para {product.name}. Disponible: {product.stock_quantity}, Solicitado: {item.quantity}"
+                        detail=f"Stock insuficiente para {product.name}. Disponible: {total_available_stock}, Solicitado: {item.quantity}"
                     )
             
             item_total = item.unit_price * item.quantity
@@ -590,14 +613,19 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                         new_size_stock = old_size_stock - item_data["quantity"]
                         size_stock.stock_quantity = new_size_stock
                         
-                        # Also update general product stock
-                        previous_stock = product.stock_quantity
-                        product.stock_quantity -= item_data["quantity"]
-                        new_stock = product.stock_quantity
+                        # Actualizar BranchStock correspondiente (buscar sucursal con stock)
+                        branch_stock = db.query(BranchStock).filter(
+                            BranchStock.product_id == product.id,
+                            BranchStock.stock_quantity >= item_data["quantity"]
+                        ).first()
                         
-                        # Create inventory movement for size stock
+                        if branch_stock:
+                            branch_stock.stock_quantity -= item_data["quantity"]
+                        
+                        # Create inventory movement for size stock con branch_id específico
                         inventory_movement = InventoryMovement(
                             product_id=product.id,
+                            branch_id=branch_stock.branch_id if branch_stock else size_stock.branch_id,
                             movement_type="OUT",
                             quantity=item_data["quantity"],
                             previous_stock=old_size_stock,
@@ -608,14 +636,26 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                         )
                         db.add(inventory_movement)
                 else:
-                    # Update general stock for products without sizes
-                    previous_stock = product.stock_quantity
-                    product.stock_quantity -= item_data["quantity"]
-                    new_stock = product.stock_quantity
+                    # Para productos sin talles, descontar de la primera sucursal con stock disponible
+                    branch_stock = db.query(BranchStock).filter(
+                        BranchStock.product_id == product.id,
+                        BranchStock.stock_quantity >= item_data["quantity"]
+                    ).first()
                     
-                    # Create inventory movement
+                    if not branch_stock:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"No hay stock disponible en ninguna sucursal para {product.name}"
+                        )
+                    
+                    previous_stock = branch_stock.stock_quantity
+                    branch_stock.stock_quantity -= item_data["quantity"]
+                    new_stock = branch_stock.stock_quantity
+                    
+                    # Create inventory movement con branch_id específico
                     inventory_movement = InventoryMovement(
                         product_id=product.id,
+                        branch_id=branch_stock.branch_id,
                         movement_type="OUT",
                         quantity=item_data["quantity"],
                         previous_stock=previous_stock,
@@ -704,6 +744,16 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
             except Exception as e:
                 # Si hay error creando el registro de WhatsApp, log pero no fallar la venta
                 print(f"Error creando registro de WhatsApp para venta {db_sale.id}: {str(e)}")
+        
+        # Recalcular stock global de todos los productos modificados
+        processed_products = set()
+        for item_data in validated_items:
+            product_id = item_data["product"].id
+            if product_id not in processed_products:
+                product = db.query(Product).filter(Product.id == product_id).first()
+                if product:
+                    product.stock_quantity = product.calculate_total_stock()
+                    processed_products.add(product_id)
         
         db.commit()
         db.refresh(db_sale)

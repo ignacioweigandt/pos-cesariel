@@ -18,7 +18,7 @@ from websocket_manager import notify_inventory_change, notify_low_stock
 
 router = APIRouter(prefix="/products", tags=["products"])
 
-@router.get("/", response_model=List[ProductSchema])
+@router.get("/")
 async def get_products(
     skip: int = 0,
     limit: int = 100,
@@ -28,6 +28,9 @@ async def get_products(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Obtener la sucursal del usuario para filtros específicos
+    user_branch_id = current_user.branch_id if current_user.branch_id else None
+    
     query = db.query(Product).filter(Product.is_active == True)
     
     if search:
@@ -42,11 +45,51 @@ async def get_products(
     if category_id:
         query = query.filter(Product.category_id == category_id)
     
-    if low_stock:
+    # Para filtro low_stock, consideramos stock de la sucursal específica
+    if low_stock and user_branch_id:
+        # Filtrar productos con stock bajo en la sucursal del usuario
+        query = query.join(BranchStock).filter(
+            BranchStock.branch_id == user_branch_id,
+            BranchStock.stock_quantity <= Product.min_stock
+        )
+    elif low_stock:
+        # Admin sin sucursal específica - usar stock global
         query = query.filter(Product.stock_quantity <= Product.min_stock)
     
     products = query.offset(skip).limit(limit).all()
-    return products
+    
+    # Construir respuesta con stock específico de la sucursal
+    result = []
+    for product in products:
+        if user_branch_id:
+            # Usuario con sucursal - mostrar stock de su sucursal
+            branch_stock = product.get_stock_for_branch(user_branch_id)
+        else:
+            # Admin sin sucursal - mostrar stock total calculado
+            branch_stock = product.calculate_total_stock()
+        
+        product_data = {
+            "id": product.id,
+            "name": product.name,
+            "description": product.description,
+            "sku": product.sku,
+            "barcode": product.barcode,
+            "category_id": product.category_id,
+            "price": float(product.price),
+            "cost": float(product.cost) if product.cost else None,
+            "stock_quantity": branch_stock,
+            "min_stock": product.min_stock,
+            "is_active": product.is_active,
+            "show_in_ecommerce": product.show_in_ecommerce,
+            "ecommerce_price": float(product.ecommerce_price) if product.ecommerce_price else None,
+            "has_sizes": product.has_sizes,
+            "image_url": product.image_url,
+            "created_at": product.created_at.isoformat() if product.created_at else None,
+            "updated_at": product.updated_at.isoformat() if product.updated_at else None
+        }
+        result.append(product_data)
+    
+    return result
 
 @router.get("/search")
 async def search_products(
@@ -64,19 +107,30 @@ async def search_products(
         )
     ).limit(limit).all()
     
-    return [
-        {
+    # Obtener la sucursal del usuario para mostrar stock específico
+    user_branch_id = current_user.branch_id if current_user.branch_id else None
+    
+    result = []
+    for product in products:
+        # Si el usuario tiene sucursal asignada, mostrar stock de esa sucursal
+        if user_branch_id:
+            branch_stock = product.get_stock_for_branch(user_branch_id)
+        else:
+            # Admin sin sucursal específica ve stock total
+            branch_stock = product.calculate_total_stock()
+            
+        result.append({
             "id": product.id,
             "name": product.name,
             "sku": product.sku,
             "barcode": product.barcode,
             "price": product.price,
-            "stock_quantity": product.stock_quantity
-        }
-        for product in products
-    ]
+            "stock_quantity": branch_stock
+        })
+    
+    return result
 
-@router.get("/barcode/{barcode}", response_model=ProductSchema)
+@router.get("/barcode/{barcode}")
 async def get_product_by_barcode(
     barcode: str,
     db: Session = Depends(get_db),
@@ -88,7 +142,39 @@ async def get_product_by_barcode(
     ).first()
     if product is None:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product
+    
+    # Determinar stock específico según la sucursal del usuario
+    user_branch_id = current_user.branch_id if current_user.branch_id else None
+    
+    if user_branch_id:
+        # Usuario con sucursal específica - mostrar stock de su sucursal
+        branch_stock = product.get_stock_for_branch(user_branch_id)
+    else:
+        # Admin sin sucursal específica - mostrar stock total
+        branch_stock = product.calculate_total_stock()
+    
+    # Crear respuesta con stock específico de la sucursal
+    product_data = {
+        "id": product.id,
+        "name": product.name,
+        "description": product.description,
+        "sku": product.sku,
+        "barcode": product.barcode,
+        "category_id": product.category_id,
+        "price": float(product.price),
+        "cost": float(product.cost) if product.cost else None,
+        "stock_quantity": branch_stock,
+        "min_stock": product.min_stock,
+        "is_active": product.is_active,
+        "show_in_ecommerce": product.show_in_ecommerce,
+        "ecommerce_price": float(product.ecommerce_price) if product.ecommerce_price else None,
+        "has_sizes": product.has_sizes,
+        "image_url": product.image_url,
+        "created_at": product.created_at.isoformat() if product.created_at else None,
+        "updated_at": product.updated_at.isoformat() if product.updated_at else None
+    }
+    
+    return product_data
 
 @router.get("/multi-branch-stock")
 async def get_products_with_multi_branch_stock(
@@ -97,31 +183,66 @@ async def get_products_with_multi_branch_stock(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Obtener productos con stock por sucursal"""
+    """Obtener productos con stock por sucursal (corregido para manejar productos con y sin talles)"""
+    from models import Branch
+    
     products = db.query(Product).filter(Product.is_active == True).offset(skip).limit(limit).all()
+    branches = db.query(Branch).filter(Branch.is_active == True).all()
     
     result = []
     for product in products:
-        # Obtener stock por sucursales
-        branch_stocks = db.query(BranchStock).filter(
-            BranchStock.product_id == product.id
-        ).all()
+        branch_stock_data = []
+        total_stock = 0
         
-        if branch_stocks:
-            total_stock = sum(bs.stock_quantity for bs in branch_stocks)
-            branch_stock_data = [
-                {
-                    "branch_id": bs.branch_id,
-                    "branch_name": bs.branch.name,
-                    "stock_quantity": bs.stock_quantity,
-                    "min_stock": bs.min_stock
-                }
-                for bs in branch_stocks
-            ]
+        if product.has_sizes:
+            # Para productos con talles, usar ProductSize
+            product_sizes = db.query(ProductSize).filter(
+                ProductSize.product_id == product.id
+            ).all()
+            
+            # Agrupar por sucursal
+            branch_totals = {}
+            for branch in branches:
+                branch_total = sum(
+                    ps.stock_quantity for ps in product_sizes 
+                    if ps.branch_id == branch.id
+                )
+                branch_totals[branch.id] = branch_total
+                total_stock += branch_total
+                
+                branch_stock_data.append({
+                    "branch_id": branch.id,
+                    "branch_name": branch.name,
+                    "stock_quantity": branch_total,
+                    "min_stock": 0  # Los productos con talles no usan min_stock por sucursal
+                })
         else:
-            # Si no tiene stock específico por sucursal, usar stock general
-            total_stock = product.stock_quantity
-            branch_stock_data = []
+            # Para productos sin talles, usar BranchStock
+            branch_stocks = db.query(BranchStock).filter(
+                BranchStock.product_id == product.id
+            ).all()
+            
+            if branch_stocks:
+                total_stock = sum(bs.stock_quantity for bs in branch_stocks)
+                branch_stock_data = [
+                    {
+                        "branch_id": bs.branch_id,
+                        "branch_name": bs.branch.name,
+                        "stock_quantity": bs.stock_quantity,
+                        "min_stock": bs.min_stock
+                    }
+                    for bs in branch_stocks
+                ]
+            else:
+                # Si no tiene stock específico por sucursal, crear entradas con 0
+                total_stock = product.stock_quantity
+                for branch in branches:
+                    branch_stock_data.append({
+                        "branch_id": branch.id,
+                        "branch_name": branch.name,
+                        "stock_quantity": 0,
+                        "min_stock": 0
+                    })
         
         result.append({
             "id": product.id,
@@ -310,6 +431,33 @@ async def adjust_product_stock(
         
         # Update product stock
         product.stock_quantity = stock_data.new_stock
+        
+        # For products without sizes, also update BranchStock for current user's branch
+        if not product.has_sizes:
+            user_branch_id = current_user.branch_id or 1
+            
+            # Find or create BranchStock for this product and branch
+            branch_stock = db.query(BranchStock).filter(
+                BranchStock.product_id == product.id,
+                BranchStock.branch_id == user_branch_id
+            ).first()
+            
+            if branch_stock:
+                # Update existing BranchStock
+                old_branch_stock = branch_stock.stock_quantity
+                branch_stock.stock_quantity = stock_data.new_stock
+                print(f"📦 Updated BranchStock for product {product.id} in branch {user_branch_id}: {old_branch_stock} → {stock_data.new_stock}")
+            else:
+                # Create new BranchStock entry
+                branch_stock = BranchStock(
+                    product_id=product.id,
+                    branch_id=user_branch_id,
+                    stock_quantity=stock_data.new_stock,
+                    min_stock=product.min_stock
+                )
+                db.add(branch_stock)
+                print(f"📦 Created new BranchStock for product {product.id} in branch {user_branch_id}: {stock_data.new_stock}")
+        
         db.commit()
         db.refresh(product)
         
@@ -820,7 +968,7 @@ async def get_available_sizes_for_pos(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Obtener talles disponibles para POS (solo con stock > 0)"""
+    """Obtener talles disponibles para POS (solo con stock > 0 y válidos para la categoría)"""
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -830,29 +978,47 @@ async def get_available_sizes_for_pos(
             "product_id": product_id,
             "product_name": product.name,
             "has_sizes": False,
+            "category_name": product.category.name if product.category else None,
             "available_sizes": []
         }
     
     # Get sizes with stock > 0 for current branch
     branch_id = current_user.branch_id or 1
     
+    # Get all sizes with stock for this product and branch
     available_sizes = db.query(ProductSize).filter(
         ProductSize.product_id == product_id,
         ProductSize.branch_id == branch_id,
         ProductSize.stock_quantity > 0
     ).all()
     
+    # Filter by valid sizes for category and sort
+    from utils.size_validators import get_size_display_info, sort_sizes
+    
+    size_info = get_size_display_info(product.category.name if product.category else "")
+    valid_sizes = size_info["valid_sizes"]
+    
+    # Filter to only include valid sizes for this category
+    filtered_sizes = []
+    for size in available_sizes:
+        if size.size in valid_sizes:
+            filtered_sizes.append({
+                "size": size.size,
+                "stock_quantity": size.stock_quantity
+            })
+    
+    # Sort sizes appropriately
+    sorted_sizes = sorted(filtered_sizes, key=lambda x: valid_sizes.index(x["size"]) if x["size"] in valid_sizes else 999)
+    
     return {
         "product_id": product_id,
         "product_name": product.name,
         "has_sizes": True,
-        "available_sizes": [
-            {
-                "size": size.size,
-                "stock_quantity": size.stock_quantity
-            }
-            for size in available_sizes
-        ]
+        "category_name": product.category.name if product.category else None,
+        "category_type": size_info["category_type"],
+        "size_type_label": size_info["size_type_label"],
+        "available_sizes": sorted_sizes,
+        "all_valid_sizes": valid_sizes  # Para mostrar todos los talles posibles en el frontend
     }
 
 def calculate_total_stock_from_sizes(db: Session, product_id: int, branch_id: int) -> int:
@@ -887,6 +1053,19 @@ async def manage_product_sizes(
     
     branch_id = current_user.branch_id or 1
     
+    # Validar talles según la categoría del producto
+    from utils.size_validators import validate_sizes_for_product, get_size_display_info
+    
+    sizes_to_validate = [size_info.size for size_info in size_data.sizes]
+    validation_result = validate_sizes_for_product(db, sizes_to_validate, product_id)
+    
+    if validation_result["invalid"]:
+        size_info = get_size_display_info(product.category.name if product.category else "")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Talles inválidos para esta categoría ({product.category.name if product.category else 'Sin categoría'}): {', '.join(validation_result['invalid'])}. Talles válidos: {', '.join(size_info['valid_sizes'])}"
+        )
+    
     # Actualizar o crear stock por talle
     for size_info in size_data.sizes:
         existing_size = db.query(ProductSize).filter(
@@ -910,9 +1089,10 @@ async def manage_product_sizes(
     # Commit los cambios de talles primero
     db.commit()
     
-    # Calcular y actualizar el stock general del producto
+    # Calcular y actualizar el stock general del producto (suma de TODAS las sucursales)
     old_stock = product.stock_quantity
-    total_stock = calculate_total_stock_from_sizes(db, product_id, branch_id)
+    # Usar el método del modelo que suma todas las sucursales
+    total_stock = product.calculate_total_stock()
     product.stock_quantity = total_stock
     product.updated_at = datetime.now()
     
@@ -969,3 +1149,152 @@ async def get_product_sizes(
             for size in sizes
         ]
     }
+
+@router.post("/{product_id}/stock/adjust")
+async def adjust_branch_stock(
+    product_id: int,
+    branch_id: int,
+    quantity: int,
+    reason: str = "Manual adjustment",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_admin)
+):
+    """
+    Ajustar stock de un producto específico en una sucursal.
+    
+    Args:
+        product_id: ID del producto
+        branch_id: ID de la sucursal 
+        quantity: Nueva cantidad de stock
+        reason: Razón del ajuste (opcional)
+    """
+    # Verificar que el producto existe
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Verificar que la sucursal existe
+    from models import Branch
+    branch = db.query(Branch).filter(Branch.id == branch_id).first()
+    if not branch:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    
+    # Verificar permisos: solo admins pueden ajustar stock de cualquier sucursal
+    if current_user.role.value != "ADMIN" and current_user.branch_id != branch_id:
+        raise HTTPException(
+            status_code=403, 
+            detail="You can only adjust stock for your own branch"
+        )
+    
+    # Buscar o crear registro de stock para la sucursal
+    branch_stock = db.query(BranchStock).filter(
+        BranchStock.branch_id == branch_id,
+        BranchStock.product_id == product_id
+    ).first()
+    
+    if branch_stock:
+        old_stock = branch_stock.stock_quantity
+        branch_stock.stock_quantity = quantity
+        branch_stock.updated_at = func.now()
+    else:
+        old_stock = 0
+        branch_stock = BranchStock(
+            branch_id=branch_id,
+            product_id=product_id,
+            stock_quantity=quantity,
+            min_stock=product.min_stock
+        )
+        db.add(branch_stock)
+    
+    # Crear movimiento de inventario para auditoría
+    movement = InventoryMovement(
+        product_id=product_id,
+        branch_id=branch_id,
+        movement_type="ADJUSTMENT",
+        quantity=quantity - old_stock,
+        previous_stock=old_stock,
+        new_stock=quantity,
+        reference_type="MANUAL_ADJUSTMENT",
+        notes=f"Manual adjustment by {current_user.username}: {reason}"
+    )
+    db.add(movement)
+    
+    # Recalcular stock global del producto
+    total_stock = product.calculate_total_stock()
+    product.stock_quantity = total_stock
+    
+    db.commit()
+    
+    # Notificar cambio via WebSocket
+    await notify_inventory_change(product_id, branch_id, quantity)
+    
+    # Verificar si necesita alerta de stock bajo
+    if quantity <= branch_stock.min_stock:
+        await notify_low_stock(product_id, branch_id, quantity)
+    
+    return {
+        "success": True,
+        "message": f"Stock adjusted for {product.name} in {branch.name}",
+        "old_stock": old_stock,
+        "new_stock": quantity,
+        "total_product_stock": total_stock
+    }
+
+@router.get("/stock-by-branch")
+async def get_all_products_stock_by_branch(
+    skip: int = 0,
+    limit: int = 50,
+    branch_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Obtener stock de todos los productos organizados por sucursal.
+    
+    Args:
+        branch_id: Filtrar por sucursal específica (opcional)
+    """
+    query = db.query(Product).filter(Product.is_active == True)
+    
+    # Si no es admin, solo puede ver productos de su sucursal
+    if current_user.role.value != "ADMIN" and current_user.branch_id:
+        branch_id = current_user.branch_id
+    
+    products = query.offset(skip).limit(limit).all()
+    
+    result = []
+    for product in products:
+        product_data = {
+            "id": product.id,
+            "name": product.name,
+            "sku": product.sku,
+            "branches": []
+        }
+        
+        # Obtener stock por cada sucursal
+        branch_stocks = db.query(BranchStock).filter(
+            BranchStock.product_id == product.id
+        ).all()
+        
+        if branch_id:
+            branch_stocks = [bs for bs in branch_stocks if bs.branch_id == branch_id]
+        
+        for bs in branch_stocks:
+            branch_data = {
+                "branch_id": bs.branch_id,
+                "branch_name": bs.branch.name,
+                "stock_quantity": bs.stock_quantity,
+                "available_stock": bs.available_stock,
+                # "reserved_stock": bs.reserved_stock,
+                "min_stock": bs.min_stock,
+                "low_stock": bs.stock_quantity <= bs.min_stock
+            }
+            product_data["branches"].append(branch_data)
+        
+        # Calcular totales
+        product_data["total_stock"] = sum(b["stock_quantity"] for b in product_data["branches"])
+        product_data["total_available"] = sum(b["available_stock"] for b in product_data["branches"])
+        
+        result.append(product_data)
+    
+    return result

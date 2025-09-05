@@ -275,9 +275,9 @@ class Product(Base):
     
     # Control de inventario
     stock_quantity = Column(Integer, default=0,
-                            doc="Stock general del producto (suma de sucursales)")
+                            doc="Stock global calculado (suma de todas las sucursales)")
     min_stock = Column(Integer, default=0,
-                       doc="Stock mínimo para alertas de reposición")
+                       doc="Stock mínimo global para alertas de reposición")
     
     # Configuración de producto
     is_active = Column(Boolean, default=True,
@@ -310,6 +310,157 @@ class Product(Base):
                                 doc="Talles/variantes disponibles del producto")
     product_images = relationship("ProductImage", back_populates="product",
                                  doc="Imágenes adicionales del producto")
+    
+    def get_stock_for_branch(self, branch_id):
+        """
+        Obtiene el stock específico para una sucursal.
+        Para productos con talles, suma ProductSize de esa sucursal.
+        
+        Args:
+            branch_id (int): ID de la sucursal
+            
+        Returns:
+            int: Cantidad en stock para la sucursal especificada
+        """
+        if self.has_sizes:
+            # Para productos con talles, sumar stock de ProductSize de la sucursal
+            from sqlalchemy.orm import Session
+            from sqlalchemy import func as sqlalchemy_func
+            from database import SessionLocal
+            db = SessionLocal()
+            try:
+                total = db.query(sqlalchemy_func.sum(ProductSize.stock_quantity)).filter(
+                    ProductSize.product_id == self.id,
+                    ProductSize.branch_id == branch_id
+                ).scalar() or 0
+                return int(total)
+            finally:
+                db.close()
+        else:
+            # Para productos sin talles, usar BranchStock
+            branch_stock = next((bs for bs in self.branch_stocks if bs.branch_id == branch_id), None)
+            return branch_stock.stock_quantity if branch_stock else 0
+    
+    def get_available_stock_for_branch(self, branch_id):
+        """
+        Obtiene el stock disponible (no reservado) para una sucursal.
+        Para productos con talles, usa ProductSize de esa sucursal.
+        
+        Args:
+            branch_id (int): ID de la sucursal
+            
+        Returns:
+            int: Cantidad disponible para venta en la sucursal especificada
+        """
+        if self.has_sizes:
+            # Para productos con talles, usar el stock de ProductSize (mismo que get_stock_for_branch por ahora)
+            return self.get_stock_for_branch(branch_id)
+        else:
+            # Para productos sin talles, usar BranchStock disponible
+            branch_stock = next((bs for bs in self.branch_stocks if bs.branch_id == branch_id), None)
+            return branch_stock.available_stock if branch_stock else 0
+    
+    def calculate_total_stock(self):
+        """
+        Calcula el stock total sumando todas las sucursales.
+        Para productos con talles, suma ProductSize, sino suma BranchStock.
+        
+        Returns:
+            int: Stock total del producto
+        """
+        if self.has_sizes:
+            # Para productos con talles, sumar todo el stock de ProductSize
+            from sqlalchemy.orm import Session
+            from sqlalchemy import func as sqlalchemy_func
+            from database import SessionLocal
+            db = SessionLocal()
+            try:
+                total = db.query(sqlalchemy_func.sum(ProductSize.stock_quantity)).filter(
+                    ProductSize.product_id == self.id
+                ).scalar() or 0
+                return int(total)
+            finally:
+                db.close()
+        else:
+            # Para productos sin talles, sumar BranchStock
+            return sum(bs.stock_quantity for bs in self.branch_stocks)
+    
+    def calculate_total_available_stock(self):
+        """
+        Calcula el stock disponible total sumando todas las sucursales.
+        Para productos con talles, suma ProductSize, sino suma BranchStock.
+        
+        Returns:
+            int: Stock disponible total del producto
+        """
+        if self.has_sizes:
+            # Para productos con talles, sumar todo el stock de ProductSize (sin reserved_stock por ahora)
+            from sqlalchemy.orm import Session
+            from sqlalchemy import func as sqlalchemy_func
+            from database import SessionLocal
+            db = SessionLocal()
+            try:
+                total = db.query(sqlalchemy_func.sum(ProductSize.stock_quantity)).filter(
+                    ProductSize.product_id == self.id
+                ).scalar() or 0
+                return int(total)
+            finally:
+                db.close()
+        else:
+            # Para productos sin talles, sumar BranchStock disponible
+            return sum(bs.available_stock for bs in self.branch_stocks)
+    
+    def has_stock_in_branch(self, branch_id, quantity=1):
+        """
+        Verifica si hay suficiente stock en una sucursal específica.
+        
+        Args:
+            branch_id (int): ID de la sucursal
+            quantity (int): Cantidad requerida (default: 1)
+            
+        Returns:
+            bool: True si hay stock suficiente en la sucursal
+        """
+        return self.get_available_stock_for_branch(branch_id) >= quantity
+    
+    def get_branches_with_stock(self):
+        """
+        Obtiene lista de sucursales que tienen stock del producto.
+        
+        Returns:
+            list: Lista de IDs de sucursales con stock > 0
+        """
+        return [bs.branch_id for bs in self.branch_stocks if bs.stock_quantity > 0]
+    
+    def get_allowed_sizes(self):
+        """
+        Obtiene los talles válidos para este producto basado en su categoría.
+        
+        Returns:
+            list: Lista de talles válidos para este producto
+        """
+        from utils.size_validators import get_valid_sizes_for_category
+        
+        if not self.has_sizes or not self.category:
+            return []
+        
+        return get_valid_sizes_for_category(self.category.name)
+    
+    def is_valid_size(self, size: str) -> bool:
+        """
+        Valida si un talle es válido para este producto.
+        
+        Args:
+            size (str): Talle a validar
+            
+        Returns:
+            bool: True si el talle es válido para este producto
+        """
+        allowed_sizes = self.get_allowed_sizes()
+        return size in allowed_sizes
+    
+    def __repr__(self):
+        return f"<Product(id={self.id}, sku='{self.sku}', name='{self.name}', stock={self.stock_quantity})>"
 
 class Sale(Base):
     """
@@ -617,25 +768,94 @@ class PaymentConfig(Base):
                         doc="Timestamp de última actualización")
 
 class BranchStock(Base):
+    """
+    Modelo de Stock por Sucursal del sistema POS Cesariel.
+    
+    Gestiona el inventario independiente de cada sucursal, permitiendo
+    que cada ubicación mantenga su propio control de stock sin interferir
+    con el inventario de otras sucursales.
+    
+    Attributes:
+        id (int): Identificador único del registro de stock por sucursal
+        branch_id (int): ID de la sucursal (FK hacia branches.id)
+        product_id (int): ID del producto (FK hacia products.id)
+        stock_quantity (int): Cantidad en stock específica para esta sucursal
+        min_stock (int): Stock mínimo para alertas de reposición por sucursal
+        reserved_stock (int): Stock reservado (para pedidos pendientes)
+        created_at (datetime): Fecha y hora de creación del registro
+        updated_at (datetime): Fecha y hora de última modificación
+        
+    Relationships:
+        branch: Sucursal propietaria de este stock
+        product: Producto al que pertenece este stock
+        
+    Business Rules:
+        - Combinación única de sucursal-producto
+        - El stock total del producto se calcula sumando todos los BranchStock
+        - Cada sucursal ve solo su propio stock en el POS
+        - E-commerce ve la suma de stock de todas las sucursales activas
+    """
     __tablename__ = "branch_stock"
     
-    id = Column(Integer, primary_key=True, index=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
-    stock_quantity = Column(Integer, default=0, nullable=False)
-    min_stock = Column(Integer, default=0)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-
+    # Campos principales
+    id = Column(Integer, primary_key=True, index=True,
+                doc="Identificador único del registro de stock por sucursal")
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False,
+                       doc="ID de la sucursal propietaria del stock")
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False,
+                        doc="ID del producto")
     
-    # Relationships
-    branch = relationship("Branch")
-    product = relationship("Product", back_populates="branch_stocks")
+    # Control de inventario
+    stock_quantity = Column(Integer, default=0, nullable=False,
+                            doc="Cantidad en stock específica para esta sucursal")
+    min_stock = Column(Integer, default=0,
+                       doc="Stock mínimo para alertas de reposición por sucursal")
+    # reserved_stock = Column(Integer, default=0,
+    #                        doc="Stock reservado para pedidos pendientes")
     
-    # Unique constraint per branch-product combination
+    # Campos de auditoría
+    created_at = Column(DateTime, default=func.now(),
+                        doc="Timestamp de creación del registro")
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(),
+                        doc="Timestamp de última actualización")
+    
+    # Relaciones con otras entidades
+    branch = relationship("Branch", 
+                         doc="Sucursal propietaria de este stock")
+    product = relationship("Product", back_populates="branch_stocks",
+                          doc="Producto al que pertenece este stock")
+    
+    # Restricciones de tabla
     __table_args__ = (
+        # Índice único para combinación sucursal-producto
+        # Evita duplicados de stock para el mismo producto en la misma sucursal
         {"extend_existing": True},
     )
+    
+    @property
+    def available_stock(self):
+        """
+        Calcula el stock disponible (por ahora igual a stock_quantity).
+        
+        Returns:
+            int: Cantidad disponible para venta
+        """
+        return self.stock_quantity
+    
+    def has_sufficient_stock(self, quantity):
+        """
+        Verifica si hay suficiente stock disponible para una cantidad solicitada.
+        
+        Args:
+            quantity (int): Cantidad solicitada
+            
+        Returns:
+            bool: True si hay stock suficiente, False en caso contrario
+        """
+        return self.available_stock >= quantity
+    
+    def __repr__(self):
+        return f"<BranchStock(branch_id={self.branch_id}, product_id={self.product_id}, stock={self.stock_quantity})>"
 
 class ProductSize(Base):
     """
