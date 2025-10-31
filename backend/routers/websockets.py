@@ -1,7 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User
+from app.models import User
 from auth_compat import get_current_active_user
 from websocket_manager import manager
 import json

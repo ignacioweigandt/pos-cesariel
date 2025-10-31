@@ -10,7 +10,7 @@ from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from models import User, UserRole
+from app.models import User, UserRole
 from config.settings import settings
 
 

@@ -8,7 +8,7 @@ from auth import (
     SECRET_KEY,
     ALGORITHM
 )
-from models import UserRole
+from app.models import UserRole
 
 
 @pytest.mark.unit

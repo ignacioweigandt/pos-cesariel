@@ -21,8 +21,9 @@ Arquitectura:
 """
 
 # Importaciones principales de FastAPI
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 import os
 
 # Configuración de base de datos y aplicación
@@ -41,12 +42,32 @@ from routers import (
     config,                # Configuración general del sistema
     ecommerce_advanced,    # Funcionalidades avanzadas de e-commerce
     ecommerce_public,      # API pública para la tienda online
-    content_management     # Gestión de contenido y banners
+    content_management,    # Gestión de contenido y banners
+    notifications          # Sistema de notificaciones
 )
 
 # Inicialización automática de la base de datos
 # Crea todas las tablas definidas en models.py si no existen
 Base.metadata.create_all(bind=engine)
+
+# Middleware personalizado para manejar peticiones OPTIONS (CORS preflight)
+class OptionsMiddleware(BaseHTTPMiddleware):
+    """Middleware que maneja todas las peticiones OPTIONS para CORS preflight"""
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            # Responder directamente a OPTIONS con headers CORS apropiados
+            return Response(
+                status_code=200,
+                headers={
+                    "Access-Control-Allow-Origin": request.headers.get("origin", "*"),
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers": request.headers.get("access-control-request-headers", "*"),
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Max-Age": "86400",  # 24 horas
+                }
+            )
+        response = await call_next(request)
+        return response
 
 # Crear la instancia principal de FastAPI con configuración centralizada
 # La configuración se obtiene desde config/settings.py basada en variables de entorno
@@ -58,6 +79,9 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug_mode else None,  # ReDoc solo en desarrollo
     debug=settings.debug_mode  # Habilita logs detallados y recarga automática
 )
+
+# IMPORTANTE: Agregar middleware personalizado de OPTIONS PRIMERO para interceptar preflight requests
+app.add_middleware(OptionsMiddleware)
 
 # Configuración de middleware CORS para comunicación entre frontend y backend
 # Permite las solicitudes desde los dos frontends del sistema (POS admin y E-commerce)
@@ -71,8 +95,9 @@ app.add_middleware(
         "*"  # DESARROLLO: Permitir todos los orígenes (CAMBIAR EN PRODUCCIÓN)
     ],
     allow_credentials=True,  # Permitir cookies y headers de autenticación
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Métodos HTTP permitidos
+    allow_methods=["*"],  # Permitir todos los métodos HTTP (incluye OPTIONS para CORS preflight)
     allow_headers=["*"],  # Headers permitidos (Authorization, Content-Type, etc.)
+    expose_headers=["*"],  # Exponer todos los headers en la respuesta
 )
 
 # Registro de routers modulares - Cada router maneja un conjunto específico de endpoints
@@ -93,6 +118,7 @@ app.include_router(sales.router)          # /sales/* - Ventas POS, reportes, das
 
 # ===== CONFIGURACIÓN Y ADMINISTRACIÓN =====
 app.include_router(config.router)         # /config/* - Configuración general del sistema
+app.include_router(notifications.router)  # /notifications/* - Sistema de notificaciones
 
 # ===== E-COMMERCE INTEGRADO =====
 app.include_router(ecommerce_advanced.router)  # /ecommerce-advanced/* - Admin e-commerce con autenticación

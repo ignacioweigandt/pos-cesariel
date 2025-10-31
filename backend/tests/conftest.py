@@ -10,7 +10,7 @@ import os
 # Import our FastAPI app and dependencies
 from main import app
 from database import get_db, Base
-from models import User, Branch, Category, Product, Sale, SaleItem
+from app.models import User, Branch, Category, Product, Sale, SaleItem
 from auth import get_current_active_user
 
 # Test database URL - use SQLite for tests

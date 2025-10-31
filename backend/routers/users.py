@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
-from models import User, UserRole
-from schemas import User as UserSchema, UserCreate, UserUpdate
+from app.models import User, UserRole
+from app.schemas import User as UserSchema, UserCreate, UserUpdate
 from auth_compat import get_current_active_user, require_admin, require_manager_or_admin, get_password_hash
 
 router = APIRouter(prefix="/users", tags=["users"])

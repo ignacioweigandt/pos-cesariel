@@ -7,7 +7,7 @@ import os
 import sys
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal
-from models import StoreBanner, SocialMediaConfig, EcommerceConfig
+from app.models import StoreBanner, SocialMediaConfig, EcommerceConfig
 
 def create_sample_banners(db: Session):
     """

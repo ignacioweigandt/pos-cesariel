@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
-from models import (
+from app.models import (
     ProductImage, StoreBanner, WhatsAppSale, SocialMediaConfig, WhatsAppConfig,
     Product, Sale, User, EcommerceConfig, OrderStatus
 )
-from schemas import (
+from app.schemas import (
     ProductImage as ProductImageSchema,
     ProductImageCreate, ProductImageUpdate,
     StoreBanner as StoreBannerSchema,
@@ -17,7 +17,7 @@ from schemas import (
     SocialMediaConfigCreate, SocialMediaConfigUpdate,
     WhatsAppConfig as WhatsAppConfigSchema,
     WhatsAppConfigCreate, WhatsAppConfigUpdate,
-    ProductWithImages, EcommerceStoreData, 
+    ProductWithImages, EcommerceStoreData,
     WhatsAppSaleWithDetails, EcommerceSalesReport,
     SaleStatusUpdate
 )

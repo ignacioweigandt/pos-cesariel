@@ -1,5 +1,5 @@
 from database import SessionLocal, engine, Base
-from models import Branch, User, Category, Product, EcommerceConfig, UserRole
+from app.models import Branch, User, Category, Product, EcommerceConfig, SystemConfig, UserRole
 from auth import get_password_hash
 from decimal import Decimal
 
@@ -236,7 +236,20 @@ def create_initial_data():
         
         db.add(ecommerce_config)
         db.commit()
-        
+
+        # Crear configuración del sistema (incluyendo configuración de moneda)
+        system_config = SystemConfig(
+            default_currency="ARS",
+            currency_symbol="$",
+            currency_position="before",
+            decimal_places=2,
+            default_tax_rate=0,
+            session_timeout=30
+        )
+
+        db.add(system_config)
+        db.commit()
+
         print("✅ Initial data created successfully!")
         print("\n🔑 Default users created:")
         print("- Admin: admin / admin123")
@@ -247,6 +260,7 @@ def create_initial_data():
         print("- 6 categories (including Indumentaria and Calzado)")
         print("- 10 products (4 with sizes for testing)")
         print("- E-commerce configuration")
+        print("- System configuration (Currency: ARS)")
         print("\n👕 Products with sizes for testing:")
         print("- Remera Básica (Indumentaria)")
         print("- Buzo con Capucha (Indumentaria)")

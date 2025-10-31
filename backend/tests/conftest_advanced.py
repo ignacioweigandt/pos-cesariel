@@ -9,9 +9,9 @@ from unittest.mock import Mock, AsyncMock
 from typing import List, Dict, Any
 from datetime import datetime, timedelta
 
-from models import (
-    Product, Sale, SaleItem, InventoryMovement, 
-    PaymentConfig, EcommerceConfig, ProductImage, 
+from app.models import (
+    Product, Sale, SaleItem, InventoryMovement,
+    PaymentConfig, EcommerceConfig, ProductImage,
     StoreBanner, ProductSize, WhatsAppSale
 )
 

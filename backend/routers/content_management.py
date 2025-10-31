@@ -6,8 +6,8 @@ from datetime import datetime
 
 from database import get_db
 from auth_compat import get_current_user
-from models import User, StoreBanner, SocialMediaConfig, EcommerceConfig
-from schemas import (
+from app.models import User, StoreBanner, SocialMediaConfig, EcommerceConfig
+from app.schemas import (
     StoreBannerCreate, StoreBannerUpdate, StoreBanner as StoreBannerSchema,
     SocialMediaConfigCreate, SocialMediaConfigUpdate, SocialMediaConfig as SocialMediaConfigSchema,
     EcommerceConfigCreate, EcommerceConfigUpdate, EcommerceConfig as EcommerceConfigSchema

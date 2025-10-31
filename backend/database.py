@@ -66,18 +66,18 @@ Base = declarative_base()
 def get_db():
     """
     Generador de sesión de base de datos para dependency injection en FastAPI.
-    
+
     Proporciona una sesión SQLAlchemy para cada request HTTP y garantiza
     que la conexión se cierre correctamente al finalizar la operación.
-    
+
     Usage:
         @app.get("/products")
         def get_products(db: Session = Depends(get_db)):
             return db.query(Product).all()
-    
+
     Yields:
         Session: Sesión SQLAlchemy activa para operaciones de BD
-        
+
     Behavior:
         1. Crea nueva sesión usando SessionLocal factory
         2. Yield la sesión al endpoint que la requiere
@@ -89,3 +89,42 @@ def get_db():
         yield db  # Proveer sesión al endpoint
     finally:
         db.close()  # Garantizar cierre de conexión
+
+
+# ===== FUNCIONES DE UTILIDAD =====
+
+def init_db():
+    """
+    Inicializa la base de datos creando todas las tablas definidas en los modelos.
+
+    Esta función crea todas las tablas necesarias si no existen.
+    Útil para desarrollo y pruebas.
+    """
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+
+
+def check_db_connection():
+    """
+    Verifica la conexión a la base de datos.
+
+    Returns:
+        bool: True si la conexión es exitosa, False en caso contrario
+    """
+    db = None
+    try:
+        db = SessionLocal()
+        db.execute("SELECT 1")
+        return True
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        return False
+    finally:
+        if db:
+            db.close()
+
+
+# Alias for backwards compatibility
+SQLALCHEMY_DATABASE_URL = DATABASE_URL

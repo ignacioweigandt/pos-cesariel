@@ -2,8 +2,8 @@ import pytest
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
-from models import (
-    User, Branch, Category, Product, Sale, SaleItem, 
+from app.models import (
+    User, Branch, Category, Product, Sale, SaleItem,
     InventoryMovement, PaymentConfig, EcommerceConfig,
     ProductImage, StoreBanner, WhatsAppSale
 )

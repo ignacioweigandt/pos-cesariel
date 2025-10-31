@@ -6,9 +6,9 @@ import pandas as pd
 import io
 from datetime import datetime
 from database import get_db
-from models import Product, User, InventoryMovement, BranchStock, ProductSize, ImportLog, Category
-from schemas import (
-    Product as ProductSchema, ProductCreate, ProductUpdate, 
+from app.models import Product, User, InventoryMovement, BranchStock, ProductSize, ImportLog, Category, Branch
+from app.schemas import (
+    Product as ProductSchema, ProductCreate, ProductUpdate,
     InventoryMovement as InventoryMovementSchema, StockAdjustment,
     BulkImportResponse, ProductImportData, BranchStock as BranchStockSchema,
     ProductSize as ProductSizeSchema, UpdateSizeStocks, ProductWithMultiBranchStock
@@ -184,8 +184,6 @@ async def get_products_with_multi_branch_stock(
     current_user: User = Depends(get_current_active_user)
 ):
     """Obtener productos con stock por sucursal (corregido para manejar productos con y sin talles)"""
-    from models import Branch
-    
     products = db.query(Product).filter(Product.is_active == True).offset(skip).limit(limit).all()
     branches = db.query(Branch).filter(Branch.is_active == True).all()
     
@@ -883,8 +881,6 @@ async def get_product_sizes_by_branch(
     current_user: User = Depends(get_current_active_user)
 ):
     """Obtener stock de talles por todas las sucursales"""
-    from models import Branch
-    
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
@@ -1172,9 +1168,8 @@ async def adjust_branch_stock(
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    
+
     # Verificar que la sucursal existe
-    from models import Branch
     branch = db.query(Branch).filter(Branch.id == branch_id).first()
     if not branch:
         raise HTTPException(status_code=404, detail="Branch not found")

@@ -27,7 +27,7 @@ assistant: "I'll invoke the scope-rule-architect-nextjs agent to analyze and res
 This requires architectural analysis and restructuring based on the Scope Rule and modern Next.js patterns, which is the agent's specialty.
 </commentary>
 </example>
-model: opus
+model: sonet
 color: blue
 ---
 
@@ -212,10 +212,10 @@ src/
 ### Server Component Template
 
 ```typescript
-import { Suspense } from 'react';
-import { getUser } from '@/lib/auth';
-import { FeatureCard } from './feature-card';
-import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
+import { Suspense } from "react";
+import { getUser } from "@/lib/auth";
+import { FeatureCard } from "./feature-card";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 // Server Component by default
 export default async function FeaturePage() {
@@ -235,11 +235,11 @@ export default async function FeaturePage() {
 ### Client Component Template
 
 ```typescript
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 interface FeatureComponentProps {
   initialData: FeatureData;
@@ -254,7 +254,7 @@ export function FeatureComponent({ initialData }: FeatureComponentProps) {
     setLoading(true);
     try {
       // Client-side logic
-      router.push('/dashboard');
+      router.push("/dashboard");
     } finally {
       setLoading(false);
     }
@@ -263,7 +263,7 @@ export function FeatureComponent({ initialData }: FeatureComponentProps) {
   return (
     <div>
       <Button onClick={handleAction} disabled={loading}>
-        {loading ? 'Processing...' : 'Action'}
+        {loading ? "Processing..." : "Action"}
       </Button>
     </div>
   );
@@ -370,4 +370,3 @@ You MUST optimize for:
 - Handle both server and client-side auth states
 
 You are the guardian of clean, scalable Next.js architecture. Every decision you make should result in a codebase that leverages Next.js 15+ features optimally, follows the Scope Rule religiously, is immediately understandable through Screaming Architecture principles, and performs exceptionally well for both users and search engines. When reviewing existing code, you identify violations of both the Scope Rule and Next.js best practices, providing specific refactoring instructions that embrace Server Components, proper data fetching, and modern Next.js patterns.
-

@@ -33,13 +33,16 @@ POS Cesariel is a comprehensive multi-branch point-of-sale system with integrate
 ### Primary Commands (via Makefile)
 ```bash
 make dev                 # Start all services in development mode
+make dev-pos            # Start only POS Admin and dependencies (db, backend, frontend)
+make dev-ecommerce      # Start only E-commerce and dependencies (db, backend, ecommerce)
 make down               # Stop all services
 make restart            # Restart all services
 make clean              # Clean containers and volumes
+make clean-volumes      # Clean only volumes (preserve images)
 
 # Individual service logs
 make logs-backend       # Backend FastAPI logs
-make logs-frontend      # POS Admin logs  
+make logs-frontend      # POS Admin logs
 make logs-ecommerce     # E-commerce frontend logs
 make logs-db           # PostgreSQL logs
 
@@ -54,13 +57,22 @@ make shell-db          # PostgreSQL shell
 
 #### Backend (FastAPI)
 ```bash
-# Testing
-pytest                  # Run backend tests with coverage
+# Testing (run inside backend container via `make shell-backend`)
+pytest                  # Run all tests with coverage
 pytest tests/unit/      # Unit tests only
 pytest tests/integration/ # Integration tests only
+pytest -v               # Verbose output
+pytest -k "test_name"   # Run specific test by name
+pytest -m unit          # Run only tests marked as @pytest.mark.unit
+pytest -m integration   # Run only tests marked as @pytest.mark.integration
+pytest -m auth          # Run authentication tests
+pytest -m "not slow"    # Skip slow tests
+pytest --cov=. --cov-report=html  # Generate HTML coverage report
 
 # Database initialization
 python init_data.py     # Create initial data (users, branches, products)
+python init_content_data.py  # Initialize e-commerce content (banners, config)
+python init_sportswear_data.py  # Load sportswear product catalog
 
 # Development
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -85,24 +97,139 @@ npm run dev            # Development server (port 3001)
 npm run build          # Production build
 npm run lint           # ESLint
 npm run test           # Jest unit tests
-npm run test:e2e       # Cypress E2E tests
+npm run test:watch     # Jest in watch mode
+npm run test:coverage  # Jest with coverage
+npm run test:e2e       # Cypress E2E tests (headless)
+npm run test:e2e:open  # Cypress E2E tests (interactive)
 ```
 
 ## System Architecture
 
 ### Backend Structure (FastAPI)
-- **Models**: SQLAlchemy ORM models in `models.py`
-- **Routers**: Modular API endpoints organized by functionality
-  - `auth.py` - JWT authentication and session management
-  - `users.py` - User management with role-based permissions
-  - `branches.py` - Multi-branch management
-  - `products.py` - Inventory management with size variants
-  - `sales.py` - Sales processing and reporting
-  - `ecommerce_advanced.py` - E-commerce admin functions
-  - `ecommerce_public.py` - Public e-commerce API
-  - `content_management.py` - CMS for banners and content
-- **Database**: PostgreSQL with automated migrations
-- **Configuration**: Environment-based settings in `config/settings.py`
+
+**Modern Layered Architecture** (Phases 1 & 2 completed October 2025):
+
+```
+backend/
+├── app/                          # Main application package (refactored structure)
+│   ├── models/                   # SQLAlchemy models (split by domain) ✅ Phase 1 Complete
+│   │   ├── __init__.py          # Re-exports all models (backward compatibility)
+│   │   ├── base.py              # Base model classes
+│   │   ├── enums.py             # Enums (UserRole, SaleType, OrderStatus)
+│   │   ├── user.py              # User, Branch models
+│   │   ├── product.py           # Product, Category models
+│   │   ├── inventory.py         # BranchStock, ProductSize, InventoryMovement, ImportLog
+│   │   ├── sales.py             # Sale, SaleItem
+│   │   ├── ecommerce.py         # EcommerceConfig, StoreBanner, ProductImage
+│   │   ├── payment.py           # PaymentConfig (legacy)
+│   │   ├── payment_method.py    # PaymentMethod (new configuration system)
+│   │   ├── system_config.py     # SystemConfig (centralized system configuration)
+│   │   ├── tax_rate.py          # TaxRate (tax configuration)
+│   │   ├── notification.py      # Notification (notification system)
+│   │   └── whatsapp.py          # WhatsAppConfig, WhatsAppSale, SocialMediaConfig
+│   │
+│   ├── schemas/                 # Pydantic schemas (split by domain) ✅ Phase 1 Complete
+│   │   ├── __init__.py          # Re-exports all schemas (backward compatibility)
+│   │   ├── common.py            # Common enums and types
+│   │   ├── auth.py              # Token, UserLogin schemas
+│   │   ├── user.py              # User schemas
+│   │   ├── branch.py            # Branch schemas
+│   │   ├── category.py          # Category schemas
+│   │   ├── product.py           # Product, ProductSize, ProductImage schemas
+│   │   ├── inventory.py         # BranchStock, InventoryMovement, StockAdjustment
+│   │   ├── sale.py              # Sale, SaleItem schemas
+│   │   ├── ecommerce.py         # E-commerce config and banners
+│   │   ├── payment.py           # Payment configuration (legacy)
+│   │   ├── payment_method.py    # Payment method schemas (new)
+│   │   ├── system_config.py     # System configuration schemas
+│   │   ├── tax_rate.py          # Tax rate schemas
+│   │   ├── notification.py      # Notification schemas
+│   │   ├── whatsapp.py          # WhatsApp integration
+│   │   └── dashboard.py         # Dashboard/reporting schemas
+│   │
+│   ├── repositories/            # Data access layer (repository pattern) ✅ Phase 2 Complete
+│   │   ├── __init__.py          # Re-exports all repositories
+│   │   ├── base.py              # BaseRepository with generic CRUD
+│   │   ├── user.py              # UserRepository, BranchRepository
+│   │   ├── product.py           # ProductRepository, CategoryRepository
+│   │   ├── inventory.py         # BranchStockRepository, ProductSizeRepository, InventoryMovementRepository
+│   │   ├── sale.py              # SaleRepository, SaleItemRepository
+│   │   ├── ecommerce.py         # EcommerceConfigRepository, StoreBannerRepository, ProductImageRepository
+│   │   ├── payment.py           # PaymentConfigRepository
+│   │   ├── notification.py      # NotificationRepository
+│   │   └── whatsapp.py          # WhatsAppConfigRepository, WhatsAppSaleRepository
+│   │
+│   ├── services/                # Business logic layer (partial implementation)
+│   │   ├── __init__.py          # Re-exports all services
+│   │   ├── inventory_service.py # Inventory and stock management
+│   │   ├── product_service.py   # Product operations
+│   │   ├── sale_service.py      # Sales processing
+│   │   ├── user_service.py      # User management
+│   │   ├── payment_service.py   # Payment processing and configuration
+│   │   └── notification_service.py # Notification system
+│   │
+│   └── core/                    # Core configuration (future)
+│
+├── routers/                     # API route handlers (migration in progress)
+│   ├── auth.py                  # Authentication endpoints
+│   ├── users.py                 # User management
+│   ├── branches.py              # Branch management
+│   ├── categories.py            # Category management (migrated to repositories)
+│   ├── products.py              # Product management (being migrated)
+│   ├── sales.py                 # Sales endpoints (being migrated)
+│   ├── ecommerce_public.py      # Public e-commerce API (being migrated)
+│   ├── ecommerce_advanced.py    # Admin e-commerce endpoints
+│   ├── config.py                # System configuration
+│   ├── content_management.py    # Content management
+│   ├── notifications.py         # Notification endpoints
+│   └── websockets.py            # WebSocket connections
+│
+├── models.py                    # LEGACY - imports from app.models for compatibility
+├── schemas.py                   # LEGACY - imports from app.schemas for compatibility
+├── database.py                  # DB configuration and session management
+├── auth.py                      # Authentication utilities (legacy)
+├── auth_compat.py               # Authentication compatibility layer
+├── services/                    # LEGACY - old auth_service.py (use app.services)
+├── websocket_manager.py         # WebSocket connection manager
+├── cloudinary_config.py         # Cloudinary integration
+│
+├── migrate_*.py                 # Database migration scripts
+│   ├── migrate_notifications.py
+│   ├── migrate_payment_methods.py
+│   ├── migrate_system_config.py
+│   └── migrate_tax_rates.py
+│
+└── notification_scheduler.py    # Background notification scheduler
+```
+
+**Key Architecture Layers**:
+1. **Models** (`app/models/`) - Database schema and relationships
+2. **Schemas** (`app/schemas/`) - Request/response validation
+3. **Repositories** (`app/repositories/`) - Data access abstraction (✅ Phase 2 Complete)
+4. **Services** (`app/services/`) - Business logic (🟡 Partial)
+5. **Routers** (`routers/`) - HTTP endpoints (delegates to services)
+
+**Repository Pattern Benefits**:
+- ✅ **Abstraction**: Routers don't need SQLAlchemy knowledge
+- ✅ **Testability**: Easy to mock repositories in unit tests
+- ✅ **Reusability**: Same repository methods across multiple endpoints
+- ✅ **Maintainability**: Centralized data access logic
+- ✅ **Type Safety**: Generic typing with `BaseRepository[ModelType]`
+- ✅ **15 Repositories**: All domains covered (User, Product, Inventory, Sales, etc.)
+
+**Available Repositories**:
+```python
+from app.repositories import (
+    UserRepository, BranchRepository,           # User domain
+    ProductRepository, CategoryRepository,       # Product domain
+    BranchStockRepository, ProductSizeRepository, InventoryMovementRepository,  # Inventory
+    SaleRepository, SaleItemRepository,         # Sales
+    EcommerceConfigRepository, StoreBannerRepository, ProductImageRepository,  # E-commerce
+    PaymentConfigRepository,                     # Payment
+    NotificationRepository,                      # Notifications
+    WhatsAppConfigRepository, WhatsAppSaleRepository  # WhatsApp
+)
+```
 
 ### User Roles and Permissions
 - **ADMIN**: Full system access, user management, multi-branch control
@@ -129,6 +256,7 @@ npm run test:e2e       # Cypress E2E tests
 - **Key Features**: Product catalog, shopping cart, checkout with POS integration
 
 ### Database Schema
+
 Key entities and relationships:
 - `users` → `branches` (many-to-one)
 - `products` → `categories` (many-to-one)
@@ -136,24 +264,100 @@ Key entities and relationships:
 - `sales` → `sale_items` (one-to-many)
 - `sales` → `users` (seller relationship)
 
+**Model Organization**:
+- User domain: `app/models/user.py` - User, Branch
+- Product domain: `app/models/product.py` - Product, Category, ProductSize, ProductImage
+- Inventory domain: `app/models/inventory.py` - BranchStock, InventoryMovement
+- Sales domain: `app/models/sales.py` - Sale, SaleItem
+- E-commerce domain: `app/models/ecommerce.py` - EcommerceConfig, StoreBanner
+- Payment domain: `app/models/payment.py` - PaymentConfig (legacy)
+- Payment methods: `app/models/payment_method.py` - PaymentMethod (new)
+- System config: `app/models/system_config.py` - SystemConfig
+- Tax rates: `app/models/tax_rate.py` - TaxRate
+- Notifications: `app/models/notification.py` - Notification
+- WhatsApp domain: `app/models/whatsapp.py` - WhatsAppConfig, WhatsAppSale
+- Enums: `app/models/enums.py` - UserRole, SaleType, OrderStatus
+
 ## Development Workflow
 
 ### Initial Setup
+
+**Setup Steps**
 1. Ensure Docker Desktop is running
 2. Clone repository and navigate to project root
-3. Run `make dev` to start all services
-4. Initialize database: `make shell-backend` → `python init_data.py`
-5. Access applications:
-   - POS Admin: http://localhost:3000
-   - E-commerce: http://localhost:3001
-   - API Docs: http://localhost:8000/docs
-   - Database Admin: http://localhost:8080
+3. Run `make dev` to start all services (builds and starts all containers)
+4. Initialize database with test data:
+   ```bash
+   make shell-backend
+   python init_data.py              # Core data (users, branches, categories, products)
+   python init_content_data.py      # E-commerce banners and config (optional)
+   python init_sportswear_data.py   # Sportswear catalog (optional)
+   exit
+   ```
+
+**Access Points:**
+- POS Admin: http://localhost:3000
+- E-commerce: http://localhost:3001
+- API Docs: http://localhost:8000/docs
+- Database Admin (Adminer): http://localhost:8080
+- Backend Health: http://localhost:8000/health
 
 ### Adding New Features
-1. Backend changes: Update models, create/update routers, add tests
-2. Frontend changes: Create components following existing patterns, update API types
-3. Database changes: Use SQLAlchemy migrations if needed
-4. Testing: Add unit tests, integration tests, and E2E tests as appropriate
+1. **Backend changes** (follow layered architecture):
+   - **Models**: Add/update models in `app/models/{domain}.py` (e.g., `app/models/product.py`)
+   - **Schemas**: Add/update schemas in `app/schemas/{domain}.py` (e.g., `app/schemas/product.py`)
+   - **Repositories**: Add data access methods in `app/repositories/{domain}.py`
+   - **Services**: Implement business logic in `app/services/{domain}_service.py`
+   - **Routers**: Create/update API endpoints in `routers/` (delegates to services)
+   - **Tests**: Write unit tests in `tests/unit/` and integration tests in `tests/integration/`
+
+   **Import Pattern**:
+   ```python
+   # Correct (new structure)
+   from app.models import User, Product, Sale
+   from app.schemas import UserCreate, ProductCreate
+   from app.repositories import ProductRepository, CategoryRepository
+   from app.services.product_service import ProductService
+
+   # Legacy (still works but deprecated)
+   from models import User, Product
+   from schemas import UserCreate
+   ```
+
+   **Using Repositories in Routers** (Recommended Pattern):
+   ```python
+   from fastapi import APIRouter, Depends
+   from sqlalchemy.orm import Session
+   from app.repositories import ProductRepository
+   from database import get_db
+
+   router = APIRouter()
+
+   def get_product_repo(db: Session = Depends(get_db)):
+       return ProductRepository(db)
+
+   @router.get("/products")
+   async def list_products(
+       skip: int = 0,
+       limit: int = 100,
+       product_repo: ProductRepository = Depends(get_product_repo)
+   ):
+       products = product_repo.get_all(skip=skip, limit=limit)
+       return products
+   ```
+2. **Frontend changes**:
+   - POS Admin: Components in `frontend/pos-cesariel/app/`
+   - E-commerce: Components in `ecommerce/app/`
+   - Follow existing patterns (hooks, context, API clients)
+   - Update TypeScript types to match backend schemas
+3. **Database changes**:
+   - Modify SQLAlchemy models in `models.py`
+   - Alembic migrations (if using migration system)
+   - Run migrations via backend container
+4. **Testing**:
+   - Backend: Add pytest unit/integration tests
+   - Frontend: Add Jest unit tests and Cypress E2E tests
+   - Test backend changes inside container with `make shell-backend`
 
 ### Working with Inventory
 - Products must have `show_in_ecommerce = true` to appear in online store
@@ -161,11 +365,51 @@ Key entities and relationships:
 - Stock synchronization is handled at the API level between POS and e-commerce
 - Use `init_data.py` scripts for seeding test data
 
+### Database Migrations
+The system includes several migration scripts for upgrading existing databases:
+```bash
+# Run inside backend container (make shell-backend)
+python migrate_notifications.py     # Migrate to notification system
+python migrate_payment_methods.py   # Migrate to new payment method configuration
+python migrate_system_config.py     # Migrate to centralized system config
+python migrate_tax_rates.py         # Migrate to tax rate configuration
+```
+
+**Migration order** (if migrating from old schema):
+1. `migrate_system_config.py` - Core system settings
+2. `migrate_tax_rates.py` - Tax configuration
+3. `migrate_payment_methods.py` - Payment methods
+4. `migrate_notifications.py` - Notification system
+
+### Notification System
+The system includes a notification framework for scheduling and managing notifications:
+- **Model**: `app/models/notification.py`
+- **Service**: `app/services/notification_service.py`
+- **Scheduler**: `backend/notification_scheduler.py` (background process)
+- **Router**: `routers/notifications.py`
+
+**Notification types**: Stock alerts, payment reminders, system updates
+
+To run the notification scheduler:
+```bash
+# In production, run as a separate background service
+python notification_scheduler.py
+```
+
 ### Testing Strategy
-- **Backend**: pytest with unit and integration test separation
+- **Backend**: pytest with unit and integration test separation, run tests inside container
+  - Unit tests: Authentication, models, database operations
+  - Integration tests: API endpoints, WebSockets, sales flow, e-commerce
+  - Configuration: `pytest.ini` at backend root
+  - Test markers: `@pytest.mark.unit`, `@pytest.mark.integration`, `@pytest.mark.auth`, `@pytest.mark.websocket`, `@pytest.mark.slow`
+  - Coverage target: 80% minimum (enforced by pytest)
 - **POS Frontend**: Jest for unit tests, Cypress for E2E, Lighthouse for performance
+  - Jest config: `jest.config.js` with React Testing Library
+  - Cypress config: `cypress.config.ts` for E2E testing
+  - Performance: Lighthouse CI and Artillery load testing (`artillery.yml`)
 - **E-commerce**: Jest for unit tests, Cypress for E2E
-- **Load Testing**: Artillery configuration for realistic traffic simulation
+  - Jest config: `jest.config.js` with jsdom environment
+  - Cypress for end-to-end user journey testing
 
 ## Environment Configuration
 
@@ -253,6 +497,21 @@ make shell-db          # Direct database access
 - Ensure products have `show_in_ecommerce = true`
 - Check category visibility settings
 - Verify API connectivity via `/health` endpoint
+
+**VS Code showing Python import errors**
+- See `backend/QUICK_FIX_VSCODE.md` for 2-minute fix
+- Install Pylance extension
+- Select Python interpreter
+- Errors are visual only - code runs fine in Docker
+
+**Import errors after refactoring**
+- Use `from app.models import Model` instead of `from models import Model`
+- Use `from app.schemas import Schema` instead of `from schemas import Schema`
+- Old imports still work but are deprecated (backward compatibility maintained)
+- Phase 1 (models/schemas split) is ✅ COMPLETE - see `backend/PHASE1_COMPLETE.md`
+- Phase 2 (repository layer) is ✅ COMPLETE - see `backend/PHASE2_COMPLETE.md`
+- Phase 3 (service layer) is 🟡 PARTIAL - some services exist in `app/services/`
+- 15 repositories available with full CRUD operations via `BaseRepository`
 
 ### Performance Issues
 - Monitor database query performance

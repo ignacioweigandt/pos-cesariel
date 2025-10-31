@@ -1,6 +1,6 @@
 from database import SessionLocal, engine, Base
-from models import (Branch, User, Category, Product, ProductSize, ProductImage, 
-                   EcommerceConfig, UserRole, Sale, SaleItem, InventoryMovement, 
+from app.models import (Branch, User, Category, Product, ProductSize, ProductImage,
+                   EcommerceConfig, UserRole, Sale, SaleItem, InventoryMovement,
                    BranchStock, StoreBanner, WhatsAppSale)
 from auth import get_password_hash
 from decimal import Decimal

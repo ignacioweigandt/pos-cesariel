@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from database import Base
-from models import User, Branch, Category, Product, Sale, SaleItem, InventoryMovement
+from app.models import User, Branch, Category, Product, Sale, SaleItem, InventoryMovement
 
 
 @pytest.mark.integration

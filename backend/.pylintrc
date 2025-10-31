@@ -1,0 +1,116 @@
+[MASTER]
+# Add files or directories to the blacklist. They should be base names, not paths.
+ignore=CVS,__pycache__,venv,.venv,node_modules
+
+# Use multiple processes to speed up Pylint.
+jobs=1
+
+# Pickle collected data for later comparisons.
+persistent=yes
+
+# When enabled, pylint would attempt to guess common misconfiguration and emit
+# user-friendly hints instead of false-positive error messages.
+suggestion-mode=yes
+
+# Allow loading of arbitrary C extensions.
+unsafe-load-any-extension=no
+
+# Initialize Python path to include current directory
+init-hook='import sys; sys.path.insert(0, ".")'
+
+[MESSAGES CONTROL]
+# Disable specific warnings
+disable=
+    C0103,  # invalid-name
+    C0111,  # missing-docstring
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring
+    C0116,  # missing-function-docstring
+    E1101,  # no-member (SQLAlchemy false positives)
+    R0903,  # too-few-public-methods
+    R0913,  # too-many-arguments
+    W0212,  # protected-access
+    W0621,  # redefined-outer-name
+    W0703,  # broad-except
+    W1203,  # logging-fstring-interpolation
+    C0301,  # line-too-long
+    R0914,  # too-many-locals
+    R0915,  # too-many-statements
+    E0401,  # import-error
+    C0330,  # bad-continuation
+    C0326,  # bad-whitespace
+
+[REPORTS]
+# Set the output format.
+output-format=text
+
+# Tells whether to display a full report or only the messages
+reports=no
+
+# Python expression which should return a note less than 10
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+
+[BASIC]
+# Good variable names which should always be accepted
+good-names=i,j,k,ex,Run,_,id,db,pk
+
+# Regular expression matching correct function names
+function-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct variable names
+variable-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct constant names
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+# Regular expression matching correct attribute names
+attr-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct argument names
+argument-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct class attribute names
+class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+
+# Regular expression matching correct inline iteration names
+inlinevar-rgx=[A-Za-z_][A-Za-z0-9_]*$
+
+# Regular expression matching correct class names
+class-rgx=[A-Z_][a-zA-Z0-9]+$
+
+# Regular expression matching correct module names
+module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# Regular expression matching correct method names
+method-rgx=[a-z_][a-z0-9_]{2,30}$
+
+[FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=120
+
+# Maximum number of lines in a module
+max-module-lines=1000
+
+# String used as indentation unit.
+indent-string='    '
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of attributes for a class
+max-attributes=15
+
+# Minimum number of public methods for a class
+min-public-methods=0
+
+# Maximum number of public methods for a class
+max-public-methods=20
+
+[IMPORTS]
+# Deprecated modules which should not be used
+deprecated-modules=optparse
+
+[EXCEPTIONS]
+# Exceptions that will emit a warning when being caught.
+overgeneral-exceptions=Exception

@@ -6,8 +6,8 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 from database import get_db
-from models import Product, Category, Sale, SaleItem, InventoryMovement, User, Branch, SaleType, StoreBanner, SocialMediaConfig, EcommerceConfig, WhatsAppSale, ProductSize, WhatsAppConfig, ProductImage, BranchStock
-from schemas import SaleCreate
+from app.models import Product, Category, Sale, SaleItem, InventoryMovement, User, Branch, SaleType, StoreBanner, SocialMediaConfig, EcommerceConfig, WhatsAppSale, ProductSize, WhatsAppConfig, ProductImage, BranchStock
+from app.schemas import SaleCreate
 from websocket_manager import notify_new_sale
 
 def generate_sale_number(sale_type: SaleType) -> str:
@@ -506,9 +506,9 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                         status_code=400,
                         detail=f"Producto {product.name} requiere especificar un talle"
                     )
-                
+
+
                 # Check size-specific stock
-                from models import ProductSize
                 size_stock = db.query(ProductSize).filter(
                     ProductSize.product_id == item.product_id,
                     ProductSize.branch_id == default_branch.id,
@@ -601,7 +601,6 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                 # Update stock based on whether product has sizes
                 if product.has_sizes and item_data["size"]:
                     # Update size-specific stock
-                    from models import ProductSize
                     size_stock = db.query(ProductSize).filter(
                         ProductSize.product_id == product.id,
                         ProductSize.branch_id == default_branch.id,

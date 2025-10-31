@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
-from models import Branch, User
-from schemas import Branch as BranchSchema, BranchCreate, BranchUpdate
+from app.models import Branch, User
+from app.schemas import Branch as BranchSchema, BranchCreate, BranchUpdate
 from auth_compat import get_current_active_user, require_admin, require_manager_or_admin
 
 router = APIRouter(prefix="/branches", tags=["branches"])

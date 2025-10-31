@@ -5,8 +5,8 @@ from typing import List, Optional
 from datetime import datetime, date
 from decimal import Decimal
 from database import get_db
-from models import Sale, SaleItem, Product, User, InventoryMovement, SaleType, OrderStatus, ProductSize, BranchStock
-from schemas import Sale as SaleSchema, SaleCreate, SaleStatusUpdate, SalesReport, DashboardStats, DailySales, ChartData
+from app.models import Sale, SaleItem, Product, User, InventoryMovement, SaleType, OrderStatus, ProductSize, BranchStock, Branch
+from app.schemas import Sale as SaleSchema, SaleCreate, SaleStatusUpdate, SalesReport, DashboardStats, DailySales, ChartData
 from auth_compat import get_current_active_user, require_manager_or_admin
 from websocket_manager import notify_new_sale, notify_inventory_change, notify_low_stock, notify_dashboard_update
 import uuid
@@ -400,19 +400,69 @@ async def get_dashboard_stats(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get dashboard statistics - simplified version for thesis demo"""
+    """Get real-time dashboard statistics from database"""
     try:
-        # Return simple default stats for thesis presentation
+        from datetime import timedelta
+        from app.models import Branch
+
+        # Get today's date range
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_end = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999)
+
+        # Get month's date range
+        month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # Base query for sales (exclude cancelled)
+        sales_query = db.query(Sale).filter(Sale.order_status != OrderStatus.CANCELLED)
+
+        # Filter by branch if not admin
+        if current_user.role.value.upper() != "ADMIN":
+            sales_query = sales_query.filter(Sale.branch_id == current_user.branch_id)
+
+        # Today's sales
+        total_sales_today = sales_query.filter(
+            Sale.created_at >= today_start,
+            Sale.created_at <= today_end
+        ).with_entities(func.sum(Sale.total_amount)).scalar() or Decimal("0.00")
+
+        # This month's sales
+        total_sales_month = sales_query.filter(
+            Sale.created_at >= month_start
+        ).with_entities(func.sum(Sale.total_amount)).scalar() or Decimal("0.00")
+
+        # Total products count
+        product_query = db.query(Product).filter(Product.is_active == True)
+        total_products = product_query.count()
+
+        # Low stock products (stock <= min_stock)
+        low_stock_products = 0
+        products = product_query.all()
+        for product in products:
+            try:
+                total_stock = product.calculate_total_stock()
+                if total_stock <= product.min_stock:
+                    low_stock_products += 1
+            except:
+                pass
+
+        # Active branches count
+        active_branches = db.query(Branch).filter(Branch.is_active == True).count()
+
+        # Total users count
+        total_users = db.query(User).filter(User.is_active == True).count()
+
         return DashboardStats(
-            total_sales_today=Decimal("125.50"),
-            total_sales_month=Decimal("3450.75"),
-            total_products=10,
-            low_stock_products=2,
-            active_branches=2,
-            total_users=3
+            total_sales_today=total_sales_today,
+            total_sales_month=total_sales_month,
+            total_products=total_products,
+            low_stock_products=low_stock_products,
+            active_branches=active_branches,
+            total_users=total_users
         )
     except Exception as e:
-        logger.error(f"Error in dashboard stats: {str(e)}")
+        print(f"Error in dashboard stats: {str(e)}")
+        import traceback
+        traceback.print_exc()
         # Return default stats on any error
         return DashboardStats(
             total_sales_today=Decimal("0.00"),
@@ -467,7 +517,6 @@ async def get_sales_report(
     # Sales by branch (admin only)
     sales_by_branch = []
     if current_user.role.value == "ADMIN":
-        from models import Branch
         sales_by_branch_query = db.query(
             Branch.name,
             func.sum(Sale.total_amount).label('total_sales'),
@@ -586,8 +635,7 @@ async def get_branches_chart_data(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
         )
-    
-    from models import Branch
+
     branches_query = db.query(
         Branch.name,
         func.sum(Sale.total_amount).label('total_sales')

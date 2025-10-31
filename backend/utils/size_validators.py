@@ -63,15 +63,15 @@ def get_valid_sizes_for_category(category_name: str) -> List[str]:
 def get_valid_sizes_for_product(db: Session, product_id: int) -> List[str]:
     """
     Obtiene los talles válidos para un producto específico basado en su categoría.
-    
+
     Args:
         db (Session): Sesión de base de datos
         product_id (int): ID del producto
-        
+
     Returns:
         List[str]: Lista de talles válidos para el producto
     """
-    from models import Product, Category
+    from app.models import Product, Category
     
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product or not product.category:

@@ -159,7 +159,7 @@ class TestDatabaseTransactions:
     
     def test_session_commit_rollback(self, db_session):
         """Test session commit and rollback functionality."""
-        from models import Category
+        from app.models import Category
         
         # Create a test category
         category = Category(name="Test Category", description="Test")
@@ -182,7 +182,7 @@ class TestDatabaseTransactions:
     
     def test_session_flush(self, db_session):
         """Test session flush functionality."""
-        from models import Category
+        from app.models import Category
         
         category = Category(name="Flush Test", description="Test flush")
         db_session.add(category)
@@ -205,7 +205,7 @@ class TestDatabaseQueries:
     
     def test_query_filtering(self, db_session, test_category):
         """Test basic query filtering."""
-        from models import Category
+        from app.models import Category
         
         # Query by name
         result = db_session.query(Category).filter_by(name=test_category.name).first()
@@ -218,7 +218,7 @@ class TestDatabaseQueries:
     
     def test_query_ordering(self, db_session):
         """Test query ordering."""
-        from models import Category
+        from app.models import Category
         
         # Create multiple categories
         categories = [
@@ -243,7 +243,7 @@ class TestDatabaseQueries:
     
     def test_query_pagination(self, db_session):
         """Test query pagination."""
-        from models import Category
+        from app.models import Category
         
         # Create multiple categories
         for i in range(10):

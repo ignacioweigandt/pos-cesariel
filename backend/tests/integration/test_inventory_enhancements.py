@@ -3,7 +3,7 @@ import io
 import csv
 from fastapi.testclient import TestClient
 from unittest.mock import Mock
-from models import Product, Category, BranchStock, ProductSize, ImportLog
+from app.models import Product, Category, BranchStock, ProductSize, ImportLog
 from decimal import Decimal
 
 

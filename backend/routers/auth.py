@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from datetime import timedelta
 from database import get_db
 from auth_compat import authenticate_user, create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_active_user
-from schemas import Token, UserLogin, User
-from models import User as UserModel
+from app.schemas import Token, UserLogin, User
+from app.models import User as UserModel
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
