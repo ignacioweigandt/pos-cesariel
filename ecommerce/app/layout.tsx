@@ -1,24 +1,24 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { EcommerceProvider } from "./context/EcommerceContext"
-import Header from "./components/Header"
-import Footer from "./components/Footer"
+import Footer from "@/src/shared/components/layout/Footer";
+import Header from "@/src/shared/components/layout/Header";
+import { EcommerceProvider } from "@/src/shared/providers/ecommerce-provider";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import type React from "react";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Mi Tienda Online - E-commerce",
   description: "Tienda online con productos de calidad y los mejores precios",
   keywords: "tienda, online, ropa, calzado, accesorios",
-    generator: 'v0.dev'
-}
+  generator: "v0.dev",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="es">
@@ -32,5 +32,5 @@ export default function RootLayout({
         </EcommerceProvider>
       </body>
     </html>
-  )
+  );
 }

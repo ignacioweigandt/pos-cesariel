@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
-import ProductCard from "../components/ProductCard"
-import { useProducts } from "../hooks/useProducts"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import ProductCard from "@/src/shared/components/ProductCard"
+import { useProducts } from "@/src/shared/hooks/useProducts"
+import { Button } from "@/src/shared/components/ui/button"
+import { Input } from "@/src/shared/components/ui/input"
+import { Checkbox } from "@/src/shared/components/ui/checkbox"
+import { Label } from "@/src/shared/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/shared/components/ui/select"
 import { Filter, X } from "lucide-react"
 
 export default function ProductsPage() {

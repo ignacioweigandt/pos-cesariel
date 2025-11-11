@@ -3,14 +3,14 @@
 import { useState } from "react"
 import Image from "next/image"
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react"
-import { useEcommerce } from "../context/EcommerceContext"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import RemoveFromCartModal from "../components/modals/RemoveFromCartModal"
-import CheckoutErrorModal from "../components/modals/CheckoutErrorModal"
-import LoadingModal from "../components/modals/LoadingModal"
-import { whatsappConfigApi, WhatsAppConfig } from "../lib/api"
+import { useEcommerce } from "@/src/shared/providers/ecommerce-provider"
+import { Button } from "@/src/shared/components/ui/button"
+import { Input } from "@/src/shared/components/ui/input"
+import { Separator } from "@/src/shared/components/ui/separator"
+import RemoveFromCartModal from "@/app/components/modals/RemoveFromCartModal"
+import CheckoutErrorModal from "@/app/components/modals/CheckoutErrorModal"
+import LoadingModal from "@/app/components/modals/LoadingModal"
+import { whatsappConfigApi, WhatsAppConfig } from "@/app/lib/api"
 
 export default function CartPage() {
   const { 

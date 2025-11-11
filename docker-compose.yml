@@ -83,6 +83,9 @@ services:
       - ./ecommerce:/app
       - /app/node_modules  # Evita sobrescribir node_modules
     environment:
+      # Server-side URL (Docker internal network)
+      - API_URL=http://backend:8000
+      # Client-side URL (browser from host machine)
       - NEXT_PUBLIC_API_URL=http://localhost:8000
       - PORT=3001
       - WATCHPACK_POLLING=true
