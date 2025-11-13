@@ -68,6 +68,7 @@ class Product(Base):
         sku (str): Código SKU único del producto (máx. 50 caracteres)
         barcode (str): Código de barras único para escaneo (máx. 50 caracteres)
         category_id (int): ID de la categoría asignada (FK hacia categories.id)
+        brand (str): Marca del producto (Nike, Adidas, Puma, etc.) (máx. 100 caracteres)
         price (decimal): Precio de venta en POS (10 dígitos, 2 decimales)
         cost (decimal): Costo del producto para cálculo de margen
         stock_quantity (int): Stock general del producto (suma de todas las sucursales)
@@ -107,7 +108,9 @@ class Product(Base):
     # Categorización
     category_id = Column(Integer, ForeignKey("categories.id"),
                          doc="ID de la categoría asignada al producto")
-    
+    brand = Column(String(100),
+                   doc="Marca del producto (Nike, Adidas, Puma, etc.)")
+
     # Precios y costos
     price = Column(Numeric(10, 2), nullable=False,
                    doc="Precio de venta en POS (con 2 decimales)")

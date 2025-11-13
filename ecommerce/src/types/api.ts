@@ -26,6 +26,25 @@ export interface ApiProduct {
   images?: ApiProductImage[];
 }
 
+// Public API Product (from /ecommerce/products endpoint)
+export interface ApiPublicProduct {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  stock: number;
+  featured: boolean;
+  is_active: boolean;
+  show_in_ecommerce: boolean;
+  category_id: number;
+  image_url: string | null;
+  has_sizes: boolean;
+  created_at: string;
+  // Optional relations
+  category?: { id: number; name: string };
+  images?: { id: number; image_url: string; order: number }[];
+}
+
 export interface ApiProductSize {
   id: number;
   product_id: number;

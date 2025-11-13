@@ -86,6 +86,7 @@ def get_ecommerce_products(
     limit: int = Query(100, le=1000),
     offset: int = Query(0, ge=0),
     category: Optional[str] = None,
+    brand: Optional[str] = None,
     search: Optional[str] = None,
     featured: Optional[bool] = None,
     in_stock: Optional[bool] = None
@@ -102,7 +103,10 @@ def get_ecommerce_products(
         # Filtros opcionales
         if category:
             query = query.join(Category).filter(Category.name.ilike(f"%{category}%"))
-        
+
+        if brand:
+            query = query.filter(Product.brand.ilike(f"%{brand}%"))
+
         if search:
             query = query.filter(Product.name.ilike(f"%{search}%"))
             
@@ -152,6 +156,7 @@ def get_ecommerce_products(
                 "is_active": product.is_active,
                 "show_in_ecommerce": product.show_in_ecommerce,
                 "category_id": product.category_id,
+                "brand": product.brand,
                 "image_url": product.image_url,
                 "has_sizes": product.has_sizes,
                 "created_at": product.created_at.isoformat() if product.created_at else None
@@ -320,7 +325,7 @@ def get_ecommerce_categories(db: Session = Depends(get_db)):
     """
     try:
         categories = db.query(Category).filter(Category.is_active == True).all()
-        
+
         result = []
         for category in categories:
             result.append({
@@ -328,11 +333,41 @@ def get_ecommerce_categories(db: Session = Depends(get_db)):
                 "name": category.name,
                 "is_active": category.is_active
             })
-            
+
         return {"data": result}
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al obtener categorías: {str(e)}")
+
+@router.get("/brands")
+def get_ecommerce_brands(db: Session = Depends(get_db)):
+    """
+    Obtener marcas disponibles en productos de e-commerce
+
+    Retorna una lista de marcas únicas de productos activos y visibles en e-commerce,
+    ordenadas alfabéticamente.
+    """
+    try:
+        # Query para obtener marcas únicas de productos activos en e-commerce
+        from sqlalchemy import distinct, func
+
+        brands = db.query(distinct(Product.brand))\
+            .filter(
+                Product.show_in_ecommerce == True,
+                Product.is_active == True,
+                Product.brand.isnot(None),
+                Product.brand != ''
+            )\
+            .order_by(Product.brand)\
+            .all()
+
+        # Extraer nombres de marcas de las tuplas
+        result = [{"name": brand[0]} for brand in brands if brand[0]]
+
+        return {"data": result}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener marcas: {str(e)}")
 
 @router.get("/banners")
 def get_ecommerce_banners(db: Session = Depends(get_db)):
@@ -410,10 +445,11 @@ def get_ecommerce_store_config(db: Session = Depends(get_db)):
                     "contact_phone": "+54 9 11 1234-5678",
                     "address": "Buenos Aires, Argentina",
                     "currency": "ARS",
-                    "tax_percentage": 0
+                    "tax_percentage": 0,
+                    "is_active": True
                 }
             }
-        
+
         return {
             "data": {
                 "store_name": config.store_name,
@@ -423,7 +459,8 @@ def get_ecommerce_store_config(db: Session = Depends(get_db)):
                 "contact_phone": config.contact_phone,
                 "address": config.address,
                 "currency": config.currency,
-                "tax_percentage": float(config.tax_percentage)
+                "tax_percentage": float(config.tax_percentage),
+                "is_active": config.is_active
             }
         }
         
@@ -665,12 +702,10 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                     )
                     db.add(inventory_movement)
         
-        # Si es una venta de WhatsApp (solo para ventas ECOMMERCE), crear automáticamente el registro de WhatsApp
+        # Si es una venta de e-commerce (desde la página web), crear automáticamente el registro de WhatsApp
+        # para coordinar la entrega con el cliente
         whatsapp_sale_id = None
-        if (actual_sale_type == "ECOMMERCE" and 
-            db_sale.payment_method == "WHATSAPP" and 
-            db_sale.customer_phone and 
-            db_sale.customer_name):
+        if (actual_sale_type == "ECOMMERCE" and db_sale.customer_name):
             try:
                 # Obtener configuración de WhatsApp
                 whatsapp_config = get_whatsapp_config(db)
@@ -702,23 +737,25 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                             break
                 
                 # Formatear número de teléfono para WhatsApp usando configuración
-                phone_number = format_whatsapp_phone(
-                    db_sale.customer_phone, 
-                    whatsapp_config.business_phone if whatsapp_config else None
-                )
-                
-                # Generar mensaje personalizado usando configuración
-                message = generate_whatsapp_message(
-                    db_sale.customer_name, 
-                    db_sale.sale_number,
-                    whatsapp_config
-                )
-                
-                # Decidir a qué número enviar el mensaje
-                # Si el cliente no proporcionó teléfono, usar el número de negocio configurado
-                target_phone = phone_number
-                if not db_sale.customer_phone and whatsapp_config and whatsapp_config.business_phone:
-                    target_phone = format_whatsapp_phone(None, whatsapp_config.business_phone)
+                # Si el cliente proporcionó teléfono, usarlo; si no, usar el número del negocio
+                if db_sale.customer_phone:
+                    phone_number = format_whatsapp_phone(
+                        db_sale.customer_phone,
+                        whatsapp_config.business_phone if whatsapp_config else None
+                    )
+                    target_phone = phone_number
+                    # Generar mensaje personalizado usando configuración
+                    message = generate_whatsapp_message(
+                        db_sale.customer_name,
+                        db_sale.sale_number,
+                        whatsapp_config
+                    )
+                else:
+                    # Si no hay teléfono del cliente, usar número del negocio como contacto
+                    target_phone = format_whatsapp_phone(
+                        None,
+                        whatsapp_config.business_phone if whatsapp_config else None
+                    )
                     message = f"Nueva venta e-commerce - Cliente: {db_sale.customer_name}, Pedido: #{db_sale.sale_number}, Total: ${db_sale.total_amount}"
                 
                 # Generar URL de WhatsApp  

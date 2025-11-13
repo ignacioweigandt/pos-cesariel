@@ -3,6 +3,7 @@
 // API types
 export type {
   ApiProduct,
+  ApiPublicProduct,
   ApiProductSize,
   ApiProductImage,
   ApiCategory,

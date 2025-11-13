@@ -2,8 +2,11 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
-import { salesApi, handleApiError } from "@/app/lib/api"
-// import { validateStock } from "@/app/lib/data-service" // Removed - not needed for e-commerce
+import {
+  validateProductStock,
+  createEcommerceSale,
+  type CreateSaleData
+} from "@/src/lib/actions"
 
 export interface CartItem {
   id: string
@@ -91,15 +94,29 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(async (newItem: CartItem): Promise<boolean> => {
     try {
       setError(null)
-      
-      // Skip stock validation for e-commerce - will be validated at checkout
-      // Stock validation requires authentication which e-commerce doesn't have
+      setLoading(true)
 
+      // Validate stock using Server Action
+      const existingItem = findItem(cartState.items, newItem.id, newItem.size, newItem.color)
+      const requestedQuantity = newItem.quantity + (existingItem?.quantity || 0)
+
+      const stockValidation = await validateProductStock(
+        newItem.productId,
+        requestedQuantity,
+        newItem.size
+      )
+
+      if (!stockValidation.available) {
+        setError(stockValidation.message || 'Stock insuficiente')
+        return false
+      }
+
+      // Stock is available, add to cart
       setCartState(prev => {
         const existingItem = findItem(prev.items, newItem.id, newItem.size, newItem.color)
-        
+
         let newItems: CartItem[]
-        
+
         if (existingItem) {
           // Update quantity of existing item
           newItems = prev.items.map(item =>
@@ -124,8 +141,10 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
       console.error('Error adding item to cart:', err)
       setError('Error al agregar producto al carrito')
       return false
+    } finally {
+      setLoading(false)
     }
-  }, [])
+  }, [cartState.items])
 
   const removeItem = useCallback((id: string, size?: string, color?: string) => {
     setCartState(prev => {
@@ -144,7 +163,8 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
   const updateQuantity = useCallback(async (id: string, quantity: number, size?: string, color?: string): Promise<boolean> => {
     try {
       setError(null)
-      
+      setLoading(true)
+
       if (quantity <= 0) {
         removeItem(id, size, color)
         return true
@@ -154,16 +174,26 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
       const item = findItem(cartState.items, id, size, color)
       if (!item) return false
 
-      // Skip stock validation for e-commerce - will be validated at checkout
-      // Stock validation requires authentication which e-commerce doesn't have
+      // Validate stock using Server Action
+      const stockValidation = await validateProductStock(
+        item.productId,
+        quantity,
+        item.size
+      )
 
+      if (!stockValidation.available) {
+        setError(stockValidation.message || 'Stock insuficiente')
+        return false
+      }
+
+      // Stock is available, update quantity
       setCartState(prev => {
         const newItems = prev.items.map(item =>
           findItem([item], id, size, color)
             ? { ...item, quantity }
             : item
         )
-        
+
         return {
           ...prev,
           items: newItems,
@@ -176,6 +206,8 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
       console.error('Error updating quantity:', err)
       setError('Error al actualizar cantidad')
       return false
+    } finally {
+      setLoading(false)
     }
   }, [cartState.items, removeItem])
 
@@ -224,74 +256,46 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
         deliveryNotes += `\nNotas: ${cartState.customerInfo.notes}`
       }
 
-      // Prepare sale data
-      const saleData = {
-        sale_type: 'ECOMMERCE' as const,
+      // Prepare sale data for Server Action
+      const saleData: CreateSaleData = {
+        sale_type: 'ECOMMERCE',
         customer_name: cartState.customerInfo.name,
         customer_phone: cartState.customerInfo.phone,
+        customer_email: cartState.customerInfo.email || undefined,
         notes: deliveryNotes,
-        payment_method: 'WHATSAPP', // Se coordina por WhatsApp
+        payment_method: 'WHATSAPP', // Payment coordinated via WhatsApp
         items: cartState.items.map(item => ({
-          product_id: item.productId || parseInt(item.id), // Fallback to string ID converted to number
+          product_id: item.productId || parseInt(item.id),
           quantity: item.quantity,
           unit_price: item.price,
-          size: item.size || undefined
+          size: item.size
         }))
       }
 
-      // Log the sale data for debugging
-      console.log('Sending sale data:', JSON.stringify(saleData, null, 2))
-      
-      // Validate sale data before sending
-      console.log('Sale data validation:')
-      console.log('- sale_type:', saleData.sale_type, typeof saleData.sale_type)
-      console.log('- payment_method:', saleData.payment_method, typeof saleData.payment_method)
-      console.log('- customer_name:', saleData.customer_name, typeof saleData.customer_name)
-      console.log('- items count:', saleData.items.length)
-      
-      saleData.items.forEach((item, index) => {
-        console.log(`- item ${index}:`, {
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          size: item.size
-        })
-      })
-      
-      // Create sale in backend
-      console.log('Making API call to /ecommerce/sales with:', saleData)
-      const response = await salesApi.create(saleData)
-      console.log('API Response:', response)
-      
-      if (response.data) {
+      // Create sale using Server Action
+      const result = await createEcommerceSale(saleData)
+
+      if (result.success) {
         // Clear cart on success
         clearCart()
-        
-        return { 
-          success: true, 
-          saleId: response.data.id || response.data.sale_id 
+
+        return {
+          success: true,
+          saleId: result.saleId
         }
       }
 
-      return { success: false, error: 'Error al procesar la venta' }
+      return {
+        success: false,
+        error: result.error || 'Error al procesar la venta'
+      }
 
     } catch (err) {
-      console.error('Error processing checkout:', err)
-      console.error('Error response:', err.response)
-      console.error('Error status:', err.response?.status)
-      console.error('Error data:', err.response?.data)
-      console.error('Error message:', err.message)
-      const errorInfo = handleApiError(err)
-      
-      // Combine main error message with validation errors
-      let errorMessage = errorInfo.message || 'Error al procesar la compra'
-      if (errorInfo.errors && errorInfo.errors.length > 0) {
-        errorMessage += '\n\nDetalles:\n' + errorInfo.errors.join('\n')
-      }
-      
-      return { 
-        success: false, 
-        error: errorMessage
+      console.error('[Checkout] Unexpected error:', err)
+
+      return {
+        success: false,
+        error: 'Error inesperado al procesar la compra'
       }
     } finally {
       setLoading(false)

@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/src/shared/components/ui/button"
-import type { Banner } from "@/types"
+import type { Banner } from "@/src/types"
 
 interface BannerCarouselProps {
   banners: Banner[]

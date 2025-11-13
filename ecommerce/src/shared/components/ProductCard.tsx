@@ -30,7 +30,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     const loadProductImages = async () => {
       try {
         setIsLoadingImages(true)
-        const response = await productsApi.getImages(product.id)
+        const response = await productsApi.getImages(Number(product.id))
         const productImages = response.data.data
         
         if (productImages && productImages.length > 0) {

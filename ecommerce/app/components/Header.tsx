@@ -7,8 +7,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { Search, ShoppingCart, Menu, X, ChevronDown } from "lucide-react"
 import { useEcommerce } from "../context/EcommerceContext"
-import { categories, brands } from "../lib/data"
-import { ecommerceApi } from "../lib/api"
+import { categoriesApi, brandsApi, storeConfigApi } from "../lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -35,14 +34,19 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("")
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null)
   const [isLoadingConfig, setIsLoadingConfig] = useState(true)
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
+  const [brands, setBrands] = useState<Array<{ name: string }>>([])
+  const [isLoadingData, setIsLoadingData] = useState(true)
   const { cartState } = useEcommerce()
+
+  console.log('🔍 Header rendered - Categories:', categories.length, 'Brands:', brands.length)
 
   // Cargar configuración de la tienda
   useEffect(() => {
     const loadStoreConfig = async () => {
       try {
         setIsLoadingConfig(true)
-        const response = await ecommerceApi.getConfig()
+        const response = await storeConfigApi.get()
         setStoreConfig(response.data.data)
       } catch (error) {
         console.error('Error cargando configuración de tienda:', error)
@@ -63,6 +67,45 @@ export default function Header() {
     }
 
     loadStoreConfig()
+  }, [])
+
+  // Cargar categorías y marcas (Client-side usando axios API)
+  useEffect(() => {
+    console.log('🚀 useEffect - Iniciando carga de categorías y marcas')
+    const loadData = async () => {
+      try {
+        setIsLoadingData(true)
+        console.log('📡 Llamando a categoriesApi y brandsApi...')
+        const [categoriesResponse, brandsResponse] = await Promise.all([
+          categoriesApi.getAll(),
+          brandsApi.getAll()
+        ])
+        console.log('✅ Respuestas recibidas:', categoriesResponse.data, brandsResponse.data)
+
+        // Extraer y procesar categorías
+        const categoriesData = categoriesResponse.data.data
+          .filter((cat: any) => cat.is_active)
+          .sort((a: any, b: any) => a.name.localeCompare(b.name))
+          .map((cat: any) => ({ id: cat.id, name: cat.name }))
+
+        // Extraer y procesar marcas
+        const brandsData = brandsResponse.data.data
+          .sort((a: any, b: any) => a.name.localeCompare(b.name))
+
+        console.log('✅ Datos procesados - Categories:', categoriesData.length, 'Brands:', brandsData.length)
+        console.log('📦 Categories:', categoriesData)
+        console.log('📦 Brands:', brandsData)
+
+        setCategories(categoriesData)
+        setBrands(brandsData)
+      } catch (error) {
+        console.error('❌ Error cargando categorías y marcas:', error)
+      } finally {
+        setIsLoadingData(false)
+      }
+    }
+
+    loadData()
   }, [])
 
   const handleSearch = (e: React.FormEvent) => {
@@ -148,27 +191,19 @@ export default function Header() {
               Categorías <ChevronDown className="ml-1 h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
-              {categories.map((category) => (
-                <div key={category.id}>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/productos?categoria=${category.slug}`} className="font-medium">
+              {isLoadingData ? (
+                <div className="p-4 text-center text-sm text-gray-500">Cargando...</div>
+              ) : categories.length > 0 ? (
+                categories.map((category) => (
+                  <DropdownMenuItem key={category.id} asChild>
+                    <Link href={`/productos?categoria=${encodeURIComponent(category.name)}`} className="font-medium">
                       {category.name}
                     </Link>
                   </DropdownMenuItem>
-                  {category.subcategories && (
-                    <>
-                      {category.subcategories.map((sub) => (
-                        <DropdownMenuItem key={sub.id} asChild>
-                          <Link href={`/productos?categoria=${sub.slug}`} className="pl-4 text-sm">
-                            {sub.name}
-                          </Link>
-                        </DropdownMenuItem>
-                      ))}
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-gray-500">No hay categorías</div>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -178,11 +213,17 @@ export default function Header() {
               Marcas <ChevronDown className="ml-1 h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-48">
-              {brands.map((brand) => (
-                <DropdownMenuItem key={brand.id} asChild>
-                  <Link href={`/productos?marca=${brand.slug}`}>{brand.name}</Link>
-                </DropdownMenuItem>
-              ))}
+              {isLoadingData ? (
+                <div className="p-4 text-center text-sm text-gray-500">Cargando...</div>
+              ) : brands.length > 0 ? (
+                brands.map((brand, index) => (
+                  <DropdownMenuItem key={index} asChild>
+                    <Link href={`/productos?marca=${encodeURIComponent(brand.name)}`}>{brand.name}</Link>
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <div className="p-4 text-center text-sm text-gray-500">No hay marcas</div>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -231,39 +272,43 @@ export default function Header() {
 
               <div className="py-2">
                 <div className="font-medium text-gray-800 mb-2">Categorías</div>
-                {categories.map((category) => (
-                  <div key={category.id} className="ml-4">
-                    <Link href={`/productos?categoria=${category.slug}`} className="block py-1 text-gray-600">
-                      {category.name}
-                    </Link>
-                    {category.subcategories && (
-                      <div className="ml-4">
-                        {category.subcategories.map((sub) => (
-                          <Link
-                            key={sub.id}
-                            href={`/productos?categoria=${sub.slug}`}
-                            className="block py-1 text-sm text-gray-500"
-                          >
-                            {sub.name}
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                {isLoadingData ? (
+                  <div className="ml-4 text-sm text-gray-500">Cargando...</div>
+                ) : categories.length > 0 ? (
+                  categories.map((category) => (
+                    <div key={category.id} className="ml-4">
+                      <Link
+                        href={`/productos?categoria=${encodeURIComponent(category.name)}`}
+                        className="block py-1 text-gray-600"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {category.name}
+                      </Link>
+                    </div>
+                  ))
+                ) : (
+                  <div className="ml-4 text-sm text-gray-500">No hay categorías</div>
+                )}
               </div>
 
               <div className="py-2">
                 <div className="font-medium text-gray-800 mb-2">Marcas</div>
-                {brands.map((brand) => (
-                  <Link
-                    key={brand.id}
-                    href={`/productos?marca=${brand.slug}`}
-                    className="block py-1 ml-4 text-gray-600"
-                  >
-                    {brand.name}
-                  </Link>
-                ))}
+                {isLoadingData ? (
+                  <div className="ml-4 text-sm text-gray-500">Cargando...</div>
+                ) : brands.length > 0 ? (
+                  brands.map((brand, index) => (
+                    <Link
+                      key={index}
+                      href={`/productos?marca=${encodeURIComponent(brand.name)}`}
+                      className="block py-1 ml-4 text-gray-600"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {brand.name}
+                    </Link>
+                  ))
+                ) : (
+                  <div className="ml-4 text-sm text-gray-500">No hay marcas</div>
+                )}
               </div>
             </nav>
           </div>

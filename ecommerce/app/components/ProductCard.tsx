@@ -30,7 +30,7 @@ export default function ProductCard({ product }: ProductCardProps) {
     const loadProductImages = async () => {
       try {
         setIsLoadingImages(true)
-        const response = await productsApi.getImages(product.id)
+        const response = await productsApi.getImages(Number(product.id))
         const productImages = response.data.data
         
         if (productImages && productImages.length > 0) {
@@ -46,7 +46,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           if (product.images && product.images.length > 0 && product.images[0]) {
             setImages([{
               id: 0,
-              product_id: product.id,
+              product_id: Number(product.id),
               image_url: product.images[0],
               alt_text: product.name,
               is_main: true,
@@ -61,7 +61,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         if (product.images && product.images.length > 0 && product.images[0]) {
           setImages([{
             id: 0,
-            product_id: product.id,
+            product_id: Number(product.id),
             image_url: product.images[0],
             alt_text: product.name,
             is_main: true,

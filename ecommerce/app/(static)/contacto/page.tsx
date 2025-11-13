@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Metadata } from "next"
+// import { Metadata } from "next"  // Not needed in client component
 import { Mail, Phone, MapPin, Clock, Send } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

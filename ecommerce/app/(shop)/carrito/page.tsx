@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react"
 import { useEcommerce } from "@/src/shared/providers/ecommerce-provider"
 import { Button } from "@/src/shared/components/ui/button"
@@ -10,28 +11,35 @@ import { Separator } from "@/src/shared/components/ui/separator"
 import RemoveFromCartModal from "@/app/components/modals/RemoveFromCartModal"
 import CheckoutErrorModal from "@/app/components/modals/CheckoutErrorModal"
 import LoadingModal from "@/app/components/modals/LoadingModal"
-import { whatsappConfigApi, WhatsAppConfig } from "@/app/lib/api"
+import PurchaseSuccessModal from "@/app/components/modals/PurchaseSuccessModal"
+import { whatsappConfigApi } from "@/app/lib/api"
 
 export default function CartPage() {
-  const { 
-    cartState, 
-    updateQuantity, 
-    removeItem, 
-    setCustomerInfo, 
-    setDeliveryMethod, 
-    processCheckout,
-    loading,
-    error 
+  const {
+    cartState,
+    updateQuantity,
+    removeItem,
+    setCustomerInfo,
+    setDeliveryMethod,
+    processCheckout
   } = useEcommerce()
 
   const [showRemoveModal, setShowRemoveModal] = useState(false)
-  const [productToRemove, setProductToRemove] = useState<any>(null)
+  const [productToRemove, setProductToRemove] = useState<{ id: string; name: string; size?: string; color?: string } | null>(null)
   const [showErrorModal, setShowErrorModal] = useState(false)
-  const [errorConfig, setErrorConfig] = useState({ title: "", message: "", missingFields: [] })
+  const [errorConfig, setErrorConfig] = useState<{ title: string; message: string; missingFields: string[] }>({ title: "", message: "", missingFields: [] })
   const [showLoadingModal, setShowLoadingModal] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [completedSaleId, setCompletedSaleId] = useState<number | undefined>(undefined)
+  const [savedCartState, setSavedCartState] = useState<typeof cartState | null>(null)
+
+  // Debug useEffect to monitor modal state
+  useEffect(() => {
+    console.log('🔔 showSuccessModal cambió a:', showSuccessModal)
+  }, [showSuccessModal])
 
   // Helper function to update customer info
-  const updateCustomerInfo = (updates: any) => {
+  const updateCustomerInfo = (updates: Partial<typeof cartState.customerInfo>) => {
     const currentInfo = cartState.customerInfo || {
       name: "",
       phone: "",
@@ -50,7 +58,7 @@ export default function CartPage() {
   }
 
   // Helper function to update address
-  const updateAddress = (addressUpdates: any) => {
+  const updateAddress = (addressUpdates: Partial<NonNullable<typeof cartState.customerInfo>['address']>) => {
     const currentAddress = cartState.customerInfo?.address || {
       street: "",
       number: "",
@@ -72,7 +80,7 @@ export default function CartPage() {
     }
   }
 
-  const handleRemoveClick = (item: any) => {
+  const handleRemoveClick = (item: { id: string; name: string; size?: string; color?: string }) => {
     setProductToRemove(item)
     setShowRemoveModal(true)
   }
@@ -113,16 +121,23 @@ export default function CartPage() {
 
     setShowLoadingModal(true)
 
+    // Save cart state before checkout (cart will be cleared after processCheckout)
+    setSavedCartState({ ...cartState })
+
     try {
       // Process checkout through EcommerceContext (creates sale in backend)
       const result = await processCheckout()
-      
+
+      console.log('🔍 Checkout result:', result)
       setShowLoadingModal(false)
 
       if (result.success) {
-        // Generate WhatsApp message after successful backend sale
-        await generateWhatsAppMessage(result.saleId)
+        // Store sale ID and show success modal
+        console.log('✅ Checkout exitoso, mostrando modal de éxito')
+        setCompletedSaleId(result.saleId)
+        setShowSuccessModal(true)
       } else {
+        console.log('❌ Checkout falló:', result.error)
         setErrorConfig({
           title: "Error en el Checkout",
           message: result.error || "Hubo un problema al procesar tu pedido. Intenta nuevamente.",
@@ -130,7 +145,7 @@ export default function CartPage() {
         })
         setShowErrorModal(true)
       }
-    } catch (error) {
+    } catch {
       setShowLoadingModal(false)
       setErrorConfig({
         title: "Error de Conexión",
@@ -141,12 +156,28 @@ export default function CartPage() {
     }
   }
 
+  const handleContinueToWhatsApp = async () => {
+    console.log('📱 Continuando a WhatsApp con sale ID:', completedSaleId)
+    console.log('📦 Saved cart state:', savedCartState)
+
+    // Close success modal
+    setShowSuccessModal(false)
+
+    // Generate WhatsApp message with the stored sale ID
+    await generateWhatsAppMessage(completedSaleId)
+  }
+
   const generateWhatsAppMessage = async (saleId?: number) => {
+    console.log('🚀 Generando mensaje de WhatsApp...')
+    // Use saved cart state (since cart is cleared after checkout)
+    const cart = savedCartState || cartState
+    console.log('📋 Cart para WhatsApp:', cart)
+
     try {
       // Fetch WhatsApp configuration from backend
       const configResponse = await whatsappConfigApi.getConfig()
       let whatsappPhone = "5491123456789" // Fallback number
-      
+
       if (configResponse.data && configResponse.data.data) {
         const config = configResponse.data.data
         if (config.is_active && config.business_phone) {
@@ -155,7 +186,7 @@ export default function CartPage() {
         }
       }
 
-      const orderDetails = cartState.items
+      const orderDetails = cart.items
         .map(
           (item) =>
             `• ${item.name} (${item.color}, Talle: ${item.size}) - Cantidad: ${item.quantity} - $${(item.price * item.quantity).toLocaleString()}`,
@@ -163,12 +194,9 @@ export default function CartPage() {
         .join("\n")
 
       const deliveryInfo =
-        cartState.deliveryMethod === "pickup"
+        cart.deliveryMethod === "pickup"
           ? "*RETIRO EN LOCAL*\nAv. Corrientes 1234, CABA\nHorarios: Lun-Vie 9:00-18:00, Sáb 9:00-13:00"
-          : `*ENVÍO A DOMICILIO*\n${cartState.customerInfo?.address?.street} ${cartState.customerInfo?.address?.number}${cartState.customerInfo?.address?.floor ? `, ${cartState.customerInfo?.address?.floor}` : ""}\n${cartState.customerInfo?.address?.city}, ${cartState.customerInfo?.address?.province}\nCP: ${cartState.customerInfo?.address?.postalCode}`
-
-      const shippingCost = cartState.deliveryMethod === "pickup" ? 0 : cartState.total >= 10000 ? 0 : 1500
-      const finalTotal = cartState.total + shippingCost
+          : `*ENVÍO A DOMICILIO*\n${cart.customerInfo?.address?.street} ${cart.customerInfo?.address?.number}${cart.customerInfo?.address?.floor ? `, ${cart.customerInfo?.address?.floor}` : ""}\n${cart.customerInfo?.address?.city}, ${cart.customerInfo?.address?.province}\nCP: ${cart.customerInfo?.address?.postalCode}`
 
       const message = `¡Hola! Quiero realizar el siguiente pedido:
 
@@ -181,25 +209,26 @@ ${orderDetails}
 ${deliveryInfo}
 
 *RESUMEN:*
-Subtotal: $${cartState.total.toLocaleString()}
-${cartState.deliveryMethod === "delivery" ? `Envío: ${shippingCost === 0 ? "Gratis" : "$" + shippingCost.toLocaleString()}` : "Envío: Gratis (Retiro en local)"}
-*TOTAL: $${finalTotal.toLocaleString()}*
+Subtotal: $${cart.total.toLocaleString()}
+${cart.deliveryMethod === "delivery" ? "Envío: A coordinar por WhatsApp" : "Envío: Gratis (Retiro en local)"}
+*TOTAL: $${cart.total.toLocaleString()}*
 
 *DATOS DEL CLIENTE:*
-Nombre: ${cartState.customerInfo?.name}
-Teléfono: ${cartState.customerInfo?.phone}
+Nombre: ${cart.customerInfo?.name}
+Teléfono: ${cart.customerInfo?.phone}
 
-${cartState.customerInfo?.notes ? `*NOTAS:*\n${cartState.customerInfo?.notes}` : ""}
+${cart.customerInfo?.notes ? `*NOTAS:*\n${cart.customerInfo?.notes}` : ""}
 
 El pedido ya está registrado en el sistema ✅
 ¡Gracias!`
 
       const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(message)}`
+      console.log('📲 Abriendo WhatsApp:', whatsappUrl)
       window.open(whatsappUrl, "_blank")
     } catch (error) {
       console.error("Error fetching WhatsApp config:", error)
       // Fallback to hardcoded number if API fails
-      const orderDetails = cartState.items
+      const orderDetails = cart.items
         .map(
           (item) =>
             `• ${item.name} (${item.color}, Talle: ${item.size}) - Cantidad: ${item.quantity} - $${(item.price * item.quantity).toLocaleString()}`,
@@ -207,12 +236,9 @@ El pedido ya está registrado en el sistema ✅
         .join("\n")
 
       const deliveryInfo =
-        cartState.deliveryMethod === "pickup"
+        cart.deliveryMethod === "pickup"
           ? "*RETIRO EN LOCAL*\nAv. Corrientes 1234, CABA\nHorarios: Lun-Vie 9:00-18:00, Sáb 9:00-13:00"
-          : `*ENVÍO A DOMICILIO*\n${cartState.customerInfo?.address?.street} ${cartState.customerInfo?.address?.number}${cartState.customerInfo?.address?.floor ? `, ${cartState.customerInfo?.address?.floor}` : ""}\n${cartState.customerInfo?.address?.city}, ${cartState.customerInfo?.address?.province}\nCP: ${cartState.customerInfo?.address?.postalCode}`
-
-      const shippingCost = cartState.deliveryMethod === "pickup" ? 0 : cartState.total >= 10000 ? 0 : 1500
-      const finalTotal = cartState.total + shippingCost
+          : `*ENVÍO A DOMICILIO*\n${cart.customerInfo?.address?.street} ${cart.customerInfo?.address?.number}${cart.customerInfo?.address?.floor ? `, ${cart.customerInfo?.address?.floor}` : ""}\n${cart.customerInfo?.address?.city}, ${cart.customerInfo?.address?.province}\nCP: ${cart.customerInfo?.address?.postalCode}`
 
       const message = `¡Hola! Quiero realizar el siguiente pedido:
 
@@ -225,25 +251,27 @@ ${orderDetails}
 ${deliveryInfo}
 
 *RESUMEN:*
-Subtotal: $${cartState.total.toLocaleString()}
-${cartState.deliveryMethod === "delivery" ? `Envío: ${shippingCost === 0 ? "Gratis" : "$" + shippingCost.toLocaleString()}` : "Envío: Gratis (Retiro en local)"}
-*TOTAL: $${finalTotal.toLocaleString()}*
+Subtotal: $${cart.total.toLocaleString()}
+${cart.deliveryMethod === "delivery" ? "Envío: A coordinar por WhatsApp" : "Envío: Gratis (Retiro en local)"}
+*TOTAL: $${cart.total.toLocaleString()}*
 
 *DATOS DEL CLIENTE:*
-Nombre: ${cartState.customerInfo?.name}
-Teléfono: ${cartState.customerInfo?.phone}
+Nombre: ${cart.customerInfo?.name}
+Teléfono: ${cart.customerInfo?.phone}
 
-${cartState.customerInfo?.notes ? `*NOTAS:*\n${cartState.customerInfo?.notes}` : ""}
+${cart.customerInfo?.notes ? `*NOTAS:*\n${cart.customerInfo?.notes}` : ""}
 
 El pedido ya está registrado en el sistema ✅
 ¡Gracias!`
 
       const whatsappUrl = `https://wa.me/5491123456789?text=${encodeURIComponent(message)}`
+      console.log('📲 Abriendo WhatsApp (fallback):', whatsappUrl)
       window.open(whatsappUrl, "_blank")
     }
   }
 
-  if (cartState.items.length === 0) {
+  // Solo mostrar "carrito vacío" si no hay un modal de éxito activo
+  if (cartState.items.length === 0 && !showSuccessModal) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-12">
@@ -251,7 +279,7 @@ El pedido ya está registrado en el sistema ✅
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Tu carrito está vacío</h1>
           <p className="text-gray-600 mb-6">Agrega algunos productos para comenzar tu compra</p>
           <Button asChild>
-            <a href="/productos">Explorar Productos</a>
+            <Link href="/productos">Explorar Productos</Link>
           </Button>
         </div>
       </div>
@@ -260,12 +288,19 @@ El pedido ya está registrado en el sistema ✅
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">Carrito de Compras</h1>
+      {/* Si el modal de éxito está abierto, mostrar solo el modal */}
+      {showSuccessModal ? (
+        <div className="h-screen flex items-center justify-center">
+          {/* El modal se renderiza al final del componente */}
+        </div>
+      ) : (
+        <>
+          <h1 className="text-3xl font-bold text-gray-800 mb-8">Carrito de Compras</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
-          {cartState.items.map((item) => (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Cart Items */}
+            <div className="lg:col-span-2 space-y-4">
+              {cartState.items.map((item) => (
             <div key={`${item.id}-${item.size}-${item.color}`} className="bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center space-x-4">
                 <Image
@@ -347,7 +382,7 @@ El pedido ya está registrado en el sistema ✅
                   <label htmlFor="delivery" className="ml-2 block text-sm text-gray-700">
                     <span className="font-medium">Envío a Domicilio</span>
                     <span className="block text-gray-500 text-xs">
-                      {cartState.total >= 10000 ? "Gratis" : "$1.500"} - Recibí tu pedido en tu casa
+                      Costo a coordinar por WhatsApp - Recibí tu pedido en tu casa
                     </span>
                   </label>
                 </div>
@@ -371,8 +406,14 @@ El pedido ya está registrado en el sistema ✅
                 <Input
                   type="tel"
                   value={cartState.customerInfo?.phone || ""}
-                  onChange={(e) => updateCustomerInfo({ phone: e.target.value })}
-                  placeholder="Tu número de teléfono"
+                  onChange={(e) => {
+                    // Solo permitir números, espacios, guiones, paréntesis y el símbolo +
+                    const value = e.target.value.replace(/[^0-9+\-\s()]/g, '')
+                    updateCustomerInfo({ phone: value })
+                  }}
+                  placeholder="Ej: +54 11 1234-5678"
+                  pattern="[0-9+\-\s()]*"
+                  title="Solo se permiten números y caracteres de formato (+, -, espacios, paréntesis)"
                   required
                 />
               </div>
@@ -522,8 +563,8 @@ El pedido ya está registrado en el sistema ✅
               </div>
               <div className="flex justify-between">
                 <span>Envío</span>
-                <span className="text-green-600">
-                  {cartState.deliveryMethod === "pickup" ? "Gratis (Retiro)" : cartState.total >= 10000 ? "Gratis" : "$1.500"}
+                <span className="text-blue-600">
+                  {cartState.deliveryMethod === "pickup" ? "Gratis (Retiro)" : "A coordinar por WhatsApp"}
                 </span>
               </div>
             </div>
@@ -533,15 +574,9 @@ El pedido ya está registrado en el sistema ✅
             <div className="flex justify-between text-lg font-bold">
               <span>Total</span>
               <span>
-                ${(cartState.total + (cartState.deliveryMethod === "pickup" ? 0 : cartState.total >= 10000 ? 0 : 1500)).toLocaleString()}
+                ${cartState.total.toLocaleString()}
               </span>
             </div>
-
-            {cartState.deliveryMethod === "delivery" && cartState.total < 10000 && (
-              <p className="text-sm text-gray-600 mt-2">
-                Agrega ${(10000 - cartState.total).toLocaleString()} más para envío gratis
-              </p>
-            )}
 
             <Button onClick={handleCheckout} className="w-full mt-6" size="lg">
               Finalizar Compra por WhatsApp
@@ -555,20 +590,28 @@ El pedido ya está registrado en el sistema ✅
                   <p>• Horarios: Lun-Vie 9:00-18:00, Sáb 9:00-13:00</p>
                 </>
               ) : (
-                <p>• El envío se organiza después de confirmar el pedido</p>
+                <>
+                  <p>• El envío y su costo se coordinan por WhatsApp</p>
+                  <p>• El costo depende de la zona de entrega</p>
+                </>
               )}
               <p>• Aceptamos efectivo, transferencia y tarjetas</p>
             </div>
           </div>
         </div>
       </div>
+        </>
+      )}
+
       {/* Modals */}
-      <RemoveFromCartModal
-        isOpen={showRemoveModal}
-        onClose={() => setShowRemoveModal(false)}
-        onConfirm={confirmRemoveItem}
-        product={productToRemove || { name: "", color: "", size: "", image: "" }}
-      />
+      {productToRemove && (
+        <RemoveFromCartModal
+          isOpen={showRemoveModal}
+          onClose={() => setShowRemoveModal(false)}
+          onConfirm={confirmRemoveItem}
+          product={{ name: productToRemove.name, color: productToRemove.color || "", size: productToRemove.size || "", image: "" }}
+        />
+      )}
 
       <CheckoutErrorModal
         isOpen={showErrorModal}
@@ -579,6 +622,70 @@ El pedido ya está registrado en el sistema ✅
       />
 
       <LoadingModal isOpen={showLoadingModal} message="Preparando tu pedido..." />
+
+      {/* Success Modal - Renderizado directamente */}
+      {showSuccessModal && (() => {
+        console.log('🎉 MODAL SE ESTÁ RENDERIZANDO - saleId:', completedSaleId)
+        return (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black"
+          style={{
+            zIndex: 99999,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
+          onClick={() => console.log('🖱️ Click en el backdrop del modal')}
+        >
+          <div className="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-md mx-4">
+            <div className="text-center mb-6">
+              <div className="mx-auto mb-4 flex justify-center">
+                <div className="h-20 w-20 text-green-500">
+                  <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                ¡Gracias por tu compra!
+              </h2>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <p className="font-semibold text-lg text-gray-800 text-center">
+                Pedido #{completedSaleId || 'CONFIRMADO'} registrado exitosamente
+              </p>
+              <p className="text-gray-600 text-center">
+                Tu venta está en proceso. A continuación serás redirigido a WhatsApp para coordinar el pago y la entrega.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800">
+                  ✅ <strong>Pedido confirmado</strong>
+                  <br />
+                  📱 <strong>Siguiente paso:</strong> Confirmar por WhatsApp
+                  <br />
+                  💰 <strong>Pago:</strong> Se coordina vía WhatsApp
+                </p>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => {
+                console.log('🟢 Botón WhatsApp clickeado')
+                handleContinueToWhatsApp()
+              }}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg"
+            >
+              <span className="mr-2">📱</span>
+              Continuar por WhatsApp
+            </Button>
+          </div>
+        </div>
+        )
+      })()}
     </div>
   )
 }

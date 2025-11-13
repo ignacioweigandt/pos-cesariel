@@ -277,10 +277,17 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
 
     } catch (err) {
       console.error('Error processing checkout:', err)
-      console.error('Error response:', err.response)
-      console.error('Error status:', err.response?.status)
-      console.error('Error data:', err.response?.data)
-      console.error('Error message:', err.message)
+      if (err && typeof err === 'object') {
+        const error = err as any
+        if ('response' in error) {
+          console.error('Error response:', error.response)
+          console.error('Error status:', error.response?.status)
+          console.error('Error data:', error.response?.data)
+        }
+        if ('message' in error) {
+          console.error('Error message:', error.message)
+        }
+      }
       const errorInfo = handleApiError(err)
       
       // Combine main error message with validation errors

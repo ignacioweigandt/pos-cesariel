@@ -768,5 +768,80 @@ async def update_ecommerce_sale_status(
     sale.order_status = status_update.new_status
     db.commit()
     db.refresh(sale)
-    
+
     return {"message": "Sale status updated successfully", "new_status": status_update.new_status}
+
+# ==================== DASHBOARD STATS ENDPOINT ====================
+
+@router.get("/dashboard/stats")
+def get_ecommerce_dashboard_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get real-time e-commerce dashboard statistics
+    Returns:
+    - total_online_products: Number of active products shown in e-commerce
+    - total_online_sales: Total revenue from e-commerce sales
+    - total_online_orders: Number of e-commerce orders
+    - pending_orders: Number of orders with pending status
+    - conversion_rate: Percentage based on completed vs total orders
+    """
+    try:
+        from sqlalchemy import func
+        from decimal import Decimal
+        from app.models import SaleType, OrderStatus
+
+        # Count products visible in e-commerce
+        total_online_products = db.query(Product).filter(
+            Product.show_in_ecommerce == True,
+            Product.is_active == True
+        ).count()
+
+        # Get e-commerce sales statistics
+        ecommerce_sales_query = db.query(Sale).filter(
+            Sale.sale_type == SaleType.ECOMMERCE
+        )
+
+        # Total e-commerce revenue (excluding cancelled orders)
+        total_online_sales = ecommerce_sales_query.filter(
+            Sale.order_status != OrderStatus.CANCELLED
+        ).with_entities(func.sum(Sale.total_amount)).scalar() or Decimal("0.00")
+
+        # Total e-commerce orders
+        total_online_orders = ecommerce_sales_query.count()
+
+        # Pending orders count
+        pending_orders = ecommerce_sales_query.filter(
+            Sale.order_status == OrderStatus.PENDING
+        ).count()
+
+        # Delivered orders count (completed)
+        delivered_orders = ecommerce_sales_query.filter(
+            Sale.order_status == OrderStatus.DELIVERED
+        ).count()
+
+        # Calculate conversion rate (delivered orders / total orders * 100)
+        conversion_rate = 0.0
+        if total_online_orders > 0:
+            conversion_rate = round((delivered_orders / total_online_orders) * 100, 2)
+
+        return {
+            "data": {
+                "total_online_products": total_online_products,
+                "total_online_sales": float(total_online_sales),
+                "total_online_orders": total_online_orders,
+                "pending_orders": pending_orders,
+                "delivered_orders": delivered_orders,
+                "conversion_rate": conversion_rate
+            }
+        }
+
+    except Exception as e:
+        print(f"Error getting e-commerce dashboard stats: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener estadísticas del dashboard: {str(e)}"
+        )

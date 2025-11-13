@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Wifi, WifiOff, AlertCircle } from "lucide-react"
+import { Wifi, WifiOff } from "lucide-react"
 import { testConnection } from '../lib/data-service'
 
 interface ConnectionStatusProps {
@@ -13,28 +13,28 @@ export default function ConnectionStatus({ onConnectionChange }: ConnectionStatu
   const [connectionStatus, setConnectionStatus] = useState<boolean | null>(null)
   const [isChecking, setIsChecking] = useState(false)
 
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     setIsChecking(true)
     try {
       const isConnected = await testConnection()
       setConnectionStatus(isConnected)
       onConnectionChange?.(isConnected)
-    } catch (error) {
+    } catch {
       setConnectionStatus(false)
       onConnectionChange?.(false)
     } finally {
       setIsChecking(false)
     }
-  }
+  }, [onConnectionChange])
 
   useEffect(() => {
     checkConnection()
-    
+
     // Verificar conexión cada 30 segundos
     const interval = setInterval(checkConnection, 30000)
-    
+
     return () => clearInterval(interval)
-  }, [])
+  }, [checkConnection])
 
   if (connectionStatus === null && !isChecking) {
     return null
