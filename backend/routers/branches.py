@@ -66,18 +66,51 @@ async def delete_branch(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
+    """
+    Delete or deactivate a branch.
+
+    - If the branch has related records (users, sales, inventory), it will be deactivated (soft delete)
+    - If the branch has no related records, it will be permanently deleted (hard delete)
+    """
+    from app.models import Sale, BranchStock
+
     branch = db.query(Branch).filter(Branch.id == branch_id).first()
     if branch is None:
         raise HTTPException(status_code=404, detail="Branch not found")
-    
-    # Check if branch has users
-    users_count = db.query(User).filter(User.branch_id == branch_id).count()
-    if users_count > 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete branch with assigned users"
-        )
-    
-    db.delete(branch)
-    db.commit()
-    return {"message": "Branch deleted successfully"}
+
+    # Check if branch has related records
+    has_users = db.query(User).filter(User.branch_id == branch_id).count() > 0
+    has_sales = db.query(Sale).filter(Sale.branch_id == branch_id).count() > 0
+    has_inventory = db.query(BranchStock).filter(BranchStock.branch_id == branch_id).count() > 0
+
+    if has_users or has_sales or has_inventory:
+        # Soft delete: mark as inactive instead of deleting
+        branch.is_active = False
+        branch.name = f"{branch.name} (Eliminada)"
+        db.commit()
+        db.refresh(branch)
+
+        return {
+            "message": "Branch deactivated successfully (has related records)",
+            "soft_delete": True,
+            "branch": {
+                "id": branch.id,
+                "name": branch.name.replace(" (Eliminada)", ""),
+                "is_active": branch.is_active
+            }
+        }
+    else:
+        # Hard delete: no related records, safe to delete
+        try:
+            db.delete(branch)
+            db.commit()
+            return {
+                "message": "Branch deleted successfully",
+                "soft_delete": False
+            }
+        except Exception as e:
+            db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error deleting branch: {str(e)}"
+            )

@@ -613,6 +613,6 @@ make shell-db          # Direct database access
 
 ### Scaling
 - Backend: Horizontal scaling with load balancer
-- Database: Read replicas for reporting queries  
+- Database: Read replicas for reporting queries
 - Frontend: CDN deployment with caching
 - Images: Cloudinary automatic optimization
