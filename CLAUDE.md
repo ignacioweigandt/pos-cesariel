@@ -115,7 +115,7 @@ backend/
 │   ├── models/                   # SQLAlchemy models (split by domain) ✅ Phase 1 Complete
 │   │   ├── __init__.py          # Re-exports all models (backward compatibility)
 │   │   ├── base.py              # Base model classes
-│   │   ├── enums.py             # Enums (UserRole, SaleType, OrderStatus)
+│   │   ├── enums.py             # Enums (UserRole, SaleType, OrderStatus, ChangeAction)
 │   │   ├── user.py              # User, Branch models
 │   │   ├── product.py           # Product, Category models
 │   │   ├── inventory.py         # BranchStock, ProductSize, InventoryMovement, ImportLog
@@ -126,7 +126,9 @@ backend/
 │   │   ├── system_config.py     # SystemConfig (centralized system configuration)
 │   │   ├── tax_rate.py          # TaxRate (tax configuration)
 │   │   ├── notification.py      # Notification (notification system)
-│   │   └── whatsapp.py          # WhatsAppConfig, WhatsAppSale, SocialMediaConfig
+│   │   ├── whatsapp.py          # WhatsAppConfig, WhatsAppSale, SocialMediaConfig
+│   │   ├── audit.py             # ConfigChangeLog, SecurityAuditLog (audit trail)
+│   │   └── branch_config.py     # BranchTaxRate, BranchPaymentMethod (branch-specific config)
 │   │
 │   ├── schemas/                 # Pydantic schemas (split by domain) ✅ Phase 1 Complete
 │   │   ├── __init__.py          # Re-exports all schemas (backward compatibility)
@@ -469,11 +471,17 @@ The system includes a notification framework for scheduling and managing notific
 
 **Notification types**: Stock alerts, payment reminders, system updates
 
-To run the notification scheduler:
+**Running the notification scheduler**:
 ```bash
-# In production, run as a separate background service
+# During development (inside backend container)
+make shell-backend
 python notification_scheduler.py
+
+# In production, run as a separate background service
+# Can be run via systemd, supervisor, or as a separate Docker service
 ```
+
+**Note**: The scheduler runs independently of the main FastAPI application and should be started separately if you need background notification processing.
 
 ### Testing Strategy
 - **Backend**: pytest with unit and integration test separation, run tests inside container

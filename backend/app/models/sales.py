@@ -34,7 +34,12 @@ class Sale(Base):
         discount_amount (decimal): Monto de descuento aplicado
         total_amount (decimal): Monto total final de la venta
         payment_method (str): Método de pago utilizado
+        payment_method_id (int): Referencia al payment_method usado
+        payment_method_name (str): Nombre del método de pago (snapshot)
         order_status (OrderStatus): Estado actual de la orden
+        tax_rate_id (int): Referencia a la tasa de impuesto aplicada
+        tax_rate_name (str): Nombre de la tasa de impuesto (snapshot)
+        tax_rate_percentage (decimal): Porcentaje de impuesto aplicado (snapshot)
         notes (str): Notas adicionales de la venta
         created_at (datetime): Fecha y hora de creación de la venta
         updated_at (datetime): Fecha y hora de última modificación
@@ -81,8 +86,20 @@ class Sale(Base):
     # Información de pago y estado
     payment_method = Column(String(50),
                             doc="Método de pago utilizado (efectivo, tarjeta, etc.)")
+    payment_method_id = Column(Integer, nullable=True,
+                               doc="Referencia al método de pago usado (payment_methods.id)")
+    payment_method_name = Column(String(100), nullable=True,
+                                doc="Nombre del método de pago al momento de la venta")
     order_status = Column(Enum(OrderStatus), default=OrderStatus.PENDING,
                           doc="Estado actual de la orden")
+
+    # Referencias de configuración de impuestos (trazabilidad)
+    tax_rate_id = Column(Integer, nullable=True,
+                        doc="Referencia a la tasa de impuesto aplicada (tax_rates.id)")
+    tax_rate_name = Column(String(100), nullable=True,
+                          doc="Nombre de la tasa de impuesto al momento de la venta")
+    tax_rate_percentage = Column(Numeric(5, 2), nullable=True,
+                                doc="Porcentaje de impuesto aplicado al momento de la venta")
     
     # Información adicional
     notes = Column(Text,

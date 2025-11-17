@@ -57,6 +57,19 @@ from app.models.notification import (
     NotificationPriority
 )
 
+# Import branch configuration models
+from app.models.branch_config import (
+    BranchTaxRate,
+    BranchPaymentMethod
+)
+
+# Import audit and logging models
+from app.models.audit import (
+    ConfigChangeLog,
+    SecurityAuditLog,
+    ChangeAction
+)
+
 # Define __all__ for explicit exports
 __all__ = [
     # Enums
@@ -100,4 +113,11 @@ __all__ = [
     "NotificationSetting",
     "NotificationType",
     "NotificationPriority",
+    # Branch Configuration models
+    "BranchTaxRate",
+    "BranchPaymentMethod",
+    # Audit and Logging models
+    "ConfigChangeLog",
+    "SecurityAuditLog",
+    "ChangeAction",
 ]

@@ -21,6 +21,12 @@ from app.repositories.ecommerce import (
 from app.repositories.payment import PaymentConfigRepository
 from app.repositories.whatsapp import WhatsAppConfigRepository, WhatsAppSaleRepository
 from app.repositories.notification import NotificationRepository, NotificationSettingRepository
+from app.repositories.config import (
+    BranchTaxRateRepository,
+    BranchPaymentMethodRepository,
+    ConfigChangeLogRepository,
+    SecurityAuditLogRepository
+)
 
 __all__ = [
     "BaseRepository",
@@ -41,4 +47,8 @@ __all__ = [
     "WhatsAppSaleRepository",
     "NotificationRepository",
     "NotificationSettingRepository",
+    "BranchTaxRateRepository",
+    "BranchPaymentMethodRepository",
+    "ConfigChangeLogRepository",
+    "SecurityAuditLogRepository",
 ]

@@ -60,12 +60,18 @@ class Sale(SaleBase):
     tax_amount: Decimal
     discount_amount: Decimal
     total_amount: Decimal
+    # Configuration references (traceability)
+    payment_method_id: Optional[int] = None
+    payment_method_name: Optional[str] = None
+    tax_rate_id: Optional[int] = None
+    tax_rate_name: Optional[str] = None
+    tax_rate_percentage: Optional[Decimal] = None
     created_at: datetime
     updated_at: datetime
     branch: Optional["Branch"] = None
     user: Optional["User"] = None
     sale_items: List[SaleItem] = []
-    
+
     class Config:
         from_attributes = True
 
