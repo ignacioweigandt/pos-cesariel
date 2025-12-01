@@ -16,6 +16,7 @@ class ProductBase(BaseModel):
     sku: str
     barcode: Optional[str] = None
     category_id: Optional[int] = None
+    brand: Optional[str] = None
     price: Decimal
     cost: Optional[Decimal] = None
     stock_quantity: int = 0
@@ -37,6 +38,7 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = None
     barcode: Optional[str] = None
     category_id: Optional[int] = None
+    brand: Optional[str] = None
     price: Optional[Decimal] = None
     cost: Optional[Decimal] = None
     stock_quantity: Optional[int] = None

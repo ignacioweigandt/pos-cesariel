@@ -189,6 +189,7 @@ def get_ecommerce_product(product_id: int, db: Session = Depends(get_db)):
             "id": product.id,
             "name": product.name,
             "description": product.description,
+            "brand": product.brand,
             "price": float(product.ecommerce_price) if product.ecommerce_price else float(product.price),
             "stock": total_stock,
             "featured": product.ecommerce_price is not None,

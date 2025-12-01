@@ -8,6 +8,7 @@ export interface ApiProduct {
   sku: string;
   barcode: string | null;
   category_id: number;
+  brand: string | null;
   price: number;
   cost: number | null;
   stock_quantity: number;
@@ -31,6 +32,7 @@ export interface ApiPublicProduct {
   id: number;
   name: string;
   description: string | null;
+  brand: string | null;
   price: number;
   stock: number;
   featured: boolean;

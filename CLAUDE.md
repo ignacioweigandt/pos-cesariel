@@ -159,7 +159,8 @@ backend/
 │   │   ├── ecommerce.py         # EcommerceConfigRepository, StoreBannerRepository, ProductImageRepository
 │   │   ├── payment.py           # PaymentConfigRepository
 │   │   ├── notification.py      # NotificationRepository
-│   │   └── whatsapp.py          # WhatsAppConfigRepository, WhatsAppSaleRepository
+│   │   ├── whatsapp.py          # WhatsAppConfigRepository, WhatsAppSaleRepository
+│   │   └── config.py            # BranchTaxRateRepository, BranchPaymentMethodRepository, ConfigChangeLogRepository, SecurityAuditLogRepository
 │   │
 │   ├── services/                # Business logic layer ✅ Phase 3 Complete
 │   │   ├── __init__.py          # Re-exports all services
@@ -168,7 +169,8 @@ backend/
 │   │   ├── sale_service.py      # Sales processing (130 lines)
 │   │   ├── user_service.py      # User management (80 lines)
 │   │   ├── payment_service.py   # Payment processing and configuration
-│   │   └── notification_service.py # Notification system
+│   │   ├── notification_service.py # Notification system
+│   │   └── config_service.py    # Configuration management, branch-specific config, audit logging
 │   │
 │   └── core/                    # Core configuration (future)
 │
@@ -200,7 +202,12 @@ backend/
 │   ├── migrate_payment_methods.py
 │   ├── migrate_system_config.py
 │   ├── migrate_tax_rates.py
-│   └── migrate_add_brand.py
+│   ├── migrate_add_brand.py
+│   ├── migrate_add_sales_references.py
+│   ├── migrate_audit_tables.py
+│   ├── migrate_branch_config.py
+│   ├── migrate_connect_config_tables.py
+│   └── migrate_connect_payment_config.py
 │
 └── notification_scheduler.py    # Background notification scheduler
 ```
@@ -218,7 +225,7 @@ backend/
 - ✅ **Reusability**: Same repository methods across multiple endpoints
 - ✅ **Maintainability**: Centralized data access logic
 - ✅ **Type Safety**: Generic typing with `BaseRepository[ModelType]`
-- ✅ **15 Repositories**: All domains covered (User, Product, Inventory, Sales, etc.)
+- ✅ **19 Repositories**: All domains covered (User, Product, Inventory, Sales, Config, Audit, etc.)
 
 **Available Repositories**:
 ```python
@@ -230,7 +237,9 @@ from app.repositories import (
     EcommerceConfigRepository, StoreBannerRepository, ProductImageRepository,  # E-commerce
     PaymentConfigRepository,                     # Payment
     NotificationRepository,                      # Notifications
-    WhatsAppConfigRepository, WhatsAppSaleRepository  # WhatsApp
+    WhatsAppConfigRepository, WhatsAppSaleRepository,  # WhatsApp
+    BranchTaxRateRepository, BranchPaymentMethodRepository,  # Branch-specific config
+    ConfigChangeLogRepository, SecurityAuditLogRepository  # Audit logging
 )
 ```
 
@@ -242,7 +251,8 @@ from app.services import (
     SaleService,          # Complete sales flow, stock updates, tax calculation
     UserService,          # User management, authentication support
     PaymentService,       # Payment processing and configuration
-    NotificationService   # Notification scheduling and management
+    NotificationService,  # Notification scheduling and management
+    ConfigService         # Configuration management, branch-specific config, audit logging
 )
 ```
 
@@ -253,6 +263,7 @@ from app.services import (
 - **UserService**: Username/email uniqueness validation, branch-specific user queries, active user filtering
 - **PaymentService**: Payment method configuration, transaction processing
 - **NotificationService**: Notification scheduling, stock alerts, payment reminders
+- **ConfigService**: Branch-specific tax rates and payment methods, configuration change audit logging, security event tracking
 
 ### Architectural Evolution
 
@@ -275,8 +286,9 @@ The backend has evolved through 3 major refactoring phases:
 **Phase 3 (Service Layer)**: `Routers → Services → Repositories → Models → Database` ✅ **CURRENT**
 - Business logic extracted to services
 - Services orchestrate multiple repositories
-- 6 services with 513 lines of business logic
+- 7 services with comprehensive business logic coverage
 - Result: Thin routers, testable business logic, clear separation of concerns
+- Latest additions: ConfigService for branch-specific configuration and audit logging
 
 ### User Roles and Permissions
 - **ADMIN**: Full system access, user management, multi-branch control
@@ -323,7 +335,9 @@ Key entities and relationships:
 - Tax rates: `app/models/tax_rate.py` - TaxRate
 - Notifications: `app/models/notification.py` - Notification
 - WhatsApp domain: `app/models/whatsapp.py` - WhatsAppConfig, WhatsAppSale
-- Enums: `app/models/enums.py` - UserRole, SaleType, OrderStatus
+- Audit domain: `app/models/audit.py` - ConfigChangeLog, SecurityAuditLog
+- Branch config: `app/models/branch_config.py` - BranchTaxRate, BranchPaymentMethod
+- Enums: `app/models/enums.py` - UserRole, SaleType, OrderStatus, ChangeAction
 
 ## Development Workflow
 
@@ -453,6 +467,11 @@ python migrate_payment_methods.py   # Migrate to new payment method configuratio
 python migrate_system_config.py     # Migrate to centralized system config
 python migrate_tax_rates.py         # Migrate to tax rate configuration
 python migrate_add_brand.py         # Add brand field to products
+python migrate_add_sales_references.py  # Add references to sales table
+python migrate_audit_tables.py      # Add audit logging tables (ConfigChangeLog, SecurityAuditLog)
+python migrate_branch_config.py     # Add branch-specific configuration tables
+python migrate_connect_config_tables.py  # Connect all configuration tables
+python migrate_connect_payment_config.py # Connect payment configuration tables
 ```
 
 **Migration order** (if migrating from old schema):
@@ -461,6 +480,110 @@ python migrate_add_brand.py         # Add brand field to products
 3. `migrate_payment_methods.py` - Payment methods
 4. `migrate_notifications.py` - Notification system
 5. `migrate_add_brand.py` - Product brand support (optional)
+6. `migrate_add_sales_references.py` - Sales references
+7. `migrate_audit_tables.py` - Audit logging infrastructure
+8. `migrate_branch_config.py` - Branch-specific configurations
+9. `migrate_connect_config_tables.py` - Connect configuration tables
+10. `migrate_connect_payment_config.py` - Connect payment configurations
+
+### Configuration and Audit System
+
+The system includes comprehensive configuration management with audit logging:
+
+#### Branch-Specific Configuration
+- **Models**: `app/models/branch_config.py` - BranchTaxRate, BranchPaymentMethod
+- **Repository**: `app/repositories/config.py` - BranchTaxRateRepository, BranchPaymentMethodRepository
+- **Service**: `app/services/config_service.py` - ConfigService
+
+**Key Features**:
+- Branch-specific tax rates with jurisdiction-based configuration
+- Branch-specific payment method availability and surcharges
+- Automatic fallback to system-wide defaults when no branch config exists
+- Historical tracking of effective dates for tax rate changes
+
+**Example Usage**:
+```python
+from app.services import ConfigService
+
+# Get effective tax rate for a branch
+config_service = ConfigService(db)
+tax_info = config_service.get_tax_rate_for_branch(branch_id=1)
+
+# Check if payment method is available at branch
+is_available = config_service.is_payment_method_available(
+    branch_id=1,
+    payment_method_id=2
+)
+
+# Validate payment method with branch context
+payment_method = config_service.validate_payment_method(
+    payment_method_code="CARD",
+    branch_id=1
+)
+```
+
+#### Audit Logging System
+- **Models**: `app/models/audit.py` - ConfigChangeLog, SecurityAuditLog
+- **Repository**: `app/repositories/config.py` - ConfigChangeLogRepository, SecurityAuditLogRepository
+- **Service**: `app/services/config_service.py` - ConfigService (includes audit methods)
+
+**Audit Types**:
+1. **Configuration Changes**: Tracks all changes to system configuration tables
+   - What was changed (table, record, field)
+   - Old and new values
+   - Who made the change
+   - When and from where (IP, user agent)
+   - Optional notes/justification
+
+2. **Security Events**: Tracks authentication and authorization events
+   - Login attempts (successful and failed)
+   - Permission changes
+   - Account lockouts
+   - Suspicious activities
+
+**Example Usage**:
+```python
+from app.models import ChangeAction
+from app.services import ConfigService
+
+config_service = ConfigService(db)
+
+# Log a configuration change
+config_service.log_config_change(
+    table_name="system_config",
+    record_id=1,
+    action=ChangeAction.UPDATE,
+    user_id=current_user.id,
+    field_name="store_name",
+    old_value="Old Store",
+    new_value="New Store",
+    notes="Updated store name per management request"
+)
+
+# Log a security event (login attempt)
+config_service.log_security_event(
+    event_type="LOGIN",
+    success="SUCCESS",
+    user_id=user.id,
+    username=user.username,
+    ip_address=request.client.host
+)
+
+# Check for account lockout
+should_lockout, attempt_count = config_service.check_account_lockout(
+    username="seller",
+    max_attempts=5,
+    lockout_hours=1
+)
+```
+
+**Compliance Features**:
+- Immutable audit logs (cannot be edited after creation)
+- Automatic timestamping
+- Complete change tracking with old/new values
+- IP and user agent tracking
+- Failed login attempt monitoring
+- Account lockout protection
 
 ### Notification System
 The system includes a notification framework for scheduling and managing notifications:
@@ -595,12 +718,25 @@ make shell-db          # Direct database access
 - Use `from app.models import Model` instead of `from models import Model`
 - Use `from app.schemas import Schema` instead of `from schemas import Schema`
 - Use `from app.services import Service` for business logic
+- Use `from app.repositories import Repository` for data access
 - Old imports still work but are deprecated (backward compatibility maintained)
 - Phase 1 (models/schemas split) is ✅ COMPLETE - see `backend/PHASE_1_COMPLETION.md`
 - Phase 2 (repository layer) is ✅ COMPLETE - see `backend/PHASE2_COMPLETE.md`
 - Phase 3 (service layer) is ✅ COMPLETE - see `backend/PHASE3_COMPLETE.md`
-- 15 repositories available with full CRUD operations via `BaseRepository`
-- 6 services available for business logic (Inventory, Product, Sale, User, Payment, Notification)
+- 19 repositories available with full CRUD operations via `BaseRepository`
+- 7 services available for business logic (Inventory, Product, Sale, User, Payment, Notification, Config)
+
+**Audit logging not working**
+- Ensure `migrate_audit_tables.py` has been run
+- Check that ConfigChangeLog and SecurityAuditLog tables exist in database
+- Verify ConfigService is being used for configuration changes
+- Review logs at `routers/` endpoints to ensure audit logging is integrated
+
+**Branch-specific configuration issues**
+- Ensure `migrate_branch_config.py` has been run
+- Check that BranchTaxRate and BranchPaymentMethod tables exist
+- Verify branch_id is being passed to ConfigService methods
+- System falls back to global config if no branch-specific config exists
 
 ### Performance Issues
 - Monitor database query performance

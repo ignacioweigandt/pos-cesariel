@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, distinct
 from typing import List, Optional
 import pandas as pd
 import io
@@ -17,6 +17,32 @@ from auth_compat import get_current_active_user, require_manager_or_admin
 from websocket_manager import notify_inventory_change, notify_low_stock
 
 router = APIRouter(prefix="/products", tags=["products"])
+
+@router.get("/brands")
+async def get_brands(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Obtener todas las marcas únicas de productos activos
+    """
+    try:
+        brands = db.query(distinct(Product.brand))\
+            .filter(
+                Product.is_active == True,
+                Product.brand.isnot(None),
+                Product.brand != ''
+            )\
+            .order_by(Product.brand)\
+            .all()
+
+        # Extraer nombres de marcas de las tuplas
+        result = [brand[0] for brand in brands if brand[0]]
+
+        return {"data": result}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al obtener marcas: {str(e)}")
 
 @router.get("/")
 async def get_products(
@@ -75,6 +101,7 @@ async def get_products(
             "sku": product.sku,
             "barcode": product.barcode,
             "category_id": product.category_id,
+            "brand": product.brand,
             "price": float(product.price),
             "cost": float(product.cost) if product.cost else None,
             "stock_quantity": branch_stock,
@@ -124,6 +151,7 @@ async def search_products(
             "name": product.name,
             "sku": product.sku,
             "barcode": product.barcode,
+            "brand": product.brand,
             "price": product.price,
             "stock_quantity": branch_stock
         })
@@ -161,6 +189,7 @@ async def get_product_by_barcode(
         "sku": product.sku,
         "barcode": product.barcode,
         "category_id": product.category_id,
+        "brand": product.brand,
         "price": float(product.price),
         "cost": float(product.cost) if product.cost else None,
         "stock_quantity": branch_stock,
@@ -173,7 +202,7 @@ async def get_product_by_barcode(
         "created_at": product.created_at.isoformat() if product.created_at else None,
         "updated_at": product.updated_at.isoformat() if product.updated_at else None
     }
-    
+
     return product_data
 
 @router.get("/multi-branch-stock")
@@ -276,33 +305,54 @@ async def create_product(
             status_code=400,
             detail="SKU already exists"
         )
-    
+
     # Check if barcode already exists
     if product.barcode and db.query(Product).filter(Product.barcode == product.barcode).first():
         raise HTTPException(
             status_code=400,
             detail="Barcode already exists"
         )
-    
-    db_product = Product(**product.dict())
+
+    # Guardar el stock inicial enviado por el usuario
+    initial_stock = product.stock_quantity if product.stock_quantity else 0
+
+    # Crear el producto con stock en 0 (se configurará por sucursal)
+    product_data = product.dict()
+    product_data['stock_quantity'] = 0  # El stock global se calculará después
+
+    db_product = Product(**product_data)
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
-    
-    # Create initial inventory movement
-    if db_product.stock_quantity > 0:
-        inventory_movement = InventoryMovement(
-            product_id=db_product.id,
-            movement_type="IN",
-            quantity=db_product.stock_quantity,
-            previous_stock=0,
-            new_stock=db_product.stock_quantity,
-            reference_type="INITIAL_STOCK",
-            notes="Initial stock"
-        )
-        db.add(inventory_movement)
+
+    # Para productos SIN talles: crear BranchStock para todas las sucursales activas
+    if not db_product.has_sizes:
+        active_branches = db.query(Branch).filter(Branch.is_active == True).all()
+        user_branch_id = current_user.branch_id
+
+        for branch in active_branches:
+            # Si es la sucursal del usuario que crea el producto, asignar el stock inicial
+            stock_for_branch = initial_stock if branch.id == user_branch_id else 0
+
+            branch_stock = BranchStock(
+                product_id=db_product.id,
+                branch_id=branch.id,
+                stock_quantity=stock_for_branch,
+                min_stock=db_product.min_stock
+            )
+            db.add(branch_stock)
+
+        # Actualizar el stock global del producto
+        db_product.stock_quantity = initial_stock
+
         db.commit()
-    
+        db.refresh(db_product)
+        print(f"✅ Producto '{db_product.name}' creado con stock inicial de {initial_stock} en sucursal {user_branch_id}")
+    else:
+        # Para productos CON talles: no es necesario crear BranchStock
+        # Los ProductSize se crearán cuando se agregue stock por talle en cada sucursal
+        print(f"✅ Producto con talles '{db_product.name}' creado. Stock se manejará por ProductSize")
+
     return db_product
 
 @router.put("/{product_id}", response_model=ProductSchema)
@@ -618,35 +668,35 @@ async def import_products_confirm(
                     })
                     continue
                 
-                # Crear producto
+                # Crear producto con stock en 0 (se configurará por sucursal)
                 product = Product(
                     name=product_data.get('name'),
                     sku=product_data.get('sku'),
                     barcode=product_data.get('barcode'),
                     price=product_data.get('price'),
                     cost=product_data.get('price', 0) * 0.7,  # Costo estimado al 70% del precio
-                    stock_quantity=product_data.get('stock_quantity', 0),
+                    stock_quantity=0,  # Stock global inicia en 0
                     min_stock=product_data.get('min_stock', 1),
                     category_id=product_data.get('category_id'),
                     has_sizes=product_data.get('has_sizes', False)
                 )
-                
+
                 db.add(product)
                 db.flush()  # Para obtener el ID del producto
-                
-                # Crear movimiento de inventario si hay stock inicial
-                if product.stock_quantity > 0:
-                    inventory_movement = InventoryMovement(
-                        product_id=product.id,
-                        movement_type="IN",
-                        quantity=product.stock_quantity,
-                        previous_stock=0,
-                        new_stock=product.stock_quantity,
-                        reference_type="IMPORT",
-                        notes="Imported product stock"
-                    )
-                    db.add(inventory_movement)
-                
+
+                # Para productos SIN talles: crear BranchStock en 0 para todas las sucursales activas
+                if not product.has_sizes:
+                    active_branches = db.query(Branch).filter(Branch.is_active == True).all()
+
+                    for branch in active_branches:
+                        branch_stock = BranchStock(
+                            product_id=product.id,
+                            branch_id=branch.id,
+                            stock_quantity=0,  # Stock inicial en 0 para cada sucursal
+                            min_stock=product.min_stock
+                        )
+                        db.add(branch_stock)
+
                 successful_rows += 1
                 
             except Exception as e:
@@ -781,20 +831,34 @@ async def import_products_bulk(
                     sku = f"{sku_base}_{sku_counter}"
                     sku_counter += 1
                 
-                # Crear producto
+                # Crear producto con stock en 0 (se configurará por sucursal)
                 product = Product(
                     name=modelo,
                     sku=sku,
                     barcode=codigo_barra,
                     price=precio,
                     cost=precio * 0.7,  # Costo estimado al 70% del precio
-                    stock_quantity=0,  # Stock inicial 0, se cargará después
+                    stock_quantity=0,  # Stock global inicial 0
                     min_stock=5,
                     category_id=category.id,
                     has_sizes=False
                 )
-                
+
                 db.add(product)
+                db.flush()  # Para obtener el ID del producto
+
+                # Crear BranchStock en 0 para todas las sucursales activas
+                active_branches = db.query(Branch).filter(Branch.is_active == True).all()
+
+                for branch in active_branches:
+                    branch_stock = BranchStock(
+                        product_id=product.id,
+                        branch_id=branch.id,
+                        stock_quantity=0,  # Stock inicial en 0 para cada sucursal
+                        min_stock=product.min_stock
+                    )
+                    db.add(branch_stock)
+
                 successful_rows += 1
                 
             except Exception as e:
