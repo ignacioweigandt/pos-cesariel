@@ -11,7 +11,8 @@ from app.schemas import (
     Product as ProductSchema, ProductCreate, ProductUpdate,
     InventoryMovement as InventoryMovementSchema, StockAdjustment,
     BulkImportResponse, ProductImportData, BranchStock as BranchStockSchema,
-    ProductSize as ProductSizeSchema, UpdateSizeStocks, ProductWithMultiBranchStock
+    ProductSize as ProductSizeSchema, UpdateSizeStocks, ProductWithMultiBranchStock,
+    BulkPriceUpdateRequest, BulkPriceUpdateResponse
 )
 from auth_compat import get_current_active_user, require_manager_or_admin
 from websocket_manager import notify_inventory_change, notify_low_stock
@@ -1353,7 +1354,123 @@ async def get_all_products_stock_by_branch(
         # Calcular totales
         product_data["total_stock"] = sum(b["stock_quantity"] for b in product_data["branches"])
         product_data["total_available"] = sum(b["available_stock"] for b in product_data["branches"])
-        
+
         result.append(product_data)
-    
+
     return result
+
+@router.post("/bulk-price-update", response_model=BulkPriceUpdateResponse)
+async def bulk_price_update(
+    update_data: BulkPriceUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_manager_or_admin)
+):
+    """
+    Actualización masiva de precios de productos.
+
+    Permite actualizar precios por:
+    - Todas las marcas (brand=None, product_ids=None)
+    - Una marca específica (brand="Nike", product_ids=None)
+    - Productos específicos de una marca (brand="Nike", product_ids=[1,2,3])
+    - Productos específicos sin filtro de marca (brand=None, product_ids=[1,2,3])
+
+    Args:
+        update_data: Datos de actualización (marca, productos, porcentaje)
+
+    Returns:
+        Respuesta con productos actualizados y errores
+    """
+    try:
+        updated_products = []
+        errors = []
+
+        # Construir query base
+        query = db.query(Product).filter(Product.is_active == True)
+
+        # Filtrar por marca si se especifica
+        if update_data.brand:
+            query = query.filter(Product.brand == update_data.brand)
+
+        # Filtrar por IDs de productos si se especifican
+        if update_data.product_ids:
+            query = query.filter(Product.id.in_(update_data.product_ids))
+
+        # Obtener productos a actualizar
+        products_to_update = query.all()
+
+        if not products_to_update:
+            return BulkPriceUpdateResponse(
+                message="No se encontraron productos para actualizar",
+                total_products_updated=0,
+                updated_products=[],
+                errors=[]
+            )
+
+        # Calcular factor de multiplicación
+        multiplier = 1 + (update_data.percentage / 100)
+
+        # Actualizar cada producto
+        for product in products_to_update:
+            try:
+                old_price = float(product.price)
+                old_ecommerce_price = float(product.ecommerce_price) if product.ecommerce_price else None
+
+                # Actualizar precio principal
+                new_price = round(old_price * multiplier, 2)
+                product.price = new_price
+
+                # Actualizar precio de ecommerce si se solicita
+                new_ecommerce_price = None
+                if update_data.update_ecommerce_price and product.ecommerce_price:
+                    new_ecommerce_price = round(float(product.ecommerce_price) * multiplier, 2)
+                    product.ecommerce_price = new_ecommerce_price
+
+                product.updated_at = datetime.now()
+
+                updated_products.append({
+                    "id": product.id,
+                    "name": product.name,
+                    "sku": product.sku,
+                    "brand": product.brand,
+                    "old_price": old_price,
+                    "new_price": new_price,
+                    "old_ecommerce_price": old_ecommerce_price,
+                    "new_ecommerce_price": new_ecommerce_price
+                })
+
+            except Exception as e:
+                errors.append({
+                    "product_id": product.id,
+                    "product_name": product.name,
+                    "error": str(e)
+                })
+
+        # Commit los cambios
+        db.commit()
+
+        # Preparar mensaje de respuesta
+        if update_data.brand and update_data.product_ids:
+            message = f"Precios actualizados para {len(updated_products)} productos de la marca {update_data.brand}"
+        elif update_data.brand:
+            message = f"Precios actualizados para {len(updated_products)} productos de la marca {update_data.brand}"
+        elif update_data.product_ids:
+            message = f"Precios actualizados para {len(updated_products)} productos seleccionados"
+        else:
+            message = f"Precios actualizados para {len(updated_products)} productos"
+
+        percentage_sign = "+" if update_data.percentage > 0 else ""
+        message += f" ({percentage_sign}{update_data.percentage}%)"
+
+        return BulkPriceUpdateResponse(
+            message=message,
+            total_products_updated=len(updated_products),
+            updated_products=updated_products,
+            errors=errors
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar precios: {str(e)}"
+        )

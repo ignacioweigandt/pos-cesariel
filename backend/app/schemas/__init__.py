@@ -53,7 +53,9 @@ from app.schemas.product import (
     ProductImportData,
     BulkImportResponse,
     SizeStockData,
-    UpdateSizeStocks
+    UpdateSizeStocks,
+    BulkPriceUpdateRequest,
+    BulkPriceUpdateResponse
 )
 
 # Import inventory schemas
@@ -224,6 +226,8 @@ __all__ = [
     "BulkImportResponse",
     "SizeStockData",
     "UpdateSizeStocks",
+    "BulkPriceUpdateRequest",
+    "BulkPriceUpdateResponse",
     
     # Inventory
     "BranchStockBase",

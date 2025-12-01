@@ -148,6 +148,33 @@ class UpdateSizeStocks(BaseModel):
     sizes: List[SizeStockData]
 
 
+# Bulk Price Update Schemas
+class BulkPriceUpdateRequest(BaseModel):
+    """Request schema for bulk price updates"""
+    brand: Optional[str] = None  # None = todas las marcas
+    product_ids: Optional[List[int]] = None  # None = todos los productos de la marca
+    percentage: float  # Porcentaje de aumento/disminución (positivo o negativo)
+    update_ecommerce_price: bool = True  # También actualizar precio de ecommerce
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "brand": "Nike",
+                "product_ids": [1, 2, 3],
+                "percentage": 10.0,
+                "update_ecommerce_price": True
+            }
+        }
+
+
+class BulkPriceUpdateResponse(BaseModel):
+    """Response schema for bulk price updates"""
+    message: str
+    total_products_updated: int
+    updated_products: List[dict]
+    errors: List[dict] = []
+
+
 # Forward reference resolution
 from app.schemas.category import Category
 from app.schemas.branch import Branch
