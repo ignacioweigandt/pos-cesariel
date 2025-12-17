@@ -43,7 +43,8 @@ from routers import (
     ecommerce_advanced,    # Funcionalidades avanzadas de e-commerce
     ecommerce_public,      # API pública para la tienda online
     content_management,    # Gestión de contenido y banners
-    notifications          # Sistema de notificaciones
+    notifications,         # Sistema de notificaciones
+    init_db_endpoint       # Inicialización de base de datos
 )
 
 # Inicialización automática de la base de datos
@@ -119,6 +120,7 @@ app.include_router(sales.router)          # /sales/* - Ventas POS, reportes, das
 # ===== CONFIGURACIÓN Y ADMINISTRACIÓN =====
 app.include_router(config.router)         # /config/* - Configuración general del sistema
 app.include_router(notifications.router)  # /notifications/* - Sistema de notificaciones
+app.include_router(init_db_endpoint.router)  # /api/init/* - Inicialización de base de datos
 
 # ===== E-COMMERCE INTEGRADO =====
 app.include_router(ecommerce_advanced.router)  # /ecommerce-advanced/* - Admin e-commerce con autenticación
