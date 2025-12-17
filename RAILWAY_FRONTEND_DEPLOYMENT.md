@@ -38,12 +38,23 @@ git push origin main
 3. Selecciona tu repositorio `pos-cesariel`
 4. Railway creará un nuevo servicio
 
-### 3. Configurar Root Directory
+### 3. Configurar Root Directory y Builder
 
 1. Haz clic en el servicio recién creado
 2. Ve a **"Settings"** → **"Service"**
 3. En **"Root Directory"**, establece: `frontend/pos-cesariel`
 4. Renombra el servicio a `frontend-pos` (opcional pero recomendado)
+
+**⚠️ IMPORTANTE - Configurar Builder Manualmente**:
+
+Railway puede intentar usar **Railpack** (buildpacks) en lugar del Dockerfile. Si ves el error "Railpack could not determine how to build the app", necesitas configurar el builder manualmente:
+
+1. Ve a **"Settings"** → **"Build"**
+2. Cambia **Builder** de "Railpack" o "Auto" a **"Dockerfile"**
+3. En **"Dockerfile Path"**, ingresa: `Dockerfile.production`
+4. Guarda los cambios
+
+📖 **Ver guía detallada**: `RAILWAY_MANUAL_CONFIG.md`
 
 ### 4. Configurar Variables de Entorno
 
