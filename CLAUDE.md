@@ -738,6 +738,13 @@ make shell-db          # Direct database access
 - Verify branch_id is being passed to ConfigService methods
 - System falls back to global config if no branch-specific config exists
 
+**Railway deployment issues**
+- **"Dockerfile not found"**: Ensure no `railway.json` exists in project root (causes conflicts)
+- **Build fails**: Verify `next.config.js` has `output: 'standalone'` for Next.js services
+- **Frontend can't connect**: Check `NEXT_PUBLIC_API_URL` points to Railway backend domain
+- **502 errors**: Review service logs in Railway dashboard, verify health checks
+- See `RAILWAY_FRONTEND_DEPLOYMENT.md` for detailed troubleshooting
+
 ### Performance Issues
 - Monitor database query performance
 - Check bundle sizes: `npm run build`
@@ -760,3 +767,34 @@ make shell-db          # Direct database access
 - Database: Read replicas for reporting queries
 - Frontend: CDN deployment with caching
 - Images: Cloudinary automatic optimization
+
+### Railway Deployment
+
+The project is configured for deployment on Railway with multi-service architecture:
+
+**Documentation**:
+- `RAILWAY_DEPLOYMENT.md` - Comprehensive Railway deployment guide
+- `RAILWAY_FRONTEND_DEPLOYMENT.md` - Frontend POS specific deployment guide
+- `RAILWAY_QUICK_START.md` - Quick start guide
+- `railway-setup.sh` - Automated setup script
+
+**Service Configuration**:
+Each service has its own `railway.json` configuration:
+- `backend/railway.json` - Backend FastAPI service
+- `frontend/pos-cesariel/railway.json` - POS Admin frontend
+- `ecommerce/railway.json` - E-commerce frontend
+
+**Important**: Do NOT create a `railway.json` in the project root as it causes conflicts with Railway's monorepo detection.
+
+**Deployment Steps**:
+1. Backend: Set root directory to `backend`, configure DATABASE_URL, SECRET_KEY, CLOUDINARY variables
+2. Frontend POS: Set root directory to `frontend/pos-cesariel`, configure NEXT_PUBLIC_API_URL
+3. E-commerce: Set root directory to `ecommerce`, configure NEXT_PUBLIC_API_URL
+4. PostgreSQL: Use Railway's PostgreSQL addon and reference variables with `${{Postgres.DATABASE_URL}}`
+
+**Key Features**:
+- Automatic deployment from GitHub pushes
+- Service-to-service variable references
+- Built-in health checks and monitoring
+- Custom domain support
+- Estimated cost: $20-40/month for all services
