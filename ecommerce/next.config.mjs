@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Configuración para builds de producción con Docker
+  output: 'standalone',
+
   eslint: {
     // Permitir builds con warnings de ESLint (según CLAUDE.md)
     ignoreDuringBuilds: true,

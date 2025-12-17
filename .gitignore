@@ -306,6 +306,24 @@ temp/
 *.swo
 
 # Docker
-.dockerignore
-Dockerfile
 docker-compose.override.yml
+
+# Production files - NEVER commit these
+.env.production
+*.production.local
+
+# Backups
+backups/
+*.sql
+*.dump
+
+# SSL Certificates
+nginx/ssl/*.crt
+nginx/ssl/*.key
+nginx/ssl/*.pem
+*.crt
+*.key
+*.pem
+
+# Production logs
+*.production.log
