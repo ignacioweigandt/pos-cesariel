@@ -327,3 +327,6 @@ nginx/ssl/*.pem
 
 # Production logs
 *.production.log
+
+# Railway
+railway-env-vars.txt
