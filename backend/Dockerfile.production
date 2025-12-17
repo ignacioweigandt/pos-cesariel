@@ -1,44 +1,21 @@
-# Multi-stage build for production
-FROM python:3.9-slim as builder
+# Single-stage build optimized for Railway
+FROM python:3.9-slim
 
 # Establecer directorio de trabajo
 WORKDIR /app
 
-# Instalar dependencias del sistema necesarias para compilar
+# Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar requirements y crear un virtual environment
+# Copiar requirements e instalar dependencias
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Stage final - imagen más pequeña
-FROM python:3.9-slim
-
-# Crear usuario no-root para mayor seguridad
-RUN useradd -m -u 1000 appuser
-
-# Establecer directorio de trabajo
-WORKDIR /app
-
-# Instalar solo las dependencias runtime necesarias
-RUN apt-get update && apt-get install -y \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copiar dependencias Python del builder
-COPY --from=builder /root/.local /home/appuser/.local
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código de la aplicación
-COPY --chown=appuser:appuser . .
-
-# Asegurar que los scripts en .local estén en PATH
-ENV PATH=/home/appuser/.local/bin:$PATH
-
-# Cambiar al usuario no-root
-USER appuser
+COPY . .
 
 # Exponer el puerto
 EXPOSE 8000
