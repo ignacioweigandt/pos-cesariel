@@ -1,0 +1,199 @@
+# ═══════════════════════════════════════════════════════════════
+# COMANDOS RAILWAY - CONFIGURACIÓN FRONTEND POS
+# ═══════════════════════════════════════════════════════════════
+#
+# Estado actual:
+# ✅ Railway CLI instalado (v4.15.0)
+# ✅ Proyecto: charming-insight
+# ✅ Backend: pos-cesariel (funcionando)
+#
+# Objetivo: Configurar servicio frontend
+# ═══════════════════════════════════════════════════════════════
+
+# ────────────────────────────────────────────────────────────────
+# PASO 1: ¿Ya creaste el servicio frontend en Railway UI?
+# ────────────────────────────────────────────────────────────────
+# SI NO LO HAS HECHO:
+#   1. Ve a https://railway.app
+#   2. Abre tu proyecto "charming-insight"
+#   3. Clic en "+ New" → "GitHub Repo"
+#   4. Selecciona "pos-cesariel"
+#   5. Nombra el servicio: "frontend-pos"
+
+
+# ────────────────────────────────────────────────────────────────
+# PASO 2: Obtener URL del Backend
+# ────────────────────────────────────────────────────────────────
+# Ejecuta estos comandos para obtener la URL de tu backend:
+
+railway link --service pos-cesariel
+railway domain
+
+# 📝 COPIA LA URL QUE SE MUESTRA (ejemplo):
+# https://pos-cesariel-production.up.railway.app
+#
+# Guárdala, la necesitarás en el siguiente paso
+
+
+# ────────────────────────────────────────────────────────────────
+# PASO 3: Cambiar al Servicio Frontend
+# ────────────────────────────────────────────────────────────────
+# Reemplaza "frontend-pos" si tu servicio tiene otro nombre
+
+railway link --service frontend-pos
+
+# Verificar que cambiaste:
+railway status
+# Debe mostrar: Service: frontend-pos
+
+
+# ────────────────────────────────────────────────────────────────
+# PASO 4: Configurar Variables de Entorno
+# ────────────────────────────────────────────────────────────────
+# ⚠️ IMPORTANTE: Reemplaza <TU-BACKEND-URL> con la URL del Paso 2
+
+railway variables --set NEXT_PUBLIC_API_URL=<TU-BACKEND-URL>
+railway variables --set PORT=3000
+railway variables --set NODE_ENV=production
+railway variables --set NEXT_TELEMETRY_DISABLED=1
+
+# EJEMPLO CON URL REAL:
+# railway variables --set NEXT_PUBLIC_API_URL=https://pos-cesariel-production.up.railway.app
+# railway variables --set PORT=3000
+# railway variables --set NODE_ENV=production
+# railway variables --set NEXT_TELEMETRY_DISABLED=1
+
+# Verificar que se configuraron:
+railway variables
+
+
+# ────────────────────────────────────────────────────────────────
+# PASO 5: Configurar Builder en Railway UI
+# ────────────────────────────────────────────────────────────────
+# ⚠️ CRÍTICO: Railway CLI no puede hacer esto, debes ir a UI
+#
+# 1. Ve a https://railway.app
+# 2. Abre tu proyecto "charming-insight"
+# 3. Selecciona servicio "frontend-pos"
+# 4. Settings → Source
+#    - Root Directory: frontend/pos-cesariel
+# 5. Settings → Build
+#    - Builder: Dockerfile
+#    - Dockerfile Path: Dockerfile.production
+#
+# ⚠️ SIN ESTO EL BUILD FALLARÁ
+
+
+# ────────────────────────────────────────────────────────────────
+# PASO 6: Hacer Deploy
+# ────────────────────────────────────────────────────────────────
+# Una vez configurado el Builder en UI, ejecuta:
+
+railway up --detach
+
+# Ver logs en tiempo real:
+railway logs
+
+# Busca en los logs:
+# ✅ "using dockerfile builder" = CORRECTO
+# ❌ "using build driver railpack" = INCORRECTO (volver al Paso 5)
+
+
+# ────────────────────────────────────────────────────────────────
+# PASO 7: Generar Dominio Público
+# ────────────────────────────────────────────────────────────────
+
+railway domain
+
+# O desde UI:
+# Settings → Networking → "Generate Domain"
+
+
+# ────────────────────────────────────────────────────────────────
+# PASO 8: Verificar que Funciona
+# ────────────────────────────────────────────────────────────────
+
+# Ver estado:
+railway status
+
+# Obtener dominio nuevamente:
+railway domain
+
+# Abrir en navegador:
+# https://<tu-dominio>.railway.app
+
+
+# ═══════════════════════════════════════════════════════════════
+# RESUMEN DE COMANDOS EN ORDEN (Copia y ejecuta)
+# ═══════════════════════════════════════════════════════════════
+
+# 1. Obtener URL del backend
+railway link --service pos-cesariel
+railway domain
+# 📝 COPIAR LA URL
+
+# 2. Cambiar al frontend
+railway link --service frontend-pos
+
+# 3. Configurar variables (REEMPLAZAR <URL>)
+railway variables --set NEXT_PUBLIC_API_URL=<TU-BACKEND-URL>
+railway variables --set PORT=3000
+railway variables --set NODE_ENV=production
+railway variables --set NEXT_TELEMETRY_DISABLED=1
+
+# 4. Verificar variables
+railway variables
+
+# 5. IR A RAILWAY UI Y CONFIGURAR:
+#    - Root Directory: frontend/pos-cesariel
+#    - Builder: Dockerfile
+#    - Dockerfile Path: Dockerfile.production
+
+# 6. Deploy
+railway up --detach
+
+# 7. Ver logs
+railway logs
+
+# 8. Obtener dominio
+railway domain
+
+
+# ═══════════════════════════════════════════════════════════════
+# TROUBLESHOOTING
+# ═══════════════════════════════════════════════════════════════
+
+# Error: "Railpack could not determine how to build"
+# → Ve a Railway UI y cambia Builder a "Dockerfile"
+
+# Error: "Service not found"
+# → Crea el servicio primero en Railway UI (Paso 1)
+
+# Frontend no carga
+# → Verifica NEXT_PUBLIC_API_URL apunta al backend correcto
+# → Revisa logs: railway logs
+
+# No veo la opción "Builder" en UI
+# → Ve a Settings → "Show Advanced"
+
+
+# ═══════════════════════════════════════════════════════════════
+# COMANDOS ÚTILES
+# ═══════════════════════════════════════════════════════════════
+
+railway status           # Ver estado actual
+railway variables        # Ver variables del servicio
+railway domain          # Ver/generar dominio
+railway logs            # Ver logs en tiempo real
+railway link --service <nombre>  # Cambiar de servicio
+railway up --detach     # Hacer deploy
+railway whoami          # Ver información de cuenta
+
+
+# ═══════════════════════════════════════════════════════════════
+# DOCUMENTACIÓN ADICIONAL
+# ═══════════════════════════════════════════════════════════════
+# - RAILWAY_CLI_SETUP.md    → Guía completa paso a paso
+# - RAILWAY_QUICK_FIX.md    → Solución rápida (5 minutos)
+# - RAILWAY_MANUAL_CONFIG.md → Configuración detallada UI
+# ═══════════════════════════════════════════════════════════════
