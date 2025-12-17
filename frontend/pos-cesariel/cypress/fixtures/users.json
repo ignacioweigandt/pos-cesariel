@@ -1,0 +1,40 @@
+{
+  "admin": {
+    "username": "admin",
+    "password": "admin123",
+    "role": "admin",
+    "full_name": "Administrador del Sistema"
+  },
+  "manager": {
+    "username": "manager",
+    "password": "manager123",
+    "role": "manager",
+    "full_name": "Gerente de Sucursal"
+  },
+  "seller": {
+    "username": "seller",
+    "password": "seller123",
+    "role": "seller",
+    "full_name": "Vendedor"
+  },
+  "testProduct": {
+    "name": "Producto de Prueba",
+    "sku": "TEST-001",
+    "barcode": "1234567890123",
+    "price": 99.99,
+    "stock_quantity": 100,
+    "category_id": 1
+  },
+  "testSale": {
+    "customer_name": "Cliente de Prueba",
+    "customer_email": "cliente@test.com",
+    "payment_method": "efectivo",
+    "items": [
+      {
+        "product_id": 1,
+        "quantity": 2,
+        "unit_price": 99.99
+      }
+    ]
+  }
+}

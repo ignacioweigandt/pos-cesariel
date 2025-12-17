@@ -1,0 +1,480 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeftIcon,
+  CubeIcon,
+  BuildingStorefrontIcon,
+  DocumentArrowUpIcon,
+  TagIcon,
+  PlusIcon,
+  CurrencyDollarIcon,
+} from '@heroicons/react/24/outline';
+import { useBarcodeScanner } from '@/lib/useBarcodeScanner';
+
+// Components
+import { InventoryStatsCards } from './Stats/InventoryStatsCards';
+import { ProductFilters } from './ProductList/ProductFilters';
+import { ProductList } from './ProductList/ProductList';
+import { ProductFormModal } from './ProductForms/ProductFormModal';
+import { CategoryFormModal } from './ProductForms/CategoryFormModal';
+import { StockAdjustmentModal } from './Modals/StockAdjustmentModal';
+import { DeleteConfirmationModal } from './Modals/DeleteConfirmationModal';
+import { BulkPriceUpdateModal } from './Modals/BulkPriceUpdateModal';
+import ImportModal from './Import/ImportModal';
+import SizeStockModal from './StockManagement/SizeStockModal';
+
+// Hooks
+import { useProducts } from '../hooks/useProducts';
+import { useCategories } from '../hooks/useCategories';
+import { useBrands } from '../hooks/useBrands';
+import { useProductFilters } from '../hooks/useProductFilters';
+import { useMultiBranchStock } from '../hooks/useMultiBranchStock';
+
+// Utils
+import { calculateInventoryStats } from '../utils/stockCalculations';
+
+// Types
+import type { Product, Category } from '../types/inventory.types';
+
+/**
+ * InventoryContainer Component
+ *
+ * Main container for inventory management that orchestrates:
+ * - Product and category CRUD operations
+ * - Stock management (single and multi-branch)
+ * - Product filtering and search
+ * - Import functionality
+ * - Size/variant management
+ */
+export function InventoryContainer() {
+  const router = useRouter();
+
+  // User state
+  const [user, setUser] = useState<any>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Data hooks
+  const {
+    products,
+    loading: productsLoading,
+    loadProducts,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    adjustStock,
+  } = useProducts();
+
+  const {
+    categories,
+    loadCategories,
+    createCategory,
+    updateCategory,
+  } = useCategories();
+
+  const {
+    brands,
+    loadBrands,
+  } = useBrands();
+
+  const { filteredProducts, filters, setFilters } = useProductFilters(products);
+
+  const {
+    multiBranchProducts,
+    loadMultiBranchStock,
+  } = useMultiBranchStock();
+
+  // Modal states
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showSizeStockModal, setShowSizeStockModal] = useState(false);
+  const [showMultiBranchView, setShowMultiBranchView] = useState(false);
+  const [showBulkPriceModal, setShowBulkPriceModal] = useState(false);
+
+  // Selected items for modals
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [stockProduct, setStockProduct] = useState<Product | null>(null);
+  const [deleteProductItem, setDeleteProductItem] = useState<Product | null>(null);
+  const [sizeStockProduct, setSizeStockProduct] = useState<Product | null>(null);
+
+  // Other states
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [scannerEnabled, setScannerEnabled] = useState(true);
+
+  // Barcode scanner
+  const handleBarcodeDetected = useCallback(
+    async (barcode: string) => {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/products/barcode/${barcode}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const product = await response.json();
+          setFilters({ ...filters, searchTerm: product.name });
+          alert(`📦 Producto encontrado: ${product.name}`);
+        } else if (response.status === 404) {
+          alert(`❌ No se encontró producto con código: ${barcode}`);
+        } else {
+          alert('Error al buscar el producto');
+        }
+      } catch (error) {
+        console.error('Error searching product by barcode:', error);
+        alert('Error de conexión al buscar el producto');
+      }
+    },
+    [token, filters, setFilters]
+  );
+
+  const { isScanning, currentBuffer } = useBarcodeScanner({
+    onBarcodeDetected: handleBarcodeDetected,
+    enabled: scannerEnabled,
+  });
+
+  // Initial load
+  useEffect(() => {
+    setMounted(true);
+
+    const loadData = async () => {
+      const authToken = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+
+      if (!authToken) {
+        router.push('/');
+        return;
+      }
+
+      setToken(authToken);
+      if (userData) {
+        setUser(JSON.parse(userData));
+      }
+
+      try {
+        await Promise.all([loadProducts(), loadCategories(), loadBrands()]);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
+
+    loadData();
+  }, [router, loadProducts, loadCategories, loadBrands]);
+
+  // Load multi-branch data when view is toggled
+  useEffect(() => {
+    if (showMultiBranchView) {
+      loadMultiBranchStock();
+    }
+  }, [showMultiBranchView, loadMultiBranchStock]);
+
+  // Modal handlers
+  const openNewProductModal = () => {
+    setEditingProduct(null);
+    setShowProductModal(true);
+  };
+
+  const openEditProductModal = (product: Product) => {
+    setEditingProduct(product);
+    setShowProductModal(true);
+  };
+
+  const openNewCategoryModal = () => {
+    setEditingCategory(null);
+    setShowCategoryModal(true);
+  };
+
+  const openEditCategoryModal = (category: Category) => {
+    setEditingCategory(category);
+    setShowCategoryModal(true);
+  };
+
+  const openStockModal = (product: Product) => {
+    setStockProduct(product);
+    setShowStockModal(true);
+  };
+
+  const openDeleteModal = (product: Product) => {
+    setDeleteProductItem(product);
+    setShowDeleteModal(true);
+  };
+
+  const openSizeStockModal = (product: Product) => {
+    setSizeStockProduct(product);
+    setShowSizeStockModal(true);
+  };
+
+  // Save handlers
+  const handleProductSave = async (productData: any) => {
+    if (editingProduct) {
+      await updateProduct(editingProduct.id, productData);
+    } else {
+      await createProduct(productData);
+    }
+  };
+
+  const handleCategorySave = async (categoryData: any) => {
+    if (editingCategory) {
+      await updateCategory(editingCategory.id, categoryData);
+    } else {
+      await createCategory(categoryData);
+    }
+  };
+
+  const handleStockSave = async (stockData: { new_stock: number; notes: string }) => {
+    if (stockProduct) {
+      await adjustStock(stockProduct.id, stockData);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteProductItem) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProduct(deleteProductItem.id);
+      setShowDeleteModal(false);
+      setDeleteProductItem(null);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleImportSuccess = () => {
+    loadProducts();
+  };
+
+  const handleSizeStockSuccess = () => {
+    loadProducts();
+  };
+
+  const handleBulkPriceSuccess = () => {
+    loadProducts();
+  };
+
+  // Calculate stats
+  const stats = calculateInventoryStats(products, categories.length);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* Top Navigation */}
+      <div className="bg-white shadow">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <ArrowLeftIcon className="h-6 w-6" />
+              </button>
+              <CubeIcon className="h-8 w-8 text-indigo-600" />
+              <h1 className="text-xl font-semibold text-gray-900">
+                Inventario
+              </h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-700">
+                {user?.full_name} - {user?.role}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Inventario</h1>
+                <p className="mt-1 text-sm text-gray-600">
+                  Gestión de productos, categorías y stock
+                </p>
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs text-blue-600">
+                    Presione{' '}
+                    <kbd className="px-1 py-0.5 bg-blue-200 rounded text-xs">
+                      F2
+                    </kbd>{' '}
+                    para ir al POS ·
+                    <kbd className="px-1 py-0.5 bg-green-200 rounded text-xs ml-1">
+                      F3
+                    </kbd>{' '}
+                    para escáner
+                  </p>
+                  <p className="text-xs text-green-600">
+                    {scannerEnabled ? (
+                      <>
+                        📱 Escáner activo - Escanee códigos de barras para
+                        buscar productos
+                      </>
+                    ) : (
+                      <>
+                        📱 Escáner desactivado - Presione F3 o haga clic en el
+                        botón &quot;Escáner&quot;
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowMultiBranchView(!showMultiBranchView)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <BuildingStorefrontIcon className="h-4 w-4 mr-2" />
+                  {showMultiBranchView
+                    ? 'Vista Normal'
+                    : 'Vista Multi-Sucursal'}
+                </button>
+                <button
+                  onClick={() => setShowBulkPriceModal(true)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <CurrencyDollarIcon className="h-4 w-4 mr-2" />
+                  Actualizar Precios
+                </button>
+                <button
+                  onClick={() => setShowImportModal(true)}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <DocumentArrowUpIcon className="h-4 w-4 mr-2" />
+                  Importar
+                </button>
+                <button
+                  onClick={openNewCategoryModal}
+                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                >
+                  <TagIcon className="h-4 w-4 mr-2" />
+                  Nueva Categoría
+                </button>
+                <button
+                  onClick={openNewProductModal}
+                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Nuevo Producto
+                </button>
+              </div>
+            </div>
+
+            {/* Stats Cards */}
+            <InventoryStatsCards stats={stats} />
+
+            {/* Filters */}
+            <ProductFilters
+              filters={filters}
+              onFiltersChange={setFilters}
+              categories={categories}
+              scannerEnabled={scannerEnabled}
+              onScannerToggle={() => setScannerEnabled(!scannerEnabled)}
+              isScanning={isScanning}
+              currentBuffer={currentBuffer}
+            />
+
+            {/* Product List */}
+            <ProductList
+              products={filteredProducts}
+              multiBranchProducts={multiBranchProducts}
+              showMultiBranchView={showMultiBranchView}
+              loading={productsLoading}
+              onEdit={openEditProductModal}
+              onDelete={openDeleteModal}
+              onAdjustStock={openStockModal}
+              onManageSizes={openSizeStockModal}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <ProductFormModal
+        isOpen={showProductModal}
+        product={editingProduct}
+        categories={categories}
+        brands={brands}
+        onClose={() => {
+          setShowProductModal(false);
+          setEditingProduct(null);
+        }}
+        onSave={handleProductSave}
+      />
+
+      <CategoryFormModal
+        isOpen={showCategoryModal}
+        category={editingCategory}
+        onClose={() => {
+          setShowCategoryModal(false);
+          setEditingCategory(null);
+        }}
+        onSave={handleCategorySave}
+      />
+
+      <StockAdjustmentModal
+        isOpen={showStockModal}
+        product={stockProduct}
+        onClose={() => {
+          setShowStockModal(false);
+          setStockProduct(null);
+        }}
+        onSave={handleStockSave}
+      />
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        product={deleteProductItem}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteProductItem(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={isDeleting}
+      />
+
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportSuccess={handleImportSuccess}
+      />
+
+      <SizeStockModal
+        isOpen={showSizeStockModal}
+        onClose={() => {
+          setShowSizeStockModal(false);
+          setSizeStockProduct(null);
+        }}
+        product={sizeStockProduct}
+        onUpdateSuccess={handleSizeStockSuccess}
+      />
+
+      <BulkPriceUpdateModal
+        isOpen={showBulkPriceModal}
+        onClose={() => setShowBulkPriceModal(false)}
+        brands={brands}
+        onSuccess={handleBulkPriceSuccess}
+      />
+    </div>
+  );
+}

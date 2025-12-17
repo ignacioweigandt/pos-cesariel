@@ -1,0 +1,121 @@
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60  # 1 minute
+      arrivalRate: 10  # 10 users per second
+      name: "Warm up phase"
+    - duration: 300  # 5 minutes  
+      arrivalRate: 25  # 25 users per second
+      name: "Load test phase"
+    - duration: 60   # 1 minute
+      arrivalRate: 50  # 50 users per second  
+      name: "Peak load phase"
+  http:
+    timeout: 30
+  payload:
+    path: './test-data.csv'
+    fields:
+      - username
+      - password
+
+scenarios:
+  - name: "Login and browse dashboard"
+    weight: 40
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "{{ username }}"
+            password: "{{ password }}"
+          capture:
+            - json: "$.access_token"
+              as: "token"
+      - get:
+          url: "/dashboard"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      - think: 5
+      - get:
+          url: "/api/sales/reports/dashboard"
+          headers:
+            Authorization: "Bearer {{ token }}"
+
+  - name: "POS workflow"
+    weight: 30
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "seller"
+            password: "seller123"
+          capture:
+            - json: "$.access_token"
+              as: "token"
+      - get:
+          url: "/pos"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      - think: 3
+      - get:
+          url: "/api/products/search?q=producto"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      - think: 2
+      - post:
+          url: "/api/sales"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            sale_type: "POS"
+            items:
+              - product_id: 1
+                quantity: 1
+                unit_price: 99.99
+            payment_method: "efectivo"
+
+  - name: "Inventory management"
+    weight: 20
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "manager"
+            password: "manager123"
+          capture:
+            - json: "$.access_token"
+              as: "token"
+      - get:
+          url: "/inventory"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      - think: 3
+      - get:
+          url: "/api/products"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      - think: 2
+      - get:
+          url: "/api/categories"
+          headers:
+            Authorization: "Bearer {{ token }}"
+
+  - name: "Reports access"
+    weight: 10
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "manager"
+            password: "manager123"
+          capture:
+            - json: "$.access_token"
+              as: "token"
+      - get:
+          url: "/reports"
+          headers:
+            Authorization: "Bearer {{ token }}"
+      - think: 5
+      - get:
+          url: "/api/sales/reports/sales-report?start_date=2024-01-01&end_date=2024-01-31"
+          headers:
+            Authorization: "Bearer {{ token }}"
