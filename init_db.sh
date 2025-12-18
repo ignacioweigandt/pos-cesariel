@@ -21,7 +21,7 @@ cd backend
 
 echo "📊 [1/3] Inicializando datos esenciales..."
 echo ""
-python init_data.py
+python3 init_data.py
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -40,7 +40,7 @@ echo ""
 
 echo "🛍️  [2/3] Inicializando contenido de e-commerce..."
 echo ""
-python init_content_data.py
+python3 init_content_data.py
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -59,7 +59,7 @@ echo ""
 
 echo "⚽ [3/3] Cargando catálogo de productos deportivos..."
 echo ""
-python init_sportswear_data.py
+python3 init_sportswear_data.py
 
 if [ $? -eq 0 ]; then
     echo ""
