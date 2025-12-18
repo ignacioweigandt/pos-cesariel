@@ -5,6 +5,7 @@ import { CloudArrowUpIcon, XMarkIcon, PhotoIcon } from '@heroicons/react/24/outl
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import { configApi } from '@/lib/api';
+import { apiClient } from '@/shared/api/client';
 
 interface EcommerceConfig {
   id?: number;
@@ -91,20 +92,14 @@ export default function LogoManager({
       formData.append('file', file);
       formData.append('folder', 'store-logo');
 
-      // Upload usando el endpoint específico para logo
-      const response = await fetch('http://localhost:8000/config/upload-logo', {
-        method: 'POST',
-        body: formData,
+      // Upload usando el endpoint específico para logo con apiClient
+      const response = await apiClient.post('/config/upload-logo', formData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'multipart/form-data',
         }
       });
 
-      if (!response.ok) {
-        throw new Error('Error uploading logo');
-      }
-
-      const result = await response.json();
+      const result = response.data;
       
       // Actualizar estado local
       setConfig(prev => ({

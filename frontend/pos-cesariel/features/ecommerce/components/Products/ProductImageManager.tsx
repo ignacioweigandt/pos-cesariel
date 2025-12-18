@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { ecommerceAdvancedApi } from '@/lib/api';
+import { apiClient } from '@/shared/api/client';
 import toast from 'react-hot-toast';
 import {
   PhotoIcon,
@@ -50,6 +51,9 @@ export default function ProductImageManager({
   const [uploading, setUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Get API base URL from apiClient configuration
+  const API_BASE_URL = apiClient.defaults.baseURL || 'https://backend-production-c20a.up.railway.app';
 
   useEffect(() => {
     if (isOpen && product) {
@@ -200,7 +204,7 @@ export default function ProductImageManager({
                 >
                   <div className="aspect-square relative">
                     <img
-                      src={`http://localhost:8000/${image.image_url}`}
+                      src={`${API_BASE_URL}/${image.image_url}`}
                       alt={image.alt_text || 'Product image'}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -217,7 +221,7 @@ export default function ProductImageManager({
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 flex items-center justify-center">
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-2">
                         <button
-                          onClick={() => handleImagePreview(`http://localhost:8000/${image.image_url}`)}
+                          onClick={() => handleImagePreview(`${API_BASE_URL}/${image.image_url}`)}
                           className="p-2 bg-white rounded-full text-gray-700 hover:text-indigo-600"
                           title="Ver imagen"
                         >

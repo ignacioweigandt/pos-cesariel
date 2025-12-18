@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { apiClient } from "@/shared/api/client";
 import toast from "react-hot-toast";
 import type {
   CartItem,
@@ -67,61 +68,37 @@ export function useSaleProcessing(): UseSaleProcessingReturn {
 
       console.log("Submitting sale data:", saleData);
 
-      // Send sale to backend
-      const response = await fetch("http://localhost:8000/sales/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      // Send sale to backend using apiClient
+      const response = await apiClient.post("/sales/", saleData);
+      const saleResult = response.data;
+
+      // Prepare confirmation data
+      const confirmationData: SaleConfirmationData = {
+        id: saleResult.id,
+        paymentMethod: paymentData.payment_method,
+        cardType: paymentData.card_type,
+        installments: paymentData.installments,
+        total: paymentData.total,
+        items: cartItems.map((item) => ({
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
+      };
+
+      toast.success(`Venta #${saleResult.id} completada exitosamente!`, {
+        duration: 3000,
+        style: {
+          background: "#10B981",
+          color: "white",
         },
-        body: JSON.stringify(saleData),
       });
 
-      if (response.ok) {
-        const saleResult = await response.json();
-
-        // Prepare confirmation data
-        const confirmationData: SaleConfirmationData = {
-          id: saleResult.id,
-          paymentMethod: paymentData.payment_method,
-          cardType: paymentData.card_type,
-          installments: paymentData.installments,
-          total: paymentData.total,
-          items: cartItems.map((item) => ({
-            name: item.product.name,
-            quantity: item.quantity,
-            price: item.price,
-          })),
-        };
-
-        toast.success(`Venta #${saleResult.id} completada exitosamente!`, {
-          duration: 3000,
-          style: {
-            background: "#10B981",
-            color: "white",
-          },
-        });
-
-        return confirmationData;
-      } else {
-        let error;
-        try {
-          error = await response.json();
-        } catch (parseError) {
-          error = {
-            detail: `HTTP ${response.status}: ${response.statusText}`,
-          };
-        }
-
-        console.error("Sale creation error:", error);
-        toast.error(
-          `Error al procesar la venta: ${error.detail || "Error desconocido"}`
-        );
-        return null;
-      }
-    } catch (error) {
+      return confirmationData;
+    } catch (error: any) {
       console.error("Error processing sale:", error);
-      toast.error("Error de conexión al procesar la venta");
+      const errorMessage = error.response?.data?.detail || "Error de conexión al procesar la venta";
+      toast.error(`Error al procesar la venta: ${errorMessage}`);
       return null;
     } finally {
       setProcessing(false);

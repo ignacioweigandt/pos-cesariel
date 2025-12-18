@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { apiClient } from '@/shared/api/client';
 import type { PreviewProduct } from './useImportPreview';
 
 export interface ImportError {
@@ -30,30 +31,17 @@ export function useImportConfirm() {
       setError(null);
 
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(
-          'http://localhost:8000/products/import-confirm',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ products }),
-          }
+        const response = await apiClient.post(
+          '/products/import-confirm',
+          { products }
         );
 
-        if (response.ok) {
-          const importResult: ImportResult = await response.json();
-          setResult(importResult);
-          return importResult.successful_rows > 0;
-        } else {
-          const errorData = await response.json();
-          setError(errorData.detail || 'Error al importar productos');
-          return false;
-        }
-      } catch (err) {
-        setError('Error de conexión al servidor');
+        const importResult: ImportResult = response.data;
+        setResult(importResult);
+        return importResult.successful_rows > 0;
+      } catch (err: any) {
+        const errorMessage = err.response?.data?.detail || 'Error de conexión al servidor';
+        setError(errorMessage);
         console.error('Import error:', err);
         return false;
       } finally {

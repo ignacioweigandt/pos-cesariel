@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { api } from '@/lib/api';
+import { apiClient } from '@/shared/api/client';
 
 export interface PreviewProduct {
   id?: number;
@@ -31,26 +31,18 @@ export function useImportPreview() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:8000/products/import-preview', {
-        method: 'POST',
+      const response = await apiClient.post('/products/import-preview', formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
         },
-        body: formData,
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setPreviewData(result.preview_data || []);
-        return true;
-      } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Error al procesar el archivo');
-        return false;
-      }
-    } catch (err) {
-      setError('Error de conexión al servidor');
+      const result = response.data;
+      setPreviewData(result.preview_data || []);
+      return true;
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.detail || 'Error de conexión al servidor';
+      setError(errorMessage);
       console.error('Preview error:', err);
       return false;
     } finally {

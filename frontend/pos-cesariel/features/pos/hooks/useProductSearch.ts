@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { apiClient } from "@/shared/api/client";
 import type { Product } from "../types/pos.types";
 
 interface UseProductSearchReturn {
@@ -44,18 +45,8 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("http://localhost:8000/products/", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProducts(data);
-      } else {
-        throw new Error("Error fetching products");
-      }
+      const response = await apiClient.get("/products/");
+      setProducts(response.data);
     } catch (err) {
       console.error("Error fetching products:", err);
       setError("Error al cargar productos");

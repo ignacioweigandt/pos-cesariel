@@ -12,6 +12,7 @@ import {
   CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 import { useBarcodeScanner } from '@/lib/useBarcodeScanner';
+import { apiClient } from '@/shared/api/client';
 
 // Components
 import { InventoryStatsCards } from './Stats/InventoryStatsCards';
@@ -111,27 +112,20 @@ export function InventoryContainer() {
   const handleBarcodeDetected = useCallback(
     async (barcode: string) => {
       try {
-        const response = await fetch(
-          `http://localhost:8000/products/barcode/${barcode}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const response = await apiClient.get(
+          `/products/barcode/${barcode}`
         );
 
-        if (response.ok) {
-          const product = await response.json();
-          setFilters({ ...filters, searchTerm: product.name });
-          alert(`📦 Producto encontrado: ${product.name}`);
-        } else if (response.status === 404) {
+        const product = response.data;
+        setFilters({ ...filters, searchTerm: product.name });
+        alert(`📦 Producto encontrado: ${product.name}`);
+      } catch (error: any) {
+        console.error('Error searching product by barcode:', error);
+        if (error.response?.status === 404) {
           alert(`❌ No se encontró producto con código: ${barcode}`);
         } else {
-          alert('Error al buscar el producto');
+          alert('Error de conexión al buscar el producto');
         }
-      } catch (error) {
-        console.error('Error searching product by barcode:', error);
-        alert('Error de conexión al buscar el producto');
       }
     },
     [token, filters, setFilters]

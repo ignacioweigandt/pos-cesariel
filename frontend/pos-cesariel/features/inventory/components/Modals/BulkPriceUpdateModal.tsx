@@ -7,6 +7,7 @@ import {
   CurrencyDollarIcon,
   CheckIcon,
 } from '@heroicons/react/24/outline';
+import { apiClient } from '@/shared/api/client';
 
 interface BulkPriceUpdateModalProps {
   isOpen: boolean;
@@ -71,18 +72,11 @@ export function BulkPriceUpdateModal({
   const loadBrandProducts = async (brand: string) => {
     setLoadingProducts(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `http://localhost:8000/products?limit=1000&search=${encodeURIComponent(brand)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await apiClient.get(
+        `/products?limit=1000&search=${encodeURIComponent(brand)}`
       );
 
-      if (response.ok) {
-        const allProducts = await response.json();
+      const allProducts = response.data;
         // Filtrar solo productos de la marca seleccionada
         const filtered = allProducts.filter(
           (p: Product) => p.brand === brand
@@ -143,27 +137,15 @@ export function BulkPriceUpdateModal({
         updateData.product_ids = selectedProductIds;
       }
 
-      const response = await fetch('http://localhost:8000/products/bulk-price-update', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setResult(data);
-        setStep('result');
-        onSuccess();
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.detail}`);
-      }
-    } catch (error) {
+      const response = await apiClient.post('/products/bulk-price-update', updateData);
+      const data = response.data;
+      setResult(data);
+      setStep('result');
+      onSuccess();
+    } catch (error: any) {
       console.error('Error updating prices:', error);
-      alert('Error al actualizar precios');
+      const errorMessage = error.response?.data?.detail || 'Error al actualizar precios';
+      alert(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { apiClient } from '@/shared/api/client';
+
+// Helper to convert HTTP(S) URL to WS(S) URL
+const getWebSocketUrl = (httpUrl: string): string => {
+  return httpUrl.replace(/^http/, 'ws');
+};
 
 export interface WebSocketMessage {
   type: string;
@@ -148,7 +154,10 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Only create URL when we have all required data
-  const url = enabled && token && branchId ? `ws://localhost:8000/ws/${branchId}?token=${token}` : '';
+  // Convert HTTP(S) base URL to WS(S) for WebSocket connection
+  const baseUrl = apiClient.defaults.baseURL || 'https://backend-production-c20a.up.railway.app';
+  const wsBaseUrl = getWebSocketUrl(baseUrl);
+  const url = enabled && token && branchId ? `${wsBaseUrl}/ws/${branchId}?token=${token}` : '';
   
   // Only log WebSocket connection attempts if there are issues
   if (enabled && (!token || !branchId)) {

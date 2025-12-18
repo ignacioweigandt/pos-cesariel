@@ -2,6 +2,7 @@
 
 import { canAccessModule, useAuth } from "@/lib/auth";
 import { configApi } from "@/lib/api";
+import { apiClient } from "@/shared/api/client";
 import { usePOSWebSocket } from "@/lib/websocket";
 import {
   ArrowLeftIcon,
@@ -89,27 +90,20 @@ export function POSContainer() {
   const handleBarcodeDetected = useCallback(
     async (barcode: string) => {
       try {
-        const response = await fetch(
-          `http://localhost:8000/products/barcode/${barcode}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const response = await apiClient.get(
+          `/products/barcode/${barcode}`
         );
 
-        if (response.ok) {
-          const product = await response.json();
-          handleProductSelect(product);
-          toast.success(`Producto encontrado: ${product.name}`);
-        } else if (response.status === 404) {
+        const product = response.data;
+        handleProductSelect(product);
+        toast.success(`Producto encontrado: ${product.name}`);
+      } catch (error: any) {
+        console.error("Error searching product by barcode:", error);
+        if (error.response?.status === 404) {
           toast.error(`No se encontró producto con código: ${barcode}`);
         } else {
-          toast.error("Error al buscar el producto");
+          toast.error("Error de conexión al buscar el producto");
         }
-      } catch (error) {
-        console.error("Error searching product by barcode:", error);
-        toast.error("Error de conexión al buscar el producto");
       }
     },
     [token]
@@ -255,25 +249,15 @@ export function POSContainer() {
     setShowSizeModal(true);
 
     try {
-      const response = await fetch(
-        `http://localhost:8000/products/${product.id}/available-sizes`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+      const response = await apiClient.get(
+        `/products/${product.id}/available-sizes`
       );
 
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableSizes(data.available_sizes || []);
-      } else {
-        toast.error("Error cargando talles disponibles");
-        setAvailableSizes([]);
-      }
+      const data = response.data;
+      setAvailableSizes(data.available_sizes || []);
     } catch (error) {
       console.error("Error fetching available sizes:", error);
-      toast.error("Error de conexión");
+      toast.error("Error cargando talles disponibles");
       setAvailableSizes([]);
     } finally {
       setLoadingSizes(false);
