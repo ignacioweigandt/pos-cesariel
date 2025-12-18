@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { apiClient } from '@/shared/api/client';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -70,46 +71,43 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
+      // Login request using apiClient (configured for Railway)
+      const response = await apiClient.post('/auth/login',
+        new URLSearchParams({
           username,
           password,
         }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      const data = response.data;
+
+      // Get user info using apiClient
+      const userResponse = await apiClient.get('/users/me', {
+        headers: {
+          'Authorization': `Bearer ${data.access_token}`
+        }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Token will be stored by Zustand login method
-        
-        // Get user info
-        const userResponse = await fetch('http://localhost:8000/users/me', {
-          headers: {
-            'Authorization': `Bearer ${data.access_token}`
-          }
-        });
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          
-          // Use the Zustand login method to update the store
-          login(data.access_token, userData);
-          
-          // Redirect to dashboard
-          router.push('/dashboard');
-        } else {
-          setError('Error al obtener información del usuario');
-        }
+      const userData = userResponse.data;
+
+      // Use the Zustand login method to update the store
+      login(data.access_token, userData);
+
+      // Redirect to dashboard
+      router.push('/dashboard');
+    } catch (error: any) {
+      if (error.response) {
+        // Server responded with error
+        setError(error.response.data?.detail || 'Usuario o contraseña incorrectos');
       } else {
-        const errorData = await response.json();
-        setError(errorData.detail || 'Usuario o contraseña incorrectos');
+        // Network error
+        setError('Error de conexión. Verifica que el backend esté funcionando');
       }
-    } catch {
-      setError('Error de conexión. Verifica que el backend esté funcionando en http://localhost:8000');
     } finally {
       setIsLoading(false);
     }
@@ -304,8 +302,8 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center text-xs text-gray-500">
-            <p>🚀 Backend: <span className="font-mono">http://localhost:8000</span></p>
-            <p>🌐 Frontend: <span className="font-mono">http://localhost:3000</span></p>
+            <p>🚀 Sistema POS Cesariel - Versión 1.0</p>
+            <p>🔒 Conexión segura establecida</p>
           </div>
         </form>
       </div>
