@@ -32,7 +32,7 @@ function getApiBaseUrl(): string {
  */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: 'https://backend-production-c20a.up.railway.app', // Hardcoded for Railway
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout (Railway cold starts can be slow)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -44,7 +44,7 @@ export const apiClient: AxiosInstance = axios.create({
  */
 export const publicApiClient: AxiosInstance = axios.create({
   baseURL: 'https://backend-production-c20a.up.railway.app', // Hardcoded for Railway
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout (Railway cold starts can be slow)
   headers: {
     'Content-Type': 'application/json',
   },
