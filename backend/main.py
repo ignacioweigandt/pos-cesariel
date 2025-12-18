@@ -86,6 +86,7 @@ app.add_middleware(OptionsMiddleware)
 
 # Configuración de middleware CORS para comunicación entre frontend y backend
 # Permite las solicitudes desde los dos frontends del sistema (POS admin y E-commerce)
+# NOTA: No se puede usar "*" con allow_credentials=True, por eso listamos orígenes específicos
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -93,9 +94,10 @@ app.add_middleware(
         "http://frontend:3000",   # POS Frontend administrativo en contenedor Docker
         "http://localhost:3001",  # E-commerce frontend en desarrollo local
         "http://ecommerce:3001",  # E-commerce frontend en contenedor Docker
-        "*"  # DESARROLLO: Permitir todos los orígenes (CAMBIAR EN PRODUCCIÓN)
+        "https://frontend-pos-production.up.railway.app",  # POS Frontend en Railway PRODUCCIÓN
+        "https://ecommerce-production.up.railway.app",  # E-commerce en Railway (si existe)
     ],
-    allow_credentials=True,  # Permitir cookies y headers de autenticación
+    allow_credentials=True,  # Permitir cookies y headers de autenticación (REQUIERE orígenes específicos)
     allow_methods=["*"],  # Permitir todos los métodos HTTP (incluye OPTIONS para CORS preflight)
     allow_headers=["*"],  # Headers permitidos (Authorization, Content-Type, etc.)
     expose_headers=["*"],  # Exponer todos los headers en la respuesta
