@@ -15,7 +15,7 @@ export const categoriesApi = {
    * @returns List of all categories
    */
   getCategories: () =>
-    apiClient.get('/categories/'),
+    apiClient.get('/categories'),
 
   /**
    * Get single category by ID
@@ -23,7 +23,7 @@ export const categoriesApi = {
    * @returns Category details
    */
   getCategory: (id: number) =>
-    apiClient.get(`/categories/${id}/`),
+    apiClient.get(`/categories/${id}`),
 
   /**
    * Create new category
@@ -31,7 +31,7 @@ export const categoriesApi = {
    * @returns Created category
    */
   createCategory: (data: any) =>
-    apiClient.post('/categories/', data),
+    apiClient.post('/categories', data),
 
   /**
    * Update existing category
@@ -40,7 +40,7 @@ export const categoriesApi = {
    * @returns Updated category
    */
   updateCategory: (id: number, data: any) =>
-    apiClient.put(`/categories/${id}/`, data),
+    apiClient.put(`/categories/${id}`, data),
 
   /**
    * Delete category
@@ -48,5 +48,5 @@ export const categoriesApi = {
    * @returns Success response
    */
   deleteCategory: (id: number) =>
-    apiClient.delete(`/categories/${id}/`),
+    apiClient.delete(`/categories/${id}`),
 };

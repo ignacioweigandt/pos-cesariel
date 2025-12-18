@@ -22,7 +22,7 @@ export const usersApi = {
    * @returns List of users
    */
   getUsers: (params?: UserParams) =>
-    apiClient.get('/users/', { params }),
+    apiClient.get('/users', { params }),
 
   /**
    * Get single user by ID
@@ -30,7 +30,7 @@ export const usersApi = {
    * @returns User details
    */
   getUser: (id: number) =>
-    apiClient.get(`/users/${id}/`),
+    apiClient.get(`/users/${id}`),
 
   /**
    * Create new user
@@ -38,7 +38,7 @@ export const usersApi = {
    * @returns Created user
    */
   createUser: (data: any) =>
-    apiClient.post('/users/', data),
+    apiClient.post('/users', data),
 
   /**
    * Update existing user
@@ -47,7 +47,7 @@ export const usersApi = {
    * @returns Updated user
    */
   updateUser: (id: number, data: any) =>
-    apiClient.put(`/users/${id}/`, data),
+    apiClient.put(`/users/${id}`, data),
 
   /**
    * Delete user
@@ -55,7 +55,7 @@ export const usersApi = {
    * @returns Success response
    */
   deleteUser: (id: number) =>
-    apiClient.delete(`/users/${id}/`),
+    apiClient.delete(`/users/${id}`),
 
   /**
    * Reset user password
@@ -63,5 +63,5 @@ export const usersApi = {
    * @returns New temporary password
    */
   resetPassword: (id: number) =>
-    apiClient.post(`/users/${id}/reset-password/`),
+    apiClient.post(`/users/${id}/reset-password`),
 };
