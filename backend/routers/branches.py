@@ -69,10 +69,11 @@ async def delete_branch(
     """
     Delete or deactivate a branch.
 
-    - If the branch has related records (users, sales, inventory), it will be deactivated (soft delete)
+    - If the branch has related records (users, sales, inventory, product sizes, movements), it will be deactivated (soft delete)
     - If the branch has no related records, it will be permanently deleted (hard delete)
+    - BranchTaxRate and BranchPaymentMethod are automatically deleted (CASCADE)
     """
-    from app.models import Sale, BranchStock
+    from app.models import Sale, BranchStock, ProductSize, InventoryMovement, Notification
 
     branch = db.query(Branch).filter(Branch.id == branch_id).first()
     if branch is None:
@@ -82,8 +83,11 @@ async def delete_branch(
     has_users = db.query(User).filter(User.branch_id == branch_id).count() > 0
     has_sales = db.query(Sale).filter(Sale.branch_id == branch_id).count() > 0
     has_inventory = db.query(BranchStock).filter(BranchStock.branch_id == branch_id).count() > 0
+    has_product_sizes = db.query(ProductSize).filter(ProductSize.branch_id == branch_id).count() > 0
+    has_movements = db.query(InventoryMovement).filter(InventoryMovement.branch_id == branch_id).count() > 0
+    has_notifications = db.query(Notification).filter(Notification.branch_id == branch_id).count() > 0
 
-    if has_users or has_sales or has_inventory:
+    if has_users or has_sales or has_inventory or has_product_sizes or has_movements or has_notifications:
         # Soft delete: mark as inactive instead of deleting
         branch.is_active = False
         branch.name = f"{branch.name} (Eliminada)"
