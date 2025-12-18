@@ -27,7 +27,7 @@ export const productsApi = {
    * @returns List of products
    */
   getProducts: (params?: ProductParams) =>
-    apiClient.get('/products', { params }),
+    apiClient.get('/products/', { params }),
 
   /**
    * Get single product by ID
@@ -43,7 +43,7 @@ export const productsApi = {
    * @returns Created product
    */
   createProduct: (data: any) =>
-    apiClient.post('/products', data),
+    apiClient.post('/products/', data),
 
   /**
    * Update existing product

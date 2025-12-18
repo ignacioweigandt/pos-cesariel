@@ -15,7 +15,7 @@ export const branchesApi = {
    * @returns List of all branches
    */
   getBranches: () =>
-    apiClient.get('/branches'),
+    apiClient.get('/branches/'),
 
   /**
    * Get single branch by ID
@@ -31,7 +31,7 @@ export const branchesApi = {
    * @returns Created branch
    */
   createBranch: (data: any) =>
-    apiClient.post('/branches', data),
+    apiClient.post('/branches/', data),
 
   /**
    * Update existing branch
