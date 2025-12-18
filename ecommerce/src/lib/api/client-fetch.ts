@@ -5,7 +5,8 @@
  * and fetch data from the browser, not the server.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Hardcoded for Railway production deployment
+const API_URL = 'https://backend-production-c20a.up.railway.app';
 
 interface ApiResponse<T> {
   data: T;

@@ -1,8 +1,7 @@
 // API Client - Server-side fetch wrapper with caching
 
-// Use server-side API_URL when available (Docker internal network)
-// Fall back to NEXT_PUBLIC_API_URL for client-side or when API_URL is not set
-const API_BASE_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Hardcoded for Railway production deployment
+const API_BASE_URL = 'https://backend-production-c20a.up.railway.app';
 
 interface FetchOptions extends RequestInit {
   revalidate?: number;
@@ -57,8 +56,8 @@ export async function apiFetch<T>(
         'Content-Type': 'application/json',
         ...fetchOptions.headers,
       },
-      // Add timeout to prevent hanging requests
-      signal: fetchOptions.signal || AbortSignal.timeout(10000),
+      // Add timeout to prevent hanging requests (30s for Railway cold starts)
+      signal: fetchOptions.signal || AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {

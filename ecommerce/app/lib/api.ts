@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Base URL del backend POS
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Base URL del backend POS - Hardcoded for Railway production
+const API_BASE_URL = 'https://backend-production-c20a.up.railway.app';
 
 // Cliente API principal
 export const api = axios.create({
@@ -9,7 +9,7 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 30000, // 30 second timeout for Railway cold starts
 });
 
 // Interceptor para manejo de errores

@@ -16,8 +16,8 @@ class ApiService {
   
   constructor() {
     this.api = axios.create({
-      baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
-      timeout: 10000, // 10 segundos
+      baseURL: 'https://backend-production-c20a.up.railway.app',
+      timeout: 30000, // 30 segundos para Railway cold starts
       headers: {
         'Content-Type': 'application/json',
       },

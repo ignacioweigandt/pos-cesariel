@@ -202,13 +202,15 @@ export async function createEcommerceSale(
     console.log('[Create Sale] Request data:', JSON.stringify(saleData, null, 2))
 
     // Create sale in backend using direct fetch to get proper error handling
-    const response = await fetch(`${process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/ecommerce/sales`, {
+    // Hardcoded for Railway production deployment
+    const response = await fetch('https://backend-production-c20a.up.railway.app/ecommerce/sales', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(saleData),
-      cache: 'no-store'
+      cache: 'no-store',
+      signal: AbortSignal.timeout(30000) // 30s timeout for Railway cold starts
     })
 
     // Parse response
