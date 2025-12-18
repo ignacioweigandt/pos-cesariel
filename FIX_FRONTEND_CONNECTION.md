@@ -206,7 +206,24 @@ F12 Console:
 
 ---
 
-**Fecha:** Diciembre 17, 2024
+**Fecha:** Diciembre 18, 2024
 **Problema:** Frontend conectando a localhost:8000
-**Solución:** Configurar NEXT_PUBLIC_API_URL y forzar redeploy
+**Solución Final:** Hardcodear URL del backend directamente en axios config
 **Tiempo:** 3-5 minutos
+
+---
+
+## 🔧 Solución Aplicada
+
+**Problema**: NEXT_PUBLIC_API_URL no se pasaba durante el build de Railway.
+
+**Fix**: Hardcoded directo en `frontend/pos-cesariel/shared/api/client.ts`:
+```typescript
+export const apiClient: AxiosInstance = axios.create({
+  baseURL: 'https://backend-production-c20a.up.railway.app', // Hardcoded for Railway
+  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' },
+});
+```
+
+**Commit**: `1737d8e` - "fix: hardcode backend URL directly in axios config"

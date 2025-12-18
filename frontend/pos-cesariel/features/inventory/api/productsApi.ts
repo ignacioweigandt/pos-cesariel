@@ -27,7 +27,7 @@ export const productsApi = {
    * @returns List of products
    */
   getProducts: (params?: ProductParams) =>
-    apiClient.get('/products', { params }),
+    apiClient.get('/products/', { params }),
 
   /**
    * Get single product by ID
@@ -35,7 +35,7 @@ export const productsApi = {
    * @returns Product details
    */
   getProduct: (id: number) =>
-    apiClient.get(`/products/${id}`),
+    apiClient.get(`/products/${id}/`),
 
   /**
    * Create new product
@@ -43,7 +43,7 @@ export const productsApi = {
    * @returns Created product
    */
   createProduct: (data: any) =>
-    apiClient.post('/products', data),
+    apiClient.post('/products/', data),
 
   /**
    * Update existing product
@@ -52,7 +52,7 @@ export const productsApi = {
    * @returns Updated product
    */
   updateProduct: (id: number, data: any) =>
-    apiClient.put(`/products/${id}`, data),
+    apiClient.put(`/products/${id}/`, data),
 
   /**
    * Delete product
@@ -60,7 +60,7 @@ export const productsApi = {
    * @returns Success response
    */
   deleteProduct: (id: number) =>
-    apiClient.delete(`/products/${id}`),
+    apiClient.delete(`/products/${id}/`),
 
   /**
    * Search products by query
@@ -68,7 +68,7 @@ export const productsApi = {
    * @returns Matching products
    */
   searchProducts: (query: string) =>
-    apiClient.get('/products/search', { params: { q: query } }),
+    apiClient.get('/products/search/', { params: { q: query } }),
 
   /**
    * Get product by barcode
@@ -76,7 +76,7 @@ export const productsApi = {
    * @returns Product matching the barcode
    */
   getProductByBarcode: (barcode: string) =>
-    apiClient.get(`/products/barcode/${barcode}`),
+    apiClient.get(`/products/barcode/${barcode}/`),
 
   /**
    * Adjust product stock level
@@ -86,5 +86,5 @@ export const productsApi = {
    * @returns Updated product
    */
   adjustStock: (id: number, newStock: number, notes?: string) =>
-    apiClient.post(`/products/${id}/adjust-stock`, { new_stock: newStock, notes }),
+    apiClient.post(`/products/${id}/adjust-stock/`, { new_stock: newStock, notes }),
 };
