@@ -6,8 +6,11 @@
 
 import axios, { AxiosInstance } from 'axios';
 
-// API base URL - always use localhost:8000 for development
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// API base URL - use Railway backend in production, localhost in development
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? 'https://backend-production-c20a.up.railway.app'
+    : 'http://localhost:8000');
 
 /**
  * Main API client with authentication
