@@ -28,7 +28,7 @@ export const salesApi = {
    * @returns List of sales
    */
   getSales: (params?: SalesParams) =>
-    apiClient.get('/sales/', { params }),
+    apiClient.get('/sales', { params }),
 
   /**
    * Get single sale by ID
@@ -36,7 +36,7 @@ export const salesApi = {
    * @returns Sale details with items
    */
   getSale: (id: number) =>
-    apiClient.get(`/sales/${id}/`),
+    apiClient.get(`/sales/${id}`),
 
   /**
    * Create new sale
@@ -44,7 +44,7 @@ export const salesApi = {
    * @returns Created sale
    */
   createSale: (data: any) =>
-    apiClient.post('/sales/', data),
+    apiClient.post('/sales', data),
 
   /**
    * Update sale status
@@ -53,7 +53,7 @@ export const salesApi = {
    * @returns Updated sale
    */
   updateSaleStatus: (id: number, status: string) =>
-    apiClient.put(`/sales/${id}/status/`, { new_status: status }),
+    apiClient.put(`/sales/${id}/status`, { new_status: status }),
 
   /**
    * Cancel/delete sale
@@ -61,14 +61,14 @@ export const salesApi = {
    * @returns Success response
    */
   cancelSale: (id: number) =>
-    apiClient.delete(`/sales/${id}/`),
+    apiClient.delete(`/sales/${id}`),
 
   /**
    * Get dashboard statistics
    * @returns Dashboard stats (today's sales, revenue, etc.)
    */
   getDashboardStats: () =>
-    apiClient.get('/sales/reports/dashboard/'),
+    apiClient.get('/sales/reports/dashboard'),
 
   /**
    * Get sales report for date range
@@ -77,7 +77,7 @@ export const salesApi = {
    * @returns Sales report data
    */
   getSalesReport: (startDate: string, endDate: string) =>
-    apiClient.get('/sales/reports/sales-report/', {
+    apiClient.get('/sales/reports/sales-report', {
       params: { start_date: startDate, end_date: endDate }
     }),
 };
