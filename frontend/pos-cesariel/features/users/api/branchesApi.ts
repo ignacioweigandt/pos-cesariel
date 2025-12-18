@@ -15,7 +15,7 @@ export const branchesApi = {
    * @returns List of all branches
    */
   getBranches: () =>
-    apiClient.get('/branches'),
+    apiClient.get('/branches/'),
 
   /**
    * Get single branch by ID
@@ -23,7 +23,7 @@ export const branchesApi = {
    * @returns Branch details
    */
   getBranch: (id: number) =>
-    apiClient.get(`/branches/${id}`),
+    apiClient.get(`/branches/${id}/`),
 
   /**
    * Create new branch
@@ -31,7 +31,7 @@ export const branchesApi = {
    * @returns Created branch
    */
   createBranch: (data: any) =>
-    apiClient.post('/branches', data),
+    apiClient.post('/branches/', data),
 
   /**
    * Update existing branch
@@ -40,7 +40,7 @@ export const branchesApi = {
    * @returns Updated branch
    */
   updateBranch: (id: number, data: any) =>
-    apiClient.put(`/branches/${id}`, data),
+    apiClient.put(`/branches/${id}/`, data),
 
   /**
    * Delete branch
@@ -48,5 +48,5 @@ export const branchesApi = {
    * @returns Success response
    */
   deleteBranch: (id: number) =>
-    apiClient.delete(`/branches/${id}`),
+    apiClient.delete(`/branches/${id}/`),
 };
