@@ -77,13 +77,12 @@ export function BulkPriceUpdateModal({
       );
 
       const allProducts = response.data;
-        // Filtrar solo productos de la marca seleccionada
-        const filtered = allProducts.filter(
-          (p: Product) => p.brand === brand
-        );
-        setBrandProducts(filtered);
-        setSelectedProductIds(filtered.map((p: Product) => p.id));
-      }
+      // Filtrar solo productos de la marca seleccionada
+      const filtered = allProducts.filter(
+        (p: Product) => p.brand === brand
+      );
+      setBrandProducts(filtered);
+      setSelectedProductIds(filtered.map((p: Product) => p.id));
     } catch (error) {
       console.error('Error loading products:', error);
       alert('Error al cargar productos de la marca');
