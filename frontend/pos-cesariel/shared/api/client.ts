@@ -6,18 +6,32 @@
 
 import axios, { AxiosInstance } from 'axios';
 
-// API base URL - use Railway backend in production, localhost in development
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-    ? 'https://backend-production-c20a.up.railway.app'
-    : 'http://localhost:8000');
+// Function to get API base URL - evaluated at runtime on client side
+function getApiBaseUrl(): string {
+  // If environment variable is set, use it
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  // Client-side detection: if running in production (not localhost), use Railway backend
+  if (typeof window !== 'undefined') {
+    const isProduction = window.location.hostname !== 'localhost' &&
+                        window.location.hostname !== '127.0.0.1';
+    if (isProduction) {
+      return 'https://backend-production-c20a.up.railway.app';
+    }
+  }
+
+  // Default: localhost for development
+  return 'http://localhost:8000';
+}
 
 /**
  * Main API client with authentication
  * Used for all authenticated endpoints
  */
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'https://backend-production-c20a.up.railway.app', // Hardcoded for Railway
   timeout: 10000, // 10 second timeout
   headers: {
     'Content-Type': 'application/json',
@@ -29,7 +43,7 @@ export const apiClient: AxiosInstance = axios.create({
  * Used for public e-commerce endpoints
  */
 export const publicApiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: 'https://backend-production-c20a.up.railway.app', // Hardcoded for Railway
   timeout: 10000, // 10 second timeout
   headers: {
     'Content-Type': 'application/json',

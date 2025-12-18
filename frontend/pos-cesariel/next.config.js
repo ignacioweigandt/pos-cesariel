@@ -23,4 +23,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;// Force rebuild at Wed Dec 17 21:10:36 -03 2025
+module.exports = nextConfig;// Force rebuild at Thu Dec 18 00:58:00 -03 2025
