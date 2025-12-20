@@ -13,7 +13,7 @@ export async function getBanners(): Promise<Banner[]> {
   const response = await apiFetch<ApiResponse<ApiPublicBanner[]>>(
     '/ecommerce/banners',
     {
-      revalidate: 3600, // Revalidate every hour
+      revalidate: 60, // Revalidate every minute for fresh banner updates
       tags: ['banners'],
     }
   );

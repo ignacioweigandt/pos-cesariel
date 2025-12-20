@@ -25,13 +25,33 @@ from auth_compat import get_current_user
 import os
 from datetime import datetime
 import uuid
+import httpx
 from cloudinary_config import (
-    upload_image_to_cloudinary, 
-    delete_image_from_cloudinary, 
+    upload_image_to_cloudinary,
+    delete_image_from_cloudinary,
     extract_public_id_from_url
 )
 
 router = APIRouter(prefix="/ecommerce-advanced", tags=["E-commerce Advanced"])
+
+# E-commerce frontend URL for cache revalidation
+ECOMMERCE_URL = os.getenv("ECOMMERCE_URL", "https://e-commerce-production-3634.up.railway.app")
+
+async def revalidate_ecommerce_cache(tag: str = "banners"):
+    """
+    Revalidate Next.js cache in e-commerce frontend
+    This ensures banner changes are immediately visible
+    """
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(f"{ECOMMERCE_URL}/api/revalidate?tag={tag}")
+            if response.status_code == 200:
+                print(f"✅ E-commerce cache revalidated for tag: {tag}")
+            else:
+                print(f"⚠️  E-commerce cache revalidation failed: {response.status_code}")
+    except Exception as e:
+        # Don't fail the main operation if cache revalidation fails
+        print(f"⚠️  Could not revalidate e-commerce cache: {str(e)}")
 
 # File upload configuration
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
@@ -260,14 +280,17 @@ async def create_store_banner(
         db.add(db_banner)
         db.commit()
         db.refresh(db_banner)
-        
+
+        # Revalidate e-commerce cache so new banner appears immediately
+        await revalidate_ecommerce_cache("banners")
+
         return db_banner
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving banner: {str(e)}")
 
 @router.put("/banners/{banner_id}", response_model=StoreBannerSchema)
-def update_store_banner(
+async def update_store_banner(
     banner_id: int,
     banner_update: StoreBannerUpdate,
     db: Session = Depends(get_db),
@@ -277,13 +300,17 @@ def update_store_banner(
     db_banner = db.query(StoreBanner).filter(StoreBanner.id == banner_id).first()
     if not db_banner:
         raise HTTPException(status_code=404, detail="Banner not found")
-    
+
     # Update fields
     for field, value in banner_update.model_dump(exclude_unset=True).items():
         setattr(db_banner, field, value)
-    
+
     db.commit()
     db.refresh(db_banner)
+
+    # Revalidate e-commerce cache
+    await revalidate_ecommerce_cache("banners")
+
     return db_banner
 
 @router.put("/banners/{banner_id}/image", response_model=StoreBannerSchema)
@@ -328,12 +355,15 @@ async def update_store_banner_with_image(
         db_banner.subtitle = subtitle
         db_banner.button_text = button_text
         db_banner.image_url = image_url
-        
+
         db.commit()
         db.refresh(db_banner)
-        
+
+        # Revalidate e-commerce cache
+        await revalidate_ecommerce_cache("banners")
+
         return db_banner
-        
+
     except Exception as e:
         db.rollback()
         raise HTTPException(
@@ -342,7 +372,7 @@ async def update_store_banner_with_image(
         )
 
 @router.delete("/banners/{banner_id}")
-def delete_store_banner(
+async def delete_store_banner(
     banner_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -351,7 +381,7 @@ def delete_store_banner(
     db_banner = db.query(StoreBanner).filter(StoreBanner.id == banner_id).first()
     if not db_banner:
         raise HTTPException(status_code=404, detail="Banner not found")
-    
+
     # Delete file from Cloudinary
     try:
         public_id = extract_public_id_from_url(db_banner.image_url)
@@ -359,11 +389,14 @@ def delete_store_banner(
             delete_image_from_cloudinary(public_id)
     except Exception as e:
         print(f"Warning: Could not delete file from Cloudinary {db_banner.image_url}: {e}")
-    
+
     # Delete from database
     db.delete(db_banner)
     db.commit()
-    
+
+    # Revalidate e-commerce cache
+    await revalidate_ecommerce_cache("banners")
+
     return {"message": "Banner deleted successfully"}
 
 # ==================== WHATSAPP SALES ENDPOINTS ====================

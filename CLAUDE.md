@@ -28,6 +28,18 @@ POS Cesariel is a comprehensive multi-branch point-of-sale system with integrate
 - Cloudinary integration for product images
 - Comprehensive testing setup across all applications
 
+## Quick Reference
+
+**Most Common Development Commands:**
+```bash
+make dev                      # Start everything
+make shell-backend            # Access backend container for testing/DB init
+make logs-backend             # View backend logs
+make down                     # Stop all services
+pytest                        # Run backend tests (inside container)
+npm test                      # Run frontend tests (inside container)
+```
+
 ## Development Commands
 
 ### Primary Commands (via Makefile)
@@ -57,12 +69,18 @@ make shell-db          # PostgreSQL shell
 
 #### Backend (FastAPI)
 ```bash
+# Setup
+pip install -r requirements.txt  # Install Python dependencies (if running locally)
+
 # Testing (run inside backend container via `make shell-backend`)
 pytest                  # Run all tests with coverage
 pytest tests/unit/      # Unit tests only
 pytest tests/integration/ # Integration tests only
 pytest -v               # Verbose output
 pytest -k "test_name"   # Run specific test by name
+pytest -k "test_auth"   # Run all tests with "auth" in the name
+pytest tests/unit/test_auth.py  # Run specific test file
+pytest tests/integration/test_sales_api.py::test_create_sale  # Run specific test function
 pytest -m unit          # Run only tests marked as @pytest.mark.unit
 pytest -m integration   # Run only tests marked as @pytest.mark.integration
 pytest -m auth          # Run authentication tests
@@ -84,11 +102,16 @@ npm run dev            # Development server
 npm run build          # Production build
 npm run lint           # ESLint
 npm run test           # Jest unit tests
-npm run test:coverage  # Jest with coverage
+npm run test:watch     # Jest in watch mode
+npm run test:coverage  # Jest with coverage (70% threshold)
 npm run cypress:open   # E2E tests (interactive)
 npm run test:e2e       # E2E tests (headless)
 npm run test:lighthouse # Performance testing
 npm run test:load      # Artillery load testing
+
+# Test specific files
+npm test -- app/components/ProductCard.test.tsx  # Run specific test file
+npm test -- --testNamePattern="renders correctly"  # Run tests matching pattern
 ```
 
 #### E-commerce Frontend
@@ -690,6 +713,18 @@ PORT=3001  # E-commerce
 **Services won't start**
 ```bash
 make clean && make dev  # Reset all containers
+docker compose ps       # Check container status
+docker compose logs     # View all service logs
+```
+
+**Port already in use (Address already in use)**
+```bash
+# Check what's using a port (e.g., 8000, 3000, 3001, 5432)
+lsof -i :8000           # macOS/Linux
+netstat -ano | findstr :8000  # Windows
+
+# Stop conflicting services or change port in docker-compose.yml
+make down && make dev
 ```
 
 **Database connection issues**
