@@ -95,7 +95,7 @@ app.add_middleware(
         "http://localhost:3001",  # E-commerce frontend en desarrollo local
         "http://ecommerce:3001",  # E-commerce frontend en contenedor Docker
         "https://frontend-pos-production.up.railway.app",  # POS Frontend en Railway PRODUCCIÓN
-        "https://ecommerce-production.up.railway.app",  # E-commerce en Railway (si existe)
+        "https://e-commerce-production-3634.up.railway.app",  # E-commerce en Railway PRODUCCIÓN
     ],
     allow_credentials=True,  # Permitir cookies y headers de autenticación (REQUIERE orígenes específicos)
     allow_methods=["*"],  # Permitir todos los métodos HTTP (incluye OPTIONS para CORS preflight)
