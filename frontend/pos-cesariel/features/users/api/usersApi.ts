@@ -22,7 +22,7 @@ export const usersApi = {
    * @returns List of users
    */
   getUsers: (params?: UserParams) =>
-    apiClient.get('/users/', { params }),
+    apiClient.get('/users', { params }),
 
   /**
    * Get single user by ID
@@ -38,7 +38,7 @@ export const usersApi = {
    * @returns Created user
    */
   createUser: (data: any) =>
-    apiClient.post('/users/', data),
+    apiClient.post('/users', data),
 
   /**
    * Update existing user
