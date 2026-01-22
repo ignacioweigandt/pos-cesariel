@@ -18,8 +18,8 @@ interface SalesHistoryTabProps {
 /**
  * SalesHistoryTab Component
  *
- * Displays history of confirmed POS sales (sales created from admin panel).
- * E-commerce sales from the public website appear in WhatsApp Sales tab.
+ * Displays history of ECOMMERCE sales (sales created from e-commerce admin module).
+ * POS sales from the main sales module are shown in the POS module.
  * Features auto-refresh capability and real-time alerts for new sales.
  *
  * @param refreshTrigger - Optional counter to trigger manual refresh of sales data
@@ -49,13 +49,13 @@ export function SalesHistoryTab({ refreshTrigger }: SalesHistoryTabProps) {
     }
   }, [refreshTrigger]);
 
-  // Load sales - Only POS sales (confirmed sales from admin, not from e-commerce web)
+  // Load sales - Only ECOMMERCE sales (sales created from e-commerce admin panel)
   const loadSales = async (showAlert = false) => {
     setLoading(true);
     try {
-      // Filter to only show POS sales (confirmed from admin panel)
-      // E-commerce sales appear in WhatsApp Sales tab
-      const response = await salesApi.getSales({ sale_type: 'POS' });
+      // Filter to only show ECOMMERCE sales (created from e-commerce admin panel)
+      // POS sales from main sales module won't appear here
+      const response = await salesApi.getSales({ sale_type: 'ECOMMERCE' });
       const newSales = response.data;
 
       // Check for new sales
@@ -150,10 +150,10 @@ export function SalesHistoryTab({ refreshTrigger }: SalesHistoryTabProps) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">
-            Historial de Ventas
+            Historial de Ventas E-commerce
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Ventas confirmadas realizadas desde la pestaña Ventas (POS)
+            Ventas realizadas desde el módulo E-commerce
           </p>
         </div>
         <button
@@ -170,12 +170,12 @@ export function SalesHistoryTab({ refreshTrigger }: SalesHistoryTabProps) {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <CurrencyDollarIcon className="h-6 w-6 text-green-600" />
+                <GlobeAltIcon className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">
-                    Total Ventas POS
+                    Total Ventas E-commerce
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
                     {sales.length}
@@ -190,12 +190,12 @@ export function SalesHistoryTab({ refreshTrigger }: SalesHistoryTabProps) {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <ComputerDesktopIcon className="h-6 w-6 text-blue-600" />
+                <CheckIcon className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">
-                    Ventas Confirmadas
+                    Ventas Entregadas
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
                     {sales.filter((s) => s.order_status === "DELIVERED").length}
@@ -210,7 +210,7 @@ export function SalesHistoryTab({ refreshTrigger }: SalesHistoryTabProps) {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <GlobeAltIcon className="h-6 w-6 text-orange-600" />
+                <ComputerDesktopIcon className="h-6 w-6 text-orange-600" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>

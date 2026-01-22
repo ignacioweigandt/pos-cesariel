@@ -24,6 +24,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useReportsData, useReportExport, useReportFilters } from "../hooks";
+import { branchesApi } from "@/features/users/api/branchesApi";
 import { StatsCards } from "./Stats/StatsCards";
 import { TotalSalesCard } from "./Stats/TotalSalesCard";
 import { DateRangeFilter } from "./Filters/DateRangeFilter";
@@ -31,11 +32,17 @@ import { DailySalesChart } from "./Charts/DailySalesChart";
 import { ProductsPieChart } from "./Charts/ProductsPieChart";
 import { BranchSalesChart } from "./Charts/BranchSalesChart";
 
+interface Branch {
+  id: number;
+  name: string;
+}
+
 export function ReportsContainer() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   // Initialize auth
   useEffect(() => {
@@ -54,19 +61,33 @@ export function ReportsContainer() {
     if (userData) {
       setUser(JSON.parse(userData));
     }
+
+    // Load branches
+    loadBranches();
   }, [router]);
+
+  // Load branches from API
+  const loadBranches = async () => {
+    try {
+      const response = await branchesApi.getBranches();
+      setBranches(response.data || []);
+    } catch (error) {
+      console.error("Error loading branches:", error);
+      setBranches([]);
+    }
+  };
 
   // Use the improved filters hook
   const filters = useReportFilters({
     initialDays: 30,
     autoApply: true,
-    onFilterChange: (startDate, endDate, reportType) => {
+    onFilterChange: (startDate, endDate, reportType, branchId) => {
       // Refresh data when filters change
       refresh();
     }
   });
 
-  // Fetch data with current filter dates
+  // Fetch data with current filter dates and branch
   const {
     salesReport,
     dashboardStats,
@@ -75,7 +96,7 @@ export function ReportsContainer() {
     branchesChartData,
     loading,
     refresh,
-  } = useReportsData(filters.startDate, filters.endDate);
+  } = useReportsData(filters.startDate, filters.endDate, filters.selectedBranch);
 
   // Export functionality
   const { exportToCSV, exporting } = useReportExport();
@@ -158,6 +179,8 @@ export function ReportsContainer() {
               endDate={filters.endDate}
               reportType={filters.reportType}
               selectedYear={filters.selectedYear}
+              selectedBranch={filters.selectedBranch}
+              branches={branches}
               error={filters.error}
               isApplying={filters.isApplying}
               isValid={filters.isValid}
@@ -165,6 +188,7 @@ export function ReportsContainer() {
               onEndDateChange={filters.setEndDate}
               onReportTypeChange={filters.setReportType}
               onSelectedYearChange={filters.setSelectedYear}
+              onBranchChange={filters.setSelectedBranch}
               onQuickFilter={filters.handleQuickFilter}
               onMonthFilter={filters.handleMonthFilter}
               onYearFilter={filters.handleYearFilter}
@@ -195,10 +219,15 @@ export function ReportsContainer() {
 
                 {/* Charts Section - Main Row */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <DailySalesChart data={dailySalesData} loading={loading} />
+                  <DailySalesChart
+                    data={dailySalesData}
+                    loading={loading}
+                    branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
+                  />
                   <ProductsPieChart
                     data={productsChartData}
                     loading={loading}
+                    branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
                   />
                 </div>
 

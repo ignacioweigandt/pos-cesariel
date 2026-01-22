@@ -6,9 +6,23 @@ import {
   PhotoIcon,
 } from "@heroicons/react/24/outline";
 import { Product } from "../../types/ecommerce.types";
+import { useProductFilters } from "../../hooks/useProductFilters";
+import { ProductFilters } from "./ProductFilters";
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface Brand {
+  id: number;
+  name: string;
+}
 
 interface ProductsTabProps {
   products: Product[];
+  categories: Category[];
+  brands: Brand[];
   onToggleOnline: (id: number) => void;
   onEdit: (product: Product) => void;
   onView: (product: Product) => void;
@@ -21,12 +35,17 @@ interface ProductsTabProps {
  */
 export default function ProductsTab({
   products,
+  categories,
+  brands,
   onToggleOnline,
   onEdit,
   onView,
   onManageImages,
 }: ProductsTabProps) {
   const safeProducts = Array.isArray(products) ? products : [];
+
+  // Hook para filtrar productos
+  const { filters, setFilters, filteredProducts } = useProductFilters(safeProducts);
 
   return (
     <div className="space-y-6">
@@ -39,6 +58,14 @@ export default function ProductsTab({
           </p>
         </div>
       </div>
+
+      {/* Filtros */}
+      <ProductFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        categories={categories}
+        brands={brands}
+      />
 
       {/* Products Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -63,7 +90,19 @@ export default function ProductsTab({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {safeProducts.map((product) => (
+            {filteredProducts.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-12 text-center">
+                  <div className="text-gray-500">
+                    <p className="text-lg font-medium">No se encontraron productos</p>
+                    <p className="text-sm mt-1">
+                      Intenta ajustar los filtros de búsqueda
+                    </p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredProducts.map((product) => (
               <tr key={product.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900">
@@ -120,9 +159,15 @@ export default function ProductsTab({
                   </button>
                 </td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
         </table>
+      </div>
+
+      {/* Contador de resultados */}
+      <div className="text-sm text-gray-600 text-right">
+        Mostrando {filteredProducts.length} de {safeProducts.length} productos
       </div>
     </div>
   );

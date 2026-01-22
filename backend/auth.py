@@ -99,3 +99,15 @@ def require_same_branch_or_admin(branch_id: int, current_user: User = Depends(ge
             detail="Access denied: different branch"
         )
     return current_user
+
+def require_stock_management_permission(current_user: User = Depends(get_current_active_user)):
+    """
+    Permite acceso a funciones de gestión de stock (ajuste de stock).
+    Roles permitidos: ADMIN, MANAGER, SELLER
+    """
+    if current_user.role not in [UserRole.ADMIN, UserRole.MANAGER, UserRole.SELLER]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Stock management access required (Admin, Manager, or Seller role)"
+        )
+    return current_user

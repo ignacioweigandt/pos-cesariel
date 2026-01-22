@@ -10,6 +10,7 @@ export function useProductFilters(products: Product[]) {
   const [filters, setFilters] = useState<ProductFilters>({
     searchTerm: '',
     selectedCategory: 'all',
+    selectedBrand: 'all',
     stockFilter: 'all',
   });
 
@@ -25,6 +26,11 @@ export function useProductFilters(products: Product[]) {
         filters.selectedCategory === 'all' ||
         product.category_id?.toString() === filters.selectedCategory;
 
+      // Brand filter
+      const matchesBrand =
+        filters.selectedBrand === 'all' ||
+        product.brand_id?.toString() === filters.selectedBrand;
+
       // Stock filter
       const matchesStock =
         filters.stockFilter === 'all' ||
@@ -33,7 +39,7 @@ export function useProductFilters(products: Product[]) {
           product.stock_quantity > 0) ||
         (filters.stockFilter === 'out' && product.stock_quantity === 0);
 
-      return matchesSearch && matchesCategory && matchesStock;
+      return matchesSearch && matchesCategory && matchesBrand && matchesStock;
     });
   }, [products, filters]);
 

@@ -35,6 +35,15 @@ from app.schemas.category import (
     Category
 )
 
+# Import brand schemas
+from app.schemas.brand import (
+    BrandBase,
+    BrandCreate,
+    BrandUpdate,
+    Brand,
+    BrandFormData
+)
+
 # Import product schemas
 from app.schemas.product import (
     ProductBase,
@@ -207,7 +216,14 @@ __all__ = [
     "CategoryCreate",
     "CategoryUpdate",
     "Category",
-    
+
+    # Brand
+    "BrandBase",
+    "BrandCreate",
+    "BrandUpdate",
+    "Brand",
+    "BrandFormData",
+
     # Product
     "ProductBase",
     "ProductCreate",

@@ -1,16 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
-import type { Product, Category, ProductFormData } from '../../types/inventory.types';
+import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import type { Product, Category, Brand, ProductFormData } from '../../types/inventory.types';
+import { BarcodeInput } from './BarcodeInput';
 
 interface ProductFormModalProps {
   isOpen: boolean;
   product: Product | null;
   categories: Category[];
-  brands: string[];
+  brands: Brand[];
   onClose: () => void;
   onSave: (productData: any) => Promise<void>;
+  onNewBrand: () => void;
 }
 
 /**
@@ -30,6 +32,7 @@ export function ProductFormModal({
   brands,
   onClose,
   onSave,
+  onNewBrand,
 }: ProductFormModalProps) {
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -38,10 +41,26 @@ export function ProductFormModal({
     sku: '',
     stock_quantity: '',
     category_id: '',
+    brand_id: '',
     brand: '',
     has_sizes: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Función para resetear el formulario
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      sku: '',
+      stock_quantity: '0',
+      category_id: '',
+      brand_id: '',
+      brand: '',
+      has_sizes: false,
+    });
+  };
 
   // Initialize form when product changes
   useEffect(() => {
@@ -53,20 +72,12 @@ export function ProductFormModal({
         sku: product.sku,
         stock_quantity: product.stock_quantity.toString(),
         category_id: product.category_id?.toString() || '',
+        brand_id: product.brand_id?.toString() || '',
         brand: product.brand || '',
         has_sizes: product.has_sizes || false,
       });
     } else {
-      setFormData({
-        name: '',
-        description: '',
-        price: '',
-        sku: '',
-        stock_quantity: '0',
-        category_id: '',
-        brand: '',
-        has_sizes: false,
-      });
+      resetForm();
     }
   }, [product]);
 
@@ -85,11 +96,20 @@ export function ProductFormModal({
         category_id: formData.category_id
           ? parseInt(formData.category_id)
           : null,
-        brand: formData.brand || null,
+        brand_id: formData.brand_id
+          ? parseInt(formData.brand_id)
+          : null,
+        brand: formData.brand || null, // LEGACY: mantener por compatibilidad
         has_sizes: formData.has_sizes,
       };
 
       await onSave(productData);
+
+      // Si estamos creando (no editando), limpiar el formulario
+      if (!product) {
+        resetForm();
+      }
+
       onClose();
     } catch (error) {
       console.error('Error submitting product:', error);
@@ -153,42 +173,34 @@ export function ProductFormModal({
               />
             </div>
 
-            {/* Price and SKU */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Precio *
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      price: e.target.value,
-                    })
-                  }
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  SKU *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.sku}
-                  onChange={(e) =>
-                    setFormData({ ...formData, sku: e.target.value })
-                  }
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
+            {/* Price */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Precio *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                required
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    price: e.target.value,
+                  })
+                }
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
             </div>
+
+            {/* Barcode Scanner Input */}
+            <BarcodeInput
+              value={formData.sku}
+              onChange={(value) =>
+                setFormData({ ...formData, sku: value })
+              }
+              required
+            />
 
             {/* Stock Inicial */}
             <div>
@@ -205,11 +217,14 @@ export function ProductFormModal({
                     stock_quantity: e.target.value,
                   })
                 }
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                disabled={formData.has_sizes}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-500"
                 placeholder="0"
               />
               <p className="mt-1 text-xs text-gray-500">
-                El stock se agregará a tu sucursal actual
+                {formData.has_sizes
+                  ? 'Los productos con talles deben cargar el stock por cada talle desde "Gestionar Talles"'
+                  : 'El stock se agregará a tu sucursal actual'}
               </p>
             </div>
 
@@ -239,27 +254,36 @@ export function ProductFormModal({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Marca
-                </label>
-                <input
-                  type="text"
-                  list="brands-list"
-                  value={formData.brand}
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Marca
+                  </label>
+                  <button
+                    type="button"
+                    onClick={onNewBrand}
+                    className="inline-flex items-center px-2 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                  >
+                    <PlusIcon className="h-3 w-3 mr-1" />
+                    Nueva
+                  </button>
+                </div>
+                <select
+                  value={formData.brand_id}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      brand: e.target.value,
+                      brand_id: e.target.value,
                     })
                   }
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Ej: Nike, Adidas..."
-                />
-                <datalist id="brands-list">
-                  {brands.map((brand, index) => (
-                    <option key={index} value={brand} />
+                >
+                  <option value="">Sin marca</option>
+                  {brands.map((brand) => (
+                    <option key={brand.id} value={brand.id.toString()}>
+                      {brand.name}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </div>
             </div>
 
@@ -273,6 +297,8 @@ export function ProductFormModal({
                   setFormData({
                     ...formData,
                     has_sizes: e.target.checked,
+                    // Resetear stock a 0 cuando se marca "con talles"
+                    stock_quantity: e.target.checked ? '0' : formData.stock_quantity,
                   })
                 }
                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"

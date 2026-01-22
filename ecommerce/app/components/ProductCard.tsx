@@ -183,7 +183,9 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span className="text-sm text-gray-500 line-through ml-2">${product.originalPrice.toLocaleString()}</span>
             )}
           </div>
-          <span className="text-sm text-gray-600">{product.brand}</span>
+          {product.brand && (
+            <span className="text-sm text-gray-600">{product.brand.name}</span>
+          )}
         </div>
 
         <Button asChild className="w-full">

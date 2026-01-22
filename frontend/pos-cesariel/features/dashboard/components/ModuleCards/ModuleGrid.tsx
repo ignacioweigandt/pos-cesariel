@@ -6,17 +6,21 @@ import {
   ShoppingCartIcon,
   UsersIcon,
 } from "@heroicons/react/24/outline";
+import { useAuth, canAccessModule } from "@/shared/hooks/useAuth";
 import { ModuleCard } from "./ModuleCard";
 
 export function ModuleGrid() {
-  const modules = [
+  const { user } = useAuth();
+
+  // Definir todos los módulos del sistema
+  const allModules = [
     {
       title: "POS - Ventas",
       description: "Procesar ventas, gestionar carrito y cobros",
       icon: ShoppingCartIcon,
       href: "/pos",
       color: "bg-green-500",
-      available: true,
+      module: "pos",
     },
     {
       title: "Inventario",
@@ -24,7 +28,7 @@ export function ModuleGrid() {
       icon: CubeIcon,
       href: "/inventory",
       color: "bg-blue-500",
-      available: true,
+      module: "inventory",
     },
     {
       title: "Reportes",
@@ -32,7 +36,7 @@ export function ModuleGrid() {
       icon: ChartBarIcon,
       href: "/reports",
       color: "bg-purple-500",
-      available: true,
+      module: "reports",
     },
     {
       title: "E-commerce",
@@ -40,7 +44,7 @@ export function ModuleGrid() {
       icon: ComputerDesktopIcon,
       href: "/ecommerce",
       color: "bg-indigo-500",
-      available: true,
+      module: "ecommerce",
     },
     {
       title: "Usuarios",
@@ -48,7 +52,7 @@ export function ModuleGrid() {
       icon: UsersIcon,
       href: "/users",
       color: "bg-orange-500",
-      available: true,
+      module: "users",
     },
     {
       title: "Configuración",
@@ -56,9 +60,15 @@ export function ModuleGrid() {
       icon: Cog6ToothIcon,
       href: "/settings",
       color: "bg-gray-500",
-      available: true,
+      module: "settings",
     },
   ];
+
+  // Evaluar permisos dinámicamente para cada módulo
+  const modules = allModules.map((module) => ({
+    ...module,
+    available: canAccessModule(user, module.module),
+  }));
 
   return (
     <div className="bg-white shadow rounded-lg">

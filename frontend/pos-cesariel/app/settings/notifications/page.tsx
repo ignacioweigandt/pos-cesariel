@@ -3,26 +3,17 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
+import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import toast from 'react-hot-toast';
 import NotificationSettingsComponent from '@/app/components/NotificationSettings';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 export default function NotificationsPage() {
+  // Protección de ruta - redirige automáticamente si el usuario no tiene permisos
+  useRouteProtection();
+
   const { user } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!user) {
-      router.push('/');
-      return;
-    }
-
-    if (!['admin', 'manager', 'ADMIN', 'MANAGER'].includes(user.role)) {
-      toast.error('No tienes permisos para acceder a la configuración');
-      router.push('/dashboard');
-      return;
-    }
-  }, [user, router]);
 
   if (!user) {
     return (

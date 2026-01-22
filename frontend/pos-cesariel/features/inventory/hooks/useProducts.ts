@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import toast from 'react-hot-toast';
 import type { Product } from '../types/inventory.types';
 
 /**
@@ -16,7 +17,13 @@ export function useProducts() {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/products/');
+      // Solicitar un límite alto para obtener todos los productos
+      // 10000 es suficiente para la mayoría de los casos de uso
+      const response = await api.get('/products/', {
+        params: {
+          limit: 10000,
+        },
+      });
       setProducts(response.data);
     } catch (err: any) {
       console.error('Error fetching products:', err);
@@ -46,11 +53,12 @@ export function useProducts() {
     try {
       await api.post('/products/', productData);
       await loadProducts();
-      alert('Producto creado exitosamente');
+      toast.success('Producto creado exitosamente');
+      return true;
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail || err.message || 'Error de conexión';
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
       throw err;
     }
   }, [loadProducts]);
@@ -59,11 +67,12 @@ export function useProducts() {
     try {
       await api.put(`/products/${id}`, productData);
       await loadProducts();
-      alert('Producto actualizado exitosamente');
+      toast.success('Producto actualizado exitosamente');
+      return true;
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail || err.message || 'Error de conexión';
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
       throw err;
     }
   }, [loadProducts]);
@@ -72,11 +81,12 @@ export function useProducts() {
     try {
       await api.delete(`/products/${id}`);
       await loadProducts();
-      alert('Producto eliminado exitosamente');
+      toast.success('Producto eliminado exitosamente');
+      return true;
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail || err.message || 'Error de conexión';
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
       throw err;
     }
   }, [loadProducts]);
@@ -85,11 +95,12 @@ export function useProducts() {
     try {
       await api.post(`/products/${id}/adjust-stock`, stockData);
       await loadProducts();
-      alert('Stock actualizado exitosamente');
+      toast.success('Stock actualizado exitosamente');
+      return true;
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail || err.message || 'Error de conexión';
-      alert(`Error: ${errorMessage}`);
+      toast.error(`Error: ${errorMessage}`);
       throw err;
     }
   }, [loadProducts]);

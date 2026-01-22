@@ -14,6 +14,19 @@ export interface Category {
 }
 
 /**
+ * Product Brand
+ */
+export interface Brand {
+  id: number;
+  name: string;
+  description?: string;
+  logo_url?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
  * Product entity with all fields
  */
 export interface Product {
@@ -26,7 +39,9 @@ export interface Product {
   min_stock: number;
   category_id?: number;
   category?: Category;
-  brand?: string;
+  brand_id?: number;
+  brand_rel?: Brand;
+  brand?: string; // LEGACY: mantener por compatibilidad
   is_active: boolean;
   has_sizes: boolean;
   created_at: string;
@@ -75,7 +90,8 @@ export interface ProductFormData {
   sku: string;
   stock_quantity: string;
   category_id: string;
-  brand: string;
+  brand_id: string;
+  brand: string; // LEGACY: mantener por compatibilidad
   has_sizes: boolean;
 }
 
@@ -83,6 +99,14 @@ export interface ProductFormData {
  * Category form data
  */
 export interface CategoryFormData {
+  name: string;
+  description: string;
+}
+
+/**
+ * Brand form data
+ */
+export interface BrandFormData {
   name: string;
   description: string;
 }
@@ -101,6 +125,7 @@ export interface StockFormData {
 export interface ProductFilters {
   searchTerm: string;
   selectedCategory: string;
+  selectedBrand: string;
   stockFilter: 'all' | 'low' | 'out';
 }
 
@@ -112,6 +137,7 @@ export interface InventoryStats {
   lowStockCount: number;
   outOfStockCount: number;
   categoriesCount: number;
+  brandsCount: number;
 }
 
 /**

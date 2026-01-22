@@ -64,6 +64,9 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     params.inStock = true
   }
 
+  // Set a reasonable limit to fetch all available products
+  params.limit = 500
+
   // Fetch products, categories, and brands in parallel (server-side)
   const [products, categories, brands] = await Promise.all([
     getProducts(params),

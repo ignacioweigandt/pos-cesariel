@@ -201,9 +201,16 @@ export async function createEcommerceSale(
     // Log the request for debugging
     console.log('[Create Sale] Request data:', JSON.stringify(saleData, null, 2))
 
+    // Get API URL - same logic as client.ts
+    // Server-side (Node.js in Docker): Use backend:8000
+    // Production: Use NEXT_PUBLIC_API_URL or Railway backend
+    const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://backend:8000'
+    const endpoint = `${apiUrl}/ecommerce/sales`
+
+    console.log('[Create Sale] Using API URL:', endpoint)
+
     // Create sale in backend using direct fetch to get proper error handling
-    // Hardcoded for Railway production deployment
-    const response = await fetch('https://backend-production-c20a.up.railway.app/ecommerce/sales', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

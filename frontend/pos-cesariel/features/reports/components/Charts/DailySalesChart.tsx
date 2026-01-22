@@ -12,15 +12,18 @@ import type { DailySales } from "../../types/reports.types";
 interface DailySalesChartProps {
   data: DailySales[];
   loading: boolean;
+  branchName?: string;
 }
 
-export function DailySalesChart({ data, loading }: DailySalesChartProps) {
+export function DailySalesChart({ data, loading, branchName }: DailySalesChartProps) {
+  const title = branchName ? `Ventas Diarias - ${branchName}` : 'Ventas Diarias';
+
   if (loading) {
     return (
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Ventas Diarias
+            {title}
           </h3>
           <div className="h-80 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -34,7 +37,7 @@ export function DailySalesChart({ data, loading }: DailySalesChartProps) {
     <div className="bg-white shadow rounded-lg">
       <div className="px-4 py-5 sm:p-6">
         <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-          Ventas Diarias
+          {title}
         </h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">

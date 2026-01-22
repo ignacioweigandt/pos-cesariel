@@ -8,7 +8,7 @@ import type {
   ChartData,
 } from "../types/reports.types";
 
-export function useReportsData(startDate: string, endDate: string) {
+export function useReportsData(startDate: string, endDate: string, branchId?: number) {
   const router = useRouter();
   const [salesReport, setSalesReport] = useState<SalesReport | null>(null);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(
@@ -22,19 +22,19 @@ export function useReportsData(startDate: string, endDate: string) {
 
   useEffect(() => {
     if (startDate && endDate) {
-      loadData(startDate, endDate);
+      loadData(startDate, endDate, branchId);
     }
-  }, [startDate, endDate]);
+  }, [startDate, endDate, branchId]);
 
-  const loadData = async (start: string, end: string) => {
+  const loadData = async (start: string, end: string, branch?: number) => {
     setLoading(true);
     setError(null);
 
     try {
       await Promise.all([
-        fetchDashboardStats(),
-        fetchSalesReport(start, end),
-        fetchChartData(start, end),
+        fetchDashboardStats(branch),
+        fetchSalesReport(start, end, branch),
+        fetchChartData(start, end, branch),
       ]);
     } catch (err) {
       console.error("Error loading data:", err);
@@ -44,9 +44,10 @@ export function useReportsData(startDate: string, endDate: string) {
     }
   };
 
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = async (branch?: number) => {
     try {
-      const response = await apiClient.get("/sales/reports/dashboard");
+      const params = branch ? `?branch_id=${branch}` : '';
+      const response = await apiClient.get(`/sales/reports/dashboard${params}`);
       setDashboardStats(response.data);
     } catch (error: any) {
       console.error("Error fetching dashboard stats:", error);
@@ -58,10 +59,11 @@ export function useReportsData(startDate: string, endDate: string) {
     }
   };
 
-  const fetchSalesReport = async (start: string, end: string) => {
+  const fetchSalesReport = async (start: string, end: string, branch?: number) => {
     try {
+      const branchParam = branch ? `&branch_id=${branch}` : '';
       const response = await apiClient.get(
-        `/sales/reports/sales-report?start_date=${start}&end_date=${end}`
+        `/sales/reports/sales-report?start_date=${start}&end_date=${end}${branchParam}`
       );
       setSalesReport(response.data);
     } catch (error: any) {
@@ -74,20 +76,21 @@ export function useReportsData(startDate: string, endDate: string) {
     }
   };
 
-  const fetchChartData = async (start: string, end: string) => {
+  const fetchChartData = async (start: string, end: string, branch?: number) => {
     try {
       const userData = localStorage.getItem("user");
       const user = userData ? JSON.parse(userData) : null;
+      const branchParam = branch ? `&branch_id=${branch}` : '';
 
       // Fetch daily sales data
       const dailySalesResponse = await apiClient.get(
-        `/sales/reports/daily-sales?start_date=${start}&end_date=${end}`
+        `/sales/reports/daily-sales?start_date=${start}&end_date=${end}${branchParam}`
       );
       setDailySalesData(dailySalesResponse.data);
 
       // Fetch products chart data
       const productsResponse = await apiClient.get(
-        `/sales/reports/products-chart?start_date=${start}&end_date=${end}&limit=10`
+        `/sales/reports/products-chart?start_date=${start}&end_date=${end}${branchParam}&limit=10`
       );
       setProductsChartData(productsResponse.data);
 
@@ -111,6 +114,6 @@ export function useReportsData(startDate: string, endDate: string) {
     branchesChartData,
     loading,
     error,
-    refresh: () => loadData(startDate, endDate),
+    refresh: () => loadData(startDate, endDate, branchId),
   };
 }

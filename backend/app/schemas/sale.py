@@ -46,6 +46,7 @@ class SaleBase(BaseModel):
 
 class SaleCreate(SaleBase):
     items: List[SaleItemCreate]
+    is_confirmed: Optional[bool] = False  # True si la venta ya está coordinada (desde admin e-commerce)
 
 
 class SaleStatusUpdate(BaseModel):

@@ -5,12 +5,13 @@ import {
   QrCodeIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
-import type { Category, ProductFilters as ProductFiltersType } from '../../types/inventory.types';
+import type { Category, Brand, ProductFilters as ProductFiltersType } from '../../types/inventory.types';
 
 interface ProductFiltersProps {
   filters: ProductFiltersType;
   onFiltersChange: (filters: ProductFiltersType) => void;
   categories: Category[];
+  brands: Brand[];
   scannerEnabled?: boolean;
   onScannerToggle?: () => void;
   isScanning?: boolean;
@@ -30,6 +31,7 @@ export function ProductFilters({
   filters,
   onFiltersChange,
   categories,
+  brands,
   scannerEnabled = false,
   onScannerToggle,
   isScanning = false,
@@ -43,6 +45,10 @@ export function ProductFilters({
     onFiltersChange({ ...filters, selectedCategory });
   };
 
+  const handleBrandChange = (selectedBrand: string) => {
+    onFiltersChange({ ...filters, selectedBrand });
+  };
+
   const handleStockFilterChange = (stockFilter: 'all' | 'low' | 'out') => {
     onFiltersChange({ ...filters, stockFilter });
   };
@@ -51,6 +57,7 @@ export function ProductFilters({
     onFiltersChange({
       searchTerm: '',
       selectedCategory: 'all',
+      selectedBrand: 'all',
       stockFilter: 'all',
     });
   };
@@ -58,7 +65,7 @@ export function ProductFilters({
   return (
     <div className="bg-white shadow rounded-lg">
       <div className="px-4 py-5 sm:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
           {/* Search Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
@@ -145,6 +152,28 @@ export function ProductFilters({
                   value={category.id.toString()}
                 >
                   {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Brand Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Marca
+            </label>
+            <select
+              value={filters.selectedBrand}
+              onChange={(e) => handleBrandChange(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="all">Todas las marcas</option>
+              {brands.map((brand) => (
+                <option
+                  key={brand.id}
+                  value={brand.id.toString()}
+                >
+                  {brand.name}
                 </option>
               ))}
             </select>

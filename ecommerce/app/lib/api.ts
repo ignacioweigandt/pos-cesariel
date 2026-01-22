@@ -1,11 +1,28 @@
 import axios from 'axios';
 
-// Base URL del backend POS - Hardcoded for Railway production
-const API_BASE_URL = 'https://backend-production-c20a.up.railway.app';
+// Function to get API base URL - evaluated at runtime on client side
+function getApiBaseUrl(): string {
+  // If environment variable is set, use it
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+
+  // Client-side detection: if running in production (not localhost), use Railway backend
+  if (typeof window !== 'undefined') {
+    const isProduction = window.location.hostname !== 'localhost' &&
+                        window.location.hostname !== '127.0.0.1';
+    if (isProduction) {
+      return 'https://backend-production-c20a.up.railway.app';
+    }
+  }
+
+  // Default: localhost for development
+  return 'http://localhost:8000';
+}
 
 // Cliente API principal
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

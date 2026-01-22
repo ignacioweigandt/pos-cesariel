@@ -22,7 +22,7 @@ export type QuickFilterPeriod = 'today' | 'month' | 'year' | 'last30' | 'last7';
 export type ReportType = 'sales' | 'products' | 'branches';
 
 interface UseReportFiltersOptions {
-  onFilterChange?: (startDate: string, endDate: string, reportType: ReportType) => void;
+  onFilterChange?: (startDate: string, endDate: string, reportType: ReportType, branchId?: number) => void;
   initialDays?: number; // Default: 30
   autoApply?: boolean; // Default: true
 }
@@ -44,6 +44,7 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
   const [endDate, setEndDate] = useState<string>('');
   const [reportType, setReportType] = useState<ReportType>('sales');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedBranch, setSelectedBranch] = useState<number | undefined>(undefined);
   const [error, setError] = useState<FilterError>({ type: null, message: '' });
   const [isApplying, setIsApplying] = useState(false);
 
@@ -108,14 +109,14 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
 
     // Call the onChange callback
     if (onFilterChange) {
-      onFilterChange(startDate, endDate, reportType);
+      onFilterChange(startDate, endDate, reportType, selectedBranch);
     }
 
     // Small delay for UX feedback
     setTimeout(() => {
       setIsApplying(false);
     }, 500);
-  }, [startDate, endDate, reportType, validateDates, onFilterChange]);
+  }, [startDate, endDate, reportType, selectedBranch, validateDates, onFilterChange]);
 
   /**
    * Sets date range and optionally auto-applies
@@ -128,9 +129,9 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     // Auto-apply if enabled - directly call with the new values
     if (autoApply && shouldAutoApply && isValidDateRange(start, end)) {
       // Call immediately with the new values (not from state)
-      onFilterChange?.(start, end, reportType);
+      onFilterChange?.(start, end, reportType, selectedBranch);
     }
-  }, [autoApply, reportType, onFilterChange]);
+  }, [autoApply, reportType, selectedBranch, onFilterChange]);
 
   /**
    * Quick filter handlers
@@ -196,12 +197,17 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     setReportType(type);
   }, []);
 
+  const handleBranchChange = useCallback((branchId: number | undefined) => {
+    setSelectedBranch(branchId);
+  }, []);
+
   return {
     // State
     startDate,
     endDate,
     reportType,
     selectedYear,
+    selectedBranch,
     error,
     isApplying,
     isValid: error.type === null,
@@ -211,6 +217,7 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     setEndDate: handleEndDateChange,
     setReportType: handleReportTypeChange,
     setSelectedYear,
+    setSelectedBranch: handleBranchChange,
 
     // Actions
     applyFilter,

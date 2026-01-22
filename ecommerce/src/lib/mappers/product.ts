@@ -4,7 +4,6 @@ import type { ApiProduct, ApiPublicProduct, Product } from '@/types';
 export function mapApiProductToFrontend(apiProduct: ApiProduct): Product {
   // Determinar categoría basada en category_id
   let category = 'otros';
-  let brand = 'Sin marca';
 
   if (apiProduct.category?.name) {
     const categoryName = apiProduct.category.name.toLowerCase();
@@ -16,6 +15,9 @@ export function mapApiProductToFrontend(apiProduct: ApiProduct): Product {
       category = 'accesorios';
     }
   }
+
+  // Obtener marca del objeto brand (nuevo sistema) o null
+  const brand = apiProduct.brand || null;
 
   // Generar talles basados en categoría y si tiene talles
   let sizes: string[] = ['Único'];
@@ -60,7 +62,6 @@ export function mapApiPublicProductToFrontend(apiProduct: ApiPublicProduct): Pro
   // Determinar categoría basada en el nombre del producto
   // (el backend no incluye el objeto category en /ecommerce/products)
   let category = 'otros';
-  let brand = 'Sin marca';
 
   const nameLower = apiProduct.name.toLowerCase();
   const descLower = (apiProduct.description || '').toLowerCase();
@@ -79,12 +80,8 @@ export function mapApiPublicProductToFrontend(apiProduct: ApiPublicProduct): Pro
     category = 'accesorios';
   }
 
-  // Extraer marca del nombre
-  if (nameLower.includes('nike')) brand = 'Nike';
-  else if (nameLower.includes('adidas')) brand = 'Adidas';
-  else if (nameLower.includes('puma')) brand = 'Puma';
-  else if (nameLower.includes('reebok')) brand = 'Reebok';
-  else if (nameLower.includes('under armour')) brand = 'Under Armour';
+  // Obtener marca del objeto brand (nuevo sistema) o null
+  const brand = apiProduct.brand || null;
 
   // Generar talles basados en categoría y si tiene talles
   let sizes: string[] = ['Único'];

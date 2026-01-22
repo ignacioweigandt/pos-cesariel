@@ -1,7 +1,19 @@
 // API Client - Server-side fetch wrapper with caching
 
-// Hardcoded for Railway production deployment
-const API_BASE_URL = 'https://backend-production-c20a.up.railway.app';
+// Dynamic API URL detection
+// - Server-side (SSR): Use API_URL (Docker internal network: backend:8000)
+// - Client-side: Use NEXT_PUBLIC_API_URL (browser: localhost:8000)
+function getApiBaseUrl(): string {
+  // Server-side (Node.js in Docker)
+  if (typeof window === 'undefined') {
+    return process.env.API_URL || 'http://backend:8000';
+  }
+
+  // Client-side (browser)
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 interface FetchOptions extends RequestInit {
   revalidate?: number;

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 export interface SizeStock {
   size: string;
@@ -97,6 +98,7 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
         }
       } catch (fallbackErr) {
         console.error('Fallback load error:', fallbackErr);
+        toast.error('Error al cargar los talles del producto');
       }
     } finally {
       setLoading(false);
@@ -177,7 +179,7 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
         sizes: sizes.filter((s) => s.stock_quantity > 0),
       });
 
-      alert('Stock de talles actualizado correctamente');
+      toast.success('Stock de talles actualizado correctamente');
       return true;
     } catch (err: any) {
       const errorMessage =
@@ -185,6 +187,7 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
         err.message ||
         'Error al actualizar stock de talles';
       setError(errorMessage);
+      toast.error(`Error: ${errorMessage}`);
       console.error('Save sizes error:', err);
       return false;
     } finally {

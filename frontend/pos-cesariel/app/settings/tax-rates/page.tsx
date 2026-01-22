@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { configApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
@@ -32,6 +33,9 @@ const commonTaxRates = [
 ];
 
 export default function TaxRatesPage() {
+  // Protección de ruta - redirige automáticamente si el usuario no tiene permisos
+  useRouteProtection();
+
   const { user } = useAuth();
   const router = useRouter();
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
@@ -41,13 +45,6 @@ export default function TaxRatesPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/');
-      return;
-    }
-
-    if (!['admin', 'manager', 'ADMIN', 'MANAGER'].includes(user.role)) {
-      toast.error('No tienes permisos para acceder a la configuración');
-      router.push('/dashboard');
       return;
     }
 

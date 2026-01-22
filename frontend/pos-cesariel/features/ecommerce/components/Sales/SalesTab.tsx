@@ -12,7 +12,9 @@ interface SalesTabProps {
 }
 
 /**
- * Sales tab component for processing e-commerce sales
+ * Sales tab component for processing confirmed e-commerce sales
+ * These sales are already coordinated via WhatsApp and are marked as DELIVERED
+ * Automatically deducts stock from inventory
  * Handles product selection, cart management, and sale processing
  */
 export default function SalesTab({ onSaleCompleted }: SalesTabProps) {
@@ -188,8 +190,9 @@ export default function SalesTab({ onSaleCompleted }: SalesTabProps) {
         customer_name: customerInfo.name,
         customer_email: customerInfo.email || null,
         customer_phone: customerInfo.phone || null,
-        sale_type: "POS",
+        sale_type: "ECOMMERCE",
         payment_method: "EFECTIVO",
+        is_confirmed: true, // Venta confirmada desde admin (ya coordinada por WhatsApp)
         items: cart.map((item) => ({
           product_id: item.id,
           quantity: item.quantity,
@@ -255,7 +258,7 @@ export default function SalesTab({ onSaleCompleted }: SalesTabProps) {
             Ventas E-commerce
           </h2>
           <p className="mt-1 text-sm text-gray-600">
-            Procese ventas y descuente automáticamente del inventario
+            Procese ventas coordinadas por WhatsApp - Se marcan como completadas y descuentan stock automáticamente
           </p>
         </div>
       </div>
@@ -460,7 +463,7 @@ export default function SalesTab({ onSaleCompleted }: SalesTabProps) {
           setSaleResult(null);
         }}
         saleData={saleResult}
-        saleType="POS"
+        saleType="ECOMMERCE"
       />
 
       <Toast

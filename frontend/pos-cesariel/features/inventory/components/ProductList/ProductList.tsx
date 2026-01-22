@@ -13,6 +13,8 @@ interface ProductListProps {
   onDelete: (product: Product) => void;
   onAdjustStock: (product: Product) => void;
   onManageSizes: (product: Product) => void;
+  userRole?: string;
+  isSeller: boolean;
 }
 
 /**
@@ -30,6 +32,8 @@ export function ProductList({
   onDelete,
   onAdjustStock,
   onManageSizes,
+  userRole,
+  isSeller,
 }: ProductListProps) {
   if (loading) {
     return (
@@ -76,6 +80,8 @@ export function ProductList({
                 onDelete={onDelete}
                 onAdjustStock={onAdjustStock}
                 onManageSizes={onManageSizes}
+                userRole={userRole}
+                isSeller={isSeller}
               />
             );
           })}

@@ -93,6 +93,8 @@ export function EcommerceContainer() {
 
   // Data states
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
+  const [brands, setBrands] = useState<Array<{ id: number; name: string }>>([]);
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null);
   const [stats, setStats] = useState({
     total_online_products: 0,
@@ -173,7 +175,13 @@ export function EcommerceContainer() {
   const loadData = async () => {
     setLoading(true);
     try {
-      await Promise.all([fetchProducts(), fetchStoreConfig(), fetchStats()]);
+      await Promise.all([
+        fetchProducts(),
+        fetchCategories(),
+        fetchBrands(),
+        fetchStoreConfig(),
+        fetchStats()
+      ]);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -191,6 +199,34 @@ export function EcommerceContainer() {
       console.error("Error fetching products:", error);
       console.error("Error details:", error.response);
       setProducts([]);
+    }
+  };
+
+  // Fetch categories from API
+  const fetchCategories = async () => {
+    try {
+      const response = await productsApi.getCategories();
+      setCategories(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setCategories([]);
+    }
+  };
+
+  // Fetch brands from API
+  const fetchBrands = async () => {
+    try {
+      const response = await productsApi.getBrands();
+      const brandsData = response.data?.data || response.data || [];
+      // Transform brands to have id and name
+      const formattedBrands = brandsData.map((brand: any, index: number) => ({
+        id: brand.id || index + 1,
+        name: typeof brand === 'string' ? brand : brand.name
+      }));
+      setBrands(formattedBrands);
+    } catch (error) {
+      console.error("Error fetching brands:", error);
+      setBrands([]);
     }
   };
 
@@ -357,6 +393,8 @@ export function EcommerceContainer() {
               {activeTab === "products" && (
                 <ProductsTab
                   products={products}
+                  categories={categories}
+                  brands={brands}
                   onToggleOnline={toggleProductOnline}
                   onEdit={(product) => {
                     setSelectedProduct(product);

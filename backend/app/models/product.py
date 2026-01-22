@@ -108,8 +108,10 @@ class Product(Base):
     # Categorización
     category_id = Column(Integer, ForeignKey("categories.id"),
                          doc="ID de la categoría asignada al producto")
+    brand_id = Column(Integer, ForeignKey("brands.id"),
+                     doc="ID de la marca asignada al producto")
     brand = Column(String(100),
-                   doc="Marca del producto (Nike, Adidas, Puma, etc.)")
+                   doc="Marca del producto - LEGACY: usar brand_id (se mantendrá para compatibilidad)")
 
     # Precios y costos
     price = Column(Numeric(10, 2), nullable=False,
@@ -146,6 +148,8 @@ class Product(Base):
     # Relaciones con otras entidades
     category = relationship("Category", back_populates="products",
                            doc="Categoría asignada al producto")
+    brand_rel = relationship("Brand", back_populates="products",
+                            doc="Marca asignada al producto")
     sale_items = relationship("SaleItem", back_populates="product",
                              doc="Items de venta que incluyen este producto")
     inventory_movements = relationship("InventoryMovement", back_populates="product",

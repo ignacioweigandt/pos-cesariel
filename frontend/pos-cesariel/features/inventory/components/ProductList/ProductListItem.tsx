@@ -18,6 +18,8 @@ interface ProductListItemProps {
   onDelete: (product: Product) => void;
   onAdjustStock: (product: Product) => void;
   onManageSizes: (product: Product) => void;
+  userRole?: string; // 'ADMIN', 'MANAGER', 'SELLER', 'ECOMMERCE'
+  isSeller: boolean;
 }
 
 /**
@@ -37,6 +39,8 @@ export function ProductListItem({
   onDelete,
   onAdjustStock,
   onManageSizes,
+  userRole,
+  isSeller,
 }: ProductListItemProps) {
   const stockStatusLabel = getStockStatusLabel(product);
   const stockStatusColor = getStockStatusColor(product);
@@ -135,6 +139,7 @@ export function ProductListItem({
 
             {/* Action Buttons */}
             <div className="flex space-x-2">
+              {/* Ajustar Stock - Disponible para todos los roles */}
               {product.has_sizes ? (
                 <button
                   onClick={() => onManageSizes(product)}
@@ -152,17 +157,45 @@ export function ProductListItem({
                   <PlusCircleIcon className="h-4 w-4" />
                 </button>
               )}
+
+              {/* Editar - Deshabilitado para SELLER */}
               <button
-                onClick={() => onEdit(product)}
-                className="text-indigo-600 hover:text-indigo-900"
-                title="Editar"
+                onClick={(e) => {
+                  if (isSeller) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                  }
+                  onEdit(product);
+                }}
+                disabled={isSeller}
+                className={`${
+                  isSeller
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-indigo-600 hover:text-indigo-900 cursor-pointer'
+                }`}
+                title={isSeller ? 'No tienes permisos para editar productos' : 'Editar producto'}
               >
                 <PencilIcon className="h-4 w-4" />
               </button>
+
+              {/* Eliminar - Deshabilitado para SELLER */}
               <button
-                onClick={() => onDelete(product)}
-                className="text-red-600 hover:text-red-900"
-                title="Eliminar"
+                onClick={(e) => {
+                  if (isSeller) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                  }
+                  onDelete(product);
+                }}
+                disabled={isSeller}
+                className={`${
+                  isSeller
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-red-600 hover:text-red-900 cursor-pointer'
+                }`}
+                title={isSeller ? 'No tienes permisos para eliminar productos' : 'Eliminar producto'}
               >
                 <TrashIcon className="h-4 w-4" />
               </button>

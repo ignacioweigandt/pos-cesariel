@@ -14,6 +14,8 @@ export interface Product {
   show_in_ecommerce: boolean;
   ecommerce_price?: number;
   has_sizes?: boolean;
+  brand_id?: number;
+  brand?: string;
   category?: {
     id: number;
     name: string;

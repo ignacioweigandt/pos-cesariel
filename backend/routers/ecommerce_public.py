@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 import uuid
 from database import get_db
-from app.models import Product, Category, Sale, SaleItem, InventoryMovement, User, Branch, SaleType, StoreBanner, SocialMediaConfig, EcommerceConfig, WhatsAppSale, ProductSize, WhatsAppConfig, ProductImage, BranchStock
+from app.models import Product, Category, Sale, SaleItem, InventoryMovement, User, Branch, SaleType, StoreBanner, SocialMediaConfig, EcommerceConfig, WhatsAppSale, ProductSize, WhatsAppConfig, ProductImage, BranchStock, Brand
 from app.schemas import SaleCreate
 from websocket_manager import notify_new_sale
 
@@ -83,7 +83,7 @@ def ecommerce_health():
 @router.get("/products")
 def get_ecommerce_products(
     db: Session = Depends(get_db),
-    limit: int = Query(100, le=1000),
+    limit: int = Query(500, le=1000),  # Increased default from 100 to 500 for larger catalogs
     offset: int = Query(0, ge=0),
     category: Optional[str] = None,
     brand: Optional[str] = None,
@@ -105,7 +105,13 @@ def get_ecommerce_products(
             query = query.join(Category).filter(Category.name.ilike(f"%{category}%"))
 
         if brand:
-            query = query.filter(Product.brand.ilike(f"%{brand}%"))
+            # Filtrar por nombre de marca (soporta tanto brand_id como brand legacy)
+            query = query.outerjoin(Brand, Product.brand_id == Brand.id).filter(
+                or_(
+                    Brand.name.ilike(f"%{brand}%"),
+                    Product.brand.ilike(f"%{brand}%")  # Fallback para productos legacy
+                )
+            )
 
         if search:
             query = query.filter(Product.name.ilike(f"%{search}%"))
@@ -120,7 +126,6 @@ def get_ecommerce_products(
         # Para e-commerce, filtrar productos con stock disponible en cualquier sucursal
         if in_stock:
             # Subconsulta para obtener productos con stock total > 0 sumando todas las sucursales
-            from sqlalchemy import exists, or_
             has_branch_stock = exists().where(
                 and_(
                     BranchStock.product_id == Product.id,
@@ -145,7 +150,24 @@ def get_ecommerce_products(
         for product in products:
             # Calcular stock total de todas las sucursales para e-commerce
             total_stock = product.calculate_total_available_stock()
-            
+
+            # Obtener información de marca
+            brand_info = None
+            if product.brand_rel:
+                brand_info = {
+                    "id": product.brand_rel.id,
+                    "name": product.brand_rel.name,
+                    "description": product.brand_rel.description,
+                    "logo_url": product.brand_rel.logo_url
+                }
+            elif product.brand:  # Fallback para productos con marca legacy
+                brand_info = {
+                    "id": None,
+                    "name": product.brand,
+                    "description": None,
+                    "logo_url": None
+                }
+
             result.append({
                 "id": product.id,
                 "name": product.name,
@@ -156,7 +178,7 @@ def get_ecommerce_products(
                 "is_active": product.is_active,
                 "show_in_ecommerce": product.show_in_ecommerce,
                 "category_id": product.category_id,
-                "brand": product.brand,
+                "brand": brand_info,
                 "image_url": product.image_url,
                 "has_sizes": product.has_sizes,
                 "created_at": product.created_at.isoformat() if product.created_at else None
@@ -184,12 +206,29 @@ def get_ecommerce_product(product_id: int, db: Session = Depends(get_db)):
             
         # Calcular stock agregado para e-commerce
         total_stock = product.calculate_total_available_stock()
-        
+
+        # Obtener información de marca
+        brand_info = None
+        if product.brand_rel:
+            brand_info = {
+                "id": product.brand_rel.id,
+                "name": product.brand_rel.name,
+                "description": product.brand_rel.description,
+                "logo_url": product.brand_rel.logo_url
+            }
+        elif product.brand:  # Fallback para productos con marca legacy
+            brand_info = {
+                "id": None,
+                "name": product.brand,
+                "description": None,
+                "logo_url": None
+            }
+
         return {
             "id": product.id,
             "name": product.name,
             "description": product.description,
-            "brand": product.brand,
+            "brand": brand_info,
             "price": float(product.ecommerce_price) if product.ecommerce_price else float(product.price),
             "stock": total_stock,
             "featured": product.ecommerce_price is not None,
@@ -343,27 +382,37 @@ def get_ecommerce_categories(db: Session = Depends(get_db)):
 @router.get("/brands")
 def get_ecommerce_brands(db: Session = Depends(get_db)):
     """
-    Obtener marcas disponibles en productos de e-commerce
+    Obtener marcas disponibles en el e-commerce
 
-    Retorna una lista de marcas únicas de productos activos y visibles en e-commerce,
-    ordenadas alfabéticamente.
+    Retorna todas las marcas activas de la tabla brands que tienen productos
+    visibles en e-commerce, ordenadas alfabéticamente.
     """
     try:
-        # Query para obtener marcas únicas de productos activos en e-commerce
-        from sqlalchemy import distinct, func
+        # Obtener marcas activas que tienen al menos un producto en e-commerce
+        from sqlalchemy import exists
 
-        brands = db.query(distinct(Product.brand))\
+        brands = db.query(Brand)\
             .filter(
-                Product.show_in_ecommerce == True,
-                Product.is_active == True,
-                Product.brand.isnot(None),
-                Product.brand != ''
+                Brand.is_active == True,
+                # Solo marcas que tienen productos visibles en e-commerce
+                exists().where(
+                    and_(
+                        Product.brand_id == Brand.id,
+                        Product.show_in_ecommerce == True,
+                        Product.is_active == True
+                    )
+                )
             )\
-            .order_by(Product.brand)\
+            .order_by(Brand.name)\
             .all()
 
-        # Extraer nombres de marcas de las tuplas
-        result = [{"name": brand[0]} for brand in brands if brand[0]]
+        # Convertir a formato de respuesta con información completa
+        result = [{
+            "id": brand.id,
+            "name": brand.name,
+            "description": brand.description,
+            "logo_url": brand.logo_url
+        } for brand in brands]
 
         return {"data": result}
 
@@ -586,15 +635,16 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
         
         # Generar número de venta
         sale_number = generate_sale_number(SaleType.ECOMMERCE)
-        
-        # Las ventas desde el endpoint público siempre son ECOMMERCE
-        # Solo las ventas desde el admin POS pueden ser tipo POS
-        actual_sale_type = sale_data.sale_type if sale_data.sale_type == "POS" else "ECOMMERCE"
-        
-        # Determinar estado según tipo de venta
-        # POS: venta confirmada (producto ya entregado)
-        # ECOMMERCE: venta pendiente (requiere coordinación por WhatsApp)
-        order_status = "DELIVERED" if actual_sale_type == "POS" else "PENDING"
+
+        # Las ventas desde el endpoint público SIEMPRE son ECOMMERCE
+        # Forzamos este tipo independientemente de lo que venga en el request
+        actual_sale_type = "ECOMMERCE"
+
+        # Determinar estado según si la venta ya está confirmada
+        # is_confirmed=True: Venta coordinada desde admin e-commerce (DELIVERED + descuenta stock)
+        # is_confirmed=False: Venta desde sitio web público (PENDING + NO descuenta stock)
+        is_confirmed = getattr(sale_data, 'is_confirmed', False)
+        order_status = "DELIVERED" if is_confirmed else "PENDING"
         
         # Crear la venta
         db_sale = Sale(
@@ -630,9 +680,10 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
             )
             db.add(sale_item)
             
-            # SOLO actualizar stock para ventas POS (confirmadas)
-            # Las ventas ECOMMERCE no desconfan stock hasta que se confirmen por admin
-            if actual_sale_type == "POS":
+            # Descontar stock solo para ventas confirmadas
+            # is_confirmed=True: Venta coordinada desde admin e-commerce -> descuenta stock
+            # is_confirmed=False: Venta desde sitio web público -> NO descuenta stock (pendiente de confirmación)
+            if is_confirmed:
                 # Actualizar stock del producto
                 product = item_data["product"]
                 
@@ -669,7 +720,7 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                             new_stock=new_size_stock,
                             reference_id=db_sale.id,
                             reference_type="SALE",
-                            notes=f"Venta POS #{db_sale.sale_number or db_sale.id} - Talle {item_data['size']}"
+                            notes=f"Venta E-commerce #{db_sale.sale_number or db_sale.id} - Talle {item_data['size']}"
                         )
                         db.add(inventory_movement)
                 else:
@@ -699,14 +750,14 @@ async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get
                         new_stock=new_stock,
                         reference_id=db_sale.id,
                         reference_type="SALE",
-                        notes=f"Venta POS #{db_sale.sale_number or db_sale.id}"
+                        notes=f"Venta E-commerce #{db_sale.sale_number or db_sale.id}"
                     )
                     db.add(inventory_movement)
         
-        # Si es una venta de e-commerce (desde la página web), crear automáticamente el registro de WhatsApp
-        # para coordinar la entrega con el cliente
+        # Solo crear registro de WhatsApp para ventas NO confirmadas (pendientes de coordinación)
+        # Las ventas confirmadas (is_confirmed=True) ya fueron coordinadas y no requieren WhatsApp
         whatsapp_sale_id = None
-        if (actual_sale_type == "ECOMMERCE" and db_sale.customer_name):
+        if (actual_sale_type == "ECOMMERCE" and db_sale.customer_name and not is_confirmed):
             try:
                 # Obtener configuración de WhatsApp
                 whatsapp_config = get_whatsapp_config(db)

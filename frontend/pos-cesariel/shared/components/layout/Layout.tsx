@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth, canAccessModule } from '@/lib/auth';
 import { usePOSWebSocket } from '@/lib/websocket';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import NotificationCenter from '../feedback/NotificationCenter';
 import {
   HomeIcon,
@@ -51,6 +52,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   // Activar sistema de cierre automático de sesión por inactividad (4 horas)
   useSessionTimeout();
+
+  // Proteger rutas y mostrar toast cuando el usuario no tiene acceso
+  useRouteProtection();
 
   useEffect(() => {
     setMounted(true);

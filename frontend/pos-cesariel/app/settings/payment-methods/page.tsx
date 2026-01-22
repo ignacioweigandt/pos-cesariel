@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { configApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import toast from 'react-hot-toast';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import {
@@ -33,6 +34,9 @@ interface PaymentConfig {
 }
 
 export default function PaymentMethodsPage() {
+  // Protección de ruta - redirige automáticamente si el usuario no tiene permisos
+  useRouteProtection();
+
   const { user } = useAuth();
   const router = useRouter();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -44,7 +48,6 @@ export default function PaymentMethodsPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/');
       return;
     }
 

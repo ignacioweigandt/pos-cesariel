@@ -11,6 +11,7 @@ import type { ChartData } from "../../types/reports.types";
 interface ProductsPieChartProps {
   data: ChartData[];
   loading: boolean;
+  branchName?: string;
 }
 
 const COLORS = [
@@ -26,13 +27,15 @@ const COLORS = [
   "#6366F1",
 ];
 
-export function ProductsPieChart({ data, loading }: ProductsPieChartProps) {
+export function ProductsPieChart({ data, loading, branchName }: ProductsPieChartProps) {
+  const title = branchName ? `Productos Más Vendidos - ${branchName}` : 'Productos Más Vendidos';
+
   if (loading) {
     return (
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Productos Más Vendidos
+            {title}
           </h3>
           <div className="h-80 flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
@@ -46,7 +49,7 @@ export function ProductsPieChart({ data, loading }: ProductsPieChartProps) {
     <div className="bg-white shadow rounded-lg">
       <div className="px-4 py-5 sm:p-6">
         <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
-          Productos Más Vendidos
+          {title}
         </h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">

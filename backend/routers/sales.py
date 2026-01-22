@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, or_
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime, date, time, timedelta
 from decimal import Decimal
 from database import get_db
 from app.models import Sale, SaleItem, Product, User, InventoryMovement, SaleType, OrderStatus, ProductSize, BranchStock, Branch
@@ -18,6 +18,10 @@ def generate_sale_number(sale_type: SaleType) -> str:
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     prefix = "POS" if sale_type == SaleType.POS else "ECM"
     return f"{prefix}-{timestamp}-{str(uuid.uuid4())[:8].upper()}"
+
+def date_to_datetime_end(d: date) -> datetime:
+    """Convert a date to datetime at end of day (23:59:59.999999)"""
+    return datetime.combine(d, time(23, 59, 59, 999999))
 
 @router.get("/", response_model=List[SaleSchema])
 async def get_sales(
@@ -49,9 +53,10 @@ async def get_sales(
     
     if start_date:
         query = query.filter(Sale.created_at >= start_date)
-    
+
     if end_date:
-        query = query.filter(Sale.created_at <= end_date)
+        # Include the entire end_date day (until 23:59:59.999999)
+        query = query.filter(Sale.created_at <= date_to_datetime_end(end_date))
     
     sales = query.order_by(desc(Sale.created_at)).offset(skip).limit(limit).all()
     return sales
@@ -397,6 +402,7 @@ async def cancel_sale(
 
 @router.get("/reports/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats(
+    branch_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
@@ -415,9 +421,13 @@ async def get_dashboard_stats(
         # Base query for sales (exclude cancelled)
         sales_query = db.query(Sale).filter(Sale.order_status != OrderStatus.CANCELLED)
 
-        # Filter by branch if not admin
+        # Filter by branch
         if current_user.role.value.upper() != "ADMIN":
+            # Non-admin users can only see their own branch
             sales_query = sales_query.filter(Sale.branch_id == current_user.branch_id)
+        elif branch_id is not None:
+            # Admin users can filter by specific branch
+            sales_query = sales_query.filter(Sale.branch_id == branch_id)
 
         # Today's sales
         total_sales_today = sales_query.filter(
@@ -477,19 +487,27 @@ async def get_dashboard_stats(
 async def get_sales_report(
     start_date: date,
     end_date: date,
+    branch_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Convert end_date to include the entire day
+    end_datetime = date_to_datetime_end(end_date)
+
     # Base query
     sales_query = db.query(Sale).filter(
         Sale.created_at >= start_date,
-        Sale.created_at <= end_date,
+        Sale.created_at <= end_datetime,
         Sale.order_status != OrderStatus.CANCELLED
     )
-    
-    # Filter by branch if not admin
+
+    # Filter by branch
     if current_user.role.value != "ADMIN":
+        # Non-admin users can only see their own branch
         sales_query = sales_query.filter(Sale.branch_id == current_user.branch_id)
+    elif branch_id is not None:
+        # Admin users can filter by specific branch
+        sales_query = sales_query.filter(Sale.branch_id == branch_id)
     
     # Total sales and transactions
     total_sales = sales_query.with_entities(func.sum(Sale.total_amount)).scalar() or Decimal(0)
@@ -503,7 +521,7 @@ async def get_sales_report(
         func.sum(SaleItem.total_price).label('total_revenue')
     ).join(SaleItem).join(Sale).filter(
         Sale.created_at >= start_date,
-        Sale.created_at <= end_date,
+        Sale.created_at <= end_datetime,
         Sale.order_status != OrderStatus.CANCELLED
     )
     
@@ -523,7 +541,7 @@ async def get_sales_report(
             func.count(Sale.id).label('total_transactions')
         ).join(Sale).filter(
             Sale.created_at >= start_date,
-            Sale.created_at <= end_date,
+            Sale.created_at <= end_datetime,
             Sale.order_status != OrderStatus.CANCELLED
         ).group_by(Branch.name).all()
         
@@ -556,9 +574,13 @@ async def get_sales_report(
 async def get_daily_sales(
     start_date: date,
     end_date: date,
+    branch_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Convert end_date to include the entire day
+    end_datetime = date_to_datetime_end(end_date)
+
     # Base query
     sales_query = db.query(
         func.date(Sale.created_at).label('sale_date'),
@@ -566,13 +588,17 @@ async def get_daily_sales(
         func.count(Sale.id).label('daily_transactions')
     ).filter(
         Sale.created_at >= start_date,
-        Sale.created_at <= end_date,
+        Sale.created_at <= end_datetime,
         Sale.order_status != OrderStatus.CANCELLED
     )
-    
-    # Filter by branch if not admin
+
+    # Filter by branch
     if current_user.role.value != "ADMIN":
+        # Non-admin users can only see their own branch
         sales_query = sales_query.filter(Sale.branch_id == current_user.branch_id)
+    elif branch_id is not None:
+        # Admin users can filter by specific branch
+        sales_query = sales_query.filter(Sale.branch_id == branch_id)
     
     daily_sales = sales_query.group_by(
         func.date(Sale.created_at)
@@ -594,21 +620,30 @@ async def get_products_chart_data(
     start_date: date,
     end_date: date,
     limit: int = 10,
+    branch_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    # Convert end_date to include the entire day
+    end_datetime = date_to_datetime_end(end_date)
+
     # Top products query
     products_query = db.query(
         Product.name,
         func.sum(SaleItem.quantity).label('total_quantity')
     ).join(SaleItem).join(Sale).filter(
         Sale.created_at >= start_date,
-        Sale.created_at <= end_date,
+        Sale.created_at <= end_datetime,
         Sale.order_status != OrderStatus.CANCELLED
     )
-    
+
+    # Filter by branch
     if current_user.role.value != "ADMIN":
+        # Non-admin users can only see their own branch
         products_query = products_query.filter(Sale.branch_id == current_user.branch_id)
+    elif branch_id is not None:
+        # Admin users can filter by specific branch
+        products_query = products_query.filter(Sale.branch_id == branch_id)
     
     top_products = products_query.group_by(Product.name).order_by(
         func.sum(SaleItem.quantity).desc()
@@ -636,12 +671,15 @@ async def get_branches_chart_data(
             detail="Admin access required"
         )
 
+    # Convert end_date to include the entire day
+    end_datetime = date_to_datetime_end(end_date)
+
     branches_query = db.query(
         Branch.name,
         func.sum(Sale.total_amount).label('total_sales')
     ).join(Sale).filter(
         Sale.created_at >= start_date,
-        Sale.created_at <= end_date,
+        Sale.created_at <= end_datetime,
         Sale.order_status != OrderStatus.CANCELLED
     ).group_by(Branch.name).all()
     

@@ -77,11 +77,11 @@ export default function SaleSuccessModal({
       };
     } else {
       return {
-        title: '¡Venta E-commerce Creada!',
-        description: 'La venta está pendiente de coordinación por WhatsApp. El stock NO ha sido descontado hasta confirmar el pago.',
-        icon: <CheckCircleIcon className="w-16 h-16 text-blue-500" />,
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-200'
+        title: '¡Venta E-commerce Procesada!',
+        description: 'La venta ha sido confirmada como entregada y el stock ha sido actualizado automáticamente.',
+        icon: <CheckCircleIcon className="w-16 h-16 text-green-500" />,
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200'
       };
     }
   };
@@ -164,17 +164,15 @@ export default function SaleSuccessModal({
 
           {/* Status Message */}
           <div className={`p-3 rounded-lg border ${
-            saleData.error 
+            saleData.error
               ? 'bg-red-50 border-red-200'
-              : saleType === 'POS' 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-yellow-50 border-yellow-200'
+              : 'bg-green-50 border-green-200'
           }`}>
             <div className="flex items-start space-x-2">
               <div className={`w-2 h-2 rounded-full mt-2 ${
-                saleData.error 
+                saleData.error
                   ? 'bg-red-500'
-                  : saleType === 'POS' ? 'bg-green-500' : 'bg-yellow-500'
+                  : 'bg-green-500'
               }`}></div>
               <div className="text-sm">
                 {saleData.error ? (
@@ -182,15 +180,10 @@ export default function SaleSuccessModal({
                     <p className="font-medium text-red-800">Error</p>
                     <p className="text-red-700">Por favor, revise los datos e intente nuevamente</p>
                   </>
-                ) : saleType === 'POS' ? (
-                  <>
-                    <p className="font-medium text-green-800">Venta Confirmada</p>
-                    <p className="text-green-700">Stock actualizado automáticamente</p>
-                  </>
                 ) : (
                   <>
-                    <p className="font-medium text-yellow-800">Venta Pendiente</p>
-                    <p className="text-yellow-700">Requiere coordinación por WhatsApp</p>
+                    <p className="font-medium text-green-800">Venta Entregada</p>
+                    <p className="text-green-700">Stock actualizado automáticamente</p>
                   </>
                 )}
               </div>
@@ -216,9 +209,7 @@ export default function SaleSuccessModal({
                 className={`px-4 py-2 text-sm font-medium text-white rounded-md ${
                   saleData.error
                     ? 'bg-red-600 hover:bg-red-700'
-                    : saleType === 'POS' 
-                      ? 'bg-green-600 hover:bg-green-700' 
-                      : 'bg-blue-600 hover:bg-blue-700'
+                    : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
                 {saleData.error ? 'Cerrar' : 'Continuar'}

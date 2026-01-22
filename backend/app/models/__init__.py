@@ -13,6 +13,7 @@ from app.models.user import Branch, User
 
 # Import product-related models
 from app.models.product import Category, Product
+from app.models.brand import Brand
 
 # Import inventory-related models
 from app.models.inventory import (
@@ -82,6 +83,7 @@ __all__ = [
     # Product models
     "Category",
     "Product",
+    "Brand",
     # Inventory models
     "BranchStock",
     "InventoryMovement",

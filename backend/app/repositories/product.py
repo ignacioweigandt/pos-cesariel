@@ -1,11 +1,11 @@
 """
-Product and Category repositories for POS Cesariel.
+Product, Category and Brand repositories for POS Cesariel.
 
-Provides data access for product catalog and category management.
+Provides data access for product catalog, category and brand management.
 """
 
 from app.repositories.base import BaseRepository
-from app.models import Product, Category, ProductSize, ProductImage
+from app.models import Product, Category, Brand, ProductSize, ProductImage
 from typing import Optional, List
 
 class ProductRepository(BaseRepository[Product]):
@@ -55,9 +55,23 @@ class ProductRepository(BaseRepository[Product]):
 
 class CategoryRepository(BaseRepository[Category]):
     """Repository for Category entity."""
-    
+
     def get_active_categories(self) -> List[Category]:
         """Get all active categories."""
         return self.db.query(self.model).filter(
             self.model.is_active == True
         ).all()
+
+
+class BrandRepository(BaseRepository[Brand]):
+    """Repository for Brand entity."""
+
+    def get_active_brands(self) -> List[Brand]:
+        """Get all active brands."""
+        return self.db.query(self.model).filter(
+            self.model.is_active == True
+        ).order_by(self.model.name).all()
+
+    def get_by_name(self, name: str) -> Optional[Brand]:
+        """Get brand by name."""
+        return self.get_by_field("name", name)

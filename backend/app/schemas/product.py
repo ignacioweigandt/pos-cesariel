@@ -16,7 +16,8 @@ class ProductBase(BaseModel):
     sku: str
     barcode: Optional[str] = None
     category_id: Optional[int] = None
-    brand: Optional[str] = None
+    brand_id: Optional[int] = None  # Nuevo sistema: relación con tabla brands
+    brand: Optional[str] = None  # Legacy: mantener por compatibilidad
     price: Decimal
     cost: Optional[Decimal] = None
     stock_quantity: int = 0
@@ -38,7 +39,8 @@ class ProductUpdate(BaseModel):
     sku: Optional[str] = None
     barcode: Optional[str] = None
     category_id: Optional[int] = None
-    brand: Optional[str] = None
+    brand_id: Optional[int] = None  # Nuevo sistema: relación con tabla brands
+    brand: Optional[str] = None  # Legacy: mantener por compatibilidad
     price: Optional[Decimal] = None
     cost: Optional[Decimal] = None
     stock_quantity: Optional[int] = None
@@ -55,7 +57,7 @@ class Product(ProductBase):
     created_at: datetime
     updated_at: datetime
     category: Optional["Category"] = None
-    
+
     class Config:
         from_attributes = True
 

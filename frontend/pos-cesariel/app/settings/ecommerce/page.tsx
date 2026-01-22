@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { configApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
@@ -30,6 +31,9 @@ interface EcommerceConfig {
 }
 
 export default function EcommerceConfigPage() {
+  // Protección de ruta - redirige automáticamente si el usuario no tiene permisos
+  useRouteProtection();
+
   const { user } = useAuth();
   const router = useRouter();
   const [config, setConfig] = useState<EcommerceConfig>({

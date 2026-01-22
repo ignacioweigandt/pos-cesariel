@@ -36,6 +36,7 @@ from routers import (
     branches,              # Gesti처n de sucursales multisede
     users,                 # Administraci처n de usuarios y permisos
     categories,            # Categorizaci처n de productos
+    brands,                # Gesti처n de marcas de productos
     products,              # CRUD de productos, inventario y stock
     sales,                 # Ventas, reportes y analytics
     websockets,            # Comunicaci처n en tiempo real
@@ -111,6 +112,7 @@ app.include_router(auth.router)           # /auth/* - Login, logout, verificaci�
 app.include_router(branches.router)       # /branches/* - Gesti처n de sucursales multisede
 app.include_router(users.router)          # /users/* - CRUD usuarios, permisos, roles
 app.include_router(categories.router)     # /categories/* - Categorizaci처n de productos
+app.include_router(brands.router)         # /brands/* - Gesti처n de marcas de productos
 
 # ===== ROUTERS DE INVENTARIO Y VENTAS =====
 app.include_router(products.router)       # /products/* - CRUD productos, stock, talles, importaci처n

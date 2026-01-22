@@ -36,13 +36,15 @@ export function countOutOfStockProducts(products: Product[]): number {
  */
 export function calculateInventoryStats(
   products: Product[],
-  categoriesCount: number
+  categoriesCount: number,
+  brandsCount: number
 ): InventoryStats {
   return {
     totalProducts: products.length,
     lowStockCount: countLowStockProducts(products),
     outOfStockCount: countOutOfStockProducts(products),
     categoriesCount,
+    brandsCount,
   };
 }
 

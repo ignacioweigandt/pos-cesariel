@@ -20,6 +20,7 @@ export interface ModuleCardData {
   icon: any;
   href: string;
   color: string;
+  module: string;
   available: boolean;
 }
 

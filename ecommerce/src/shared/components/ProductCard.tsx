@@ -30,9 +30,28 @@ export default function ProductCard({ product }: ProductCardProps) {
     const loadProductImages = async () => {
       try {
         setIsLoadingImages(true)
+
+        // Si el producto ya tiene imágenes desde la API principal, usarlas directamente
+        // Esto evita hacer llamadas innecesarias a /images para cada producto
+        if (product.images && product.images.length > 0) {
+          const productImages = product.images.map((imageUrl, index) => ({
+            id: index,
+            product_id: Number(product.id),
+            image_url: imageUrl,
+            alt_text: product.name,
+            is_main: index === 0,
+            order: index,
+            created_at: null
+          }))
+          setImages(productImages)
+          setIsLoadingImages(false)
+          return
+        }
+
+        // Solo si no hay imágenes, intentar cargarlas desde el endpoint específico
         const response = await productsApi.getImages(Number(product.id))
         const productImages = response.data.data
-        
+
         if (productImages && productImages.length > 0) {
           // Ordenar imágenes: imagen principal primero, luego por orden
           const sortedImages = productImages.sort((a: ProductImage, b: ProductImage) => {
@@ -41,34 +60,10 @@ export default function ProductCard({ product }: ProductCardProps) {
             return a.order - b.order
           })
           setImages(sortedImages)
-        } else {
-          // Si no hay imágenes específicas, usar la imagen del producto si existe
-          if (product.images && product.images.length > 0 && product.images[0]) {
-            setImages([{
-              id: 0,
-              product_id: product.id,
-              image_url: product.images[0],
-              alt_text: product.name,
-              is_main: true,
-              order: 0,
-              created_at: null
-            }])
-          }
         }
       } catch (error) {
-        console.error('Error cargando imágenes del producto:', error)
-        // Fallback a imagen del producto si falla la API
-        if (product.images && product.images.length > 0 && product.images[0]) {
-          setImages([{
-            id: 0,
-            product_id: product.id,
-            image_url: product.images[0],
-            alt_text: product.name,
-            is_main: true,
-            order: 0,
-            created_at: null
-          }])
-        }
+        // Silenciar error - es esperado que algunos productos no tengan imágenes adicionales
+        // El componente ya tiene un fallback visual
       } finally {
         setIsLoadingImages(false)
       }
@@ -183,7 +178,9 @@ export default function ProductCard({ product }: ProductCardProps) {
               <span className="text-sm text-gray-500 line-through ml-2">${product.originalPrice.toLocaleString()}</span>
             )}
           </div>
-          <span className="text-sm text-gray-600">{product.brand}</span>
+          {product.brand && (
+            <span className="text-sm text-gray-600">{product.brand.name}</span>
+          )}
         </div>
 
         <Button asChild className="w-full">

@@ -14,7 +14,7 @@ from app.schemas import (
     ProductSize as ProductSizeSchema, UpdateSizeStocks, ProductWithMultiBranchStock,
     BulkPriceUpdateRequest, BulkPriceUpdateResponse
 )
-from auth_compat import get_current_active_user, require_manager_or_admin
+from auth_compat import get_current_active_user, require_manager_or_admin, require_stock_management_permission
 from websocket_manager import notify_inventory_change, notify_low_stock
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -102,6 +102,7 @@ async def get_products(
             "sku": product.sku,
             "barcode": product.barcode,
             "category_id": product.category_id,
+            "brand_id": product.brand_id,
             "brand": product.brand,
             "price": float(product.price),
             "cost": float(product.cost) if product.cost else None,
@@ -152,6 +153,7 @@ async def search_products(
             "name": product.name,
             "sku": product.sku,
             "barcode": product.barcode,
+            "brand_id": product.brand_id,
             "brand": product.brand,
             "price": product.price,
             "stock_quantity": branch_stock
@@ -190,6 +192,7 @@ async def get_product_by_barcode(
         "sku": product.sku,
         "barcode": product.barcode,
         "category_id": product.category_id,
+        "brand_id": product.brand_id,
         "brand": product.brand,
         "price": float(product.price),
         "cost": float(product.cost) if product.cost else None,
@@ -331,6 +334,11 @@ async def create_product(
         active_branches = db.query(Branch).filter(Branch.is_active == True).all()
         user_branch_id = current_user.branch_id
 
+        # Si el usuario no tiene sucursal asignada (ej: admin), usar la primera sucursal activa
+        if user_branch_id is None and active_branches:
+            user_branch_id = active_branches[0].id
+            print(f"⚠️ Usuario '{current_user.username}' sin sucursal asignada. Usando sucursal {user_branch_id} por defecto")
+
         for branch in active_branches:
             # Si es la sucursal del usuario que crea el producto, asignar el stock inicial
             stock_for_branch = initial_stock if branch.id == user_branch_id else 0
@@ -451,7 +459,7 @@ async def adjust_product_stock(
     product_id: int,
     stock_data: StockAdjustment,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_or_admin)
+    current_user: User = Depends(require_stock_management_permission)
 ):
     product = db.query(Product).filter(Product.id == product_id).first()
     if product is None:
@@ -1099,7 +1107,7 @@ async def manage_product_sizes(
     product_id: int,
     size_data: UpdateSizeStocks,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_or_admin)
+    current_user: User = Depends(require_stock_management_permission)
 ):
     """Gestionar stock de talles para productos de indumentaria/calzado"""
     product = db.query(Product).filter(Product.id == product_id).first()
@@ -1218,7 +1226,7 @@ async def adjust_branch_stock(
     quantity: int,
     reason: str = "Manual adjustment",
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_manager_or_admin)
+    current_user: User = Depends(require_stock_management_permission)
 ):
     """
     Ajustar stock de un producto específico en una sucursal.

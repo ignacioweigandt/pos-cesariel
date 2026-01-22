@@ -1,5 +1,13 @@
 // Frontend Domain Models
 
+export interface Brand {
+  id: number | null;
+  name: string;
+  description?: string | null;
+  logo_url?: string | null;
+  slug?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -8,7 +16,7 @@ export interface Product {
   originalPrice?: number;
   images: string[];
   category: string;
-  brand: string;
+  brand: Brand | null;
   sizes: string[];
   colors: string[];
   featured: boolean;
@@ -23,12 +31,6 @@ export interface Category {
   name: string;
   slug: string;
   subcategories?: Category[];
-}
-
-export interface Brand {
-  id: string;
-  name: string;
-  slug: string;
 }
 
 export interface Banner {

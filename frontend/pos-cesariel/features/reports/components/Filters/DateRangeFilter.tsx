@@ -15,20 +15,29 @@
  * - Missing validations
  */
 
+import { useState } from "react";
 import {
   FunnelIcon,
   CalendarIcon,
   ExclamationCircleIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 import { MONTH_NAMES, getAvailableYears } from "@/lib/utils/date";
 import type { QuickFilterPeriod, ReportType } from "../../hooks/useReportFilters";
+
+interface Branch {
+  id: number;
+  name: string;
+}
 
 interface DateRangeFilterProps {
   startDate: string;
   endDate: string;
   reportType: ReportType;
   selectedYear: number;
+  selectedBranch?: number;
+  branches: Branch[];
   error: { type: string | null; message: string };
   isApplying: boolean;
   isValid: boolean;
@@ -36,6 +45,7 @@ interface DateRangeFilterProps {
   onEndDateChange: (date: string) => void;
   onReportTypeChange: (type: ReportType) => void;
   onSelectedYearChange: (year: number) => void;
+  onBranchChange: (branchId: number | undefined) => void;
   onQuickFilter: (period: QuickFilterPeriod) => void;
   onMonthFilter: (month: number) => void;
   onYearFilter: (year: number) => void;
@@ -47,6 +57,8 @@ export function DateRangeFilter({
   endDate,
   reportType,
   selectedYear,
+  selectedBranch,
+  branches,
   error,
   isApplying,
   isValid,
@@ -54,12 +66,28 @@ export function DateRangeFilter({
   onEndDateChange,
   onReportTypeChange,
   onSelectedYearChange,
+  onBranchChange,
   onQuickFilter,
   onMonthFilter,
   onYearFilter,
   onApplyFilter,
 }: DateRangeFilterProps) {
   const years = getAvailableYears(5);
+
+  // Local states to track filter selections
+  const [quickFilterValue, setQuickFilterValue] = useState<string>('');
+  const [selectedMonthValue, setSelectedMonthValue] = useState<string>('');
+  const [selectedFullYearValue, setSelectedFullYearValue] = useState<string>('');
+
+  // Check if any quick filter is active
+  const hasActiveFilters = quickFilterValue !== '' || selectedMonthValue !== '' || selectedFullYearValue !== '';
+
+  // Clear all filter selections
+  const handleClearFilters = () => {
+    setQuickFilterValue('');
+    setSelectedMonthValue('');
+    setSelectedFullYearValue('');
+  };
 
   return (
     <div className="bg-white shadow rounded-lg">
@@ -105,65 +133,109 @@ export function DateRangeFilter({
           </div>
         )}
 
-        {/* Quick Filter Buttons */}
+        {/* Compact Filter Selectors */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <CalendarIcon className="h-4 w-4 inline mr-1" />
-            Filtros Rápidos
-          </label>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => onQuickFilter("today")}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              type="button"
-            >
-              Hoy
-            </button>
-            <button
-              onClick={() => onQuickFilter("last7")}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              type="button"
-            >
-              Últimos 7 días
-            </button>
-            <button
-              onClick={() => onQuickFilter("last30")}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              type="button"
-            >
-              Últimos 30 días
-            </button>
-            <button
-              onClick={() => onQuickFilter("month")}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              type="button"
-            >
-              Este Mes
-            </button>
-            <button
-              onClick={() => onQuickFilter("year")}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              type="button"
-            >
-              Este Año
-            </button>
-          </div>
-        </div>
-
-        {/* View by Month */}
-        <div className="border-t pt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Ver por Mes Específico
-          </label>
-          <div className="space-y-3">
-            {/* Year Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Año:</span>
-              <select
-                value={selectedYear}
-                onChange={(e) => onSelectedYearChange(Number(e.target.value))}
-                className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          {/* Header with Clear Button */}
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700">
+              <CalendarIcon className="h-4 w-4 inline mr-1" />
+              Filtros de Fecha
+            </h3>
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearFilters}
+                className="inline-flex items-center px-3 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                type="button"
               >
+                <XMarkIcon className="h-3 w-3 mr-1" />
+                Limpiar filtros
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Quick Filters */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filtros Rápidos
+              </label>
+              <select
+                value={quickFilterValue}
+                onChange={(e) => {
+                  const value = e.target.value as QuickFilterPeriod;
+                  if (value) {
+                    setQuickFilterValue(value);
+                    onQuickFilter(value);
+                  }
+                }}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">Seleccionar período...</option>
+                <option value="today">Hoy</option>
+                <option value="last7">Últimos 7 días</option>
+                <option value="last30">Últimos 30 días</option>
+                <option value="month">Este Mes</option>
+                <option value="year">Este Año</option>
+              </select>
+            </div>
+
+            {/* View by Specific Month */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ver por Mes Específico
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={selectedYear}
+                  onChange={(e) => onSelectedYearChange(Number(e.target.value))}
+                  className="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={selectedMonthValue}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value !== '') {
+                      const monthIndex = Number(value);
+                      setSelectedMonthValue(value);
+                      onMonthFilter(monthIndex);
+                    }
+                  }}
+                  className="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  <option value="">Mes...</option>
+                  {MONTH_NAMES.map((monthName, index) => (
+                    <option key={index} value={index}>
+                      {monthName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* View Full Year */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ver Año Completo
+              </label>
+              <select
+                value={selectedFullYearValue}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value !== '') {
+                    const year = Number(value);
+                    setSelectedFullYearValue(value);
+                    onYearFilter(year);
+                  }
+                }}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">Seleccionar año...</option>
                 {years.map((year) => (
                   <option key={year} value={year}>
                     {year}
@@ -171,39 +243,6 @@ export function DateRangeFilter({
                 ))}
               </select>
             </div>
-
-            {/* Month Buttons */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {MONTH_NAMES.map((monthName, index) => (
-                <button
-                  key={index}
-                  onClick={() => onMonthFilter(index)}
-                  className="px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  type="button"
-                >
-                  {monthName}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* View Full Year */}
-        <div className="border-t pt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Ver Año Completo
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {years.map((year) => (
-              <button
-                key={year}
-                onClick={() => onYearFilter(year)}
-                className="px-4 py-2 text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                type="button"
-              >
-                {year}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -212,7 +251,7 @@ export function DateRangeFilter({
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Filtro Personalizado
           </label>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha Inicio
@@ -245,6 +284,24 @@ export function DateRangeFilter({
                 }`}
                 max={new Date().toISOString().split('T')[0]}
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Sucursal
+              </label>
+              <select
+                value={selectedBranch || ''}
+                onChange={(e) => onBranchChange(e.target.value ? Number(e.target.value) : undefined)}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">Todas las sucursales</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>

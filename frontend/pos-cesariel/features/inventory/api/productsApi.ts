@@ -87,4 +87,18 @@ export const productsApi = {
    */
   adjustStock: (id: number, newStock: number, notes?: string) =>
     apiClient.post(`/products/${id}/adjust-stock`, { new_stock: newStock, notes }),
+
+  /**
+   * Get all categories
+   * @returns List of categories
+   */
+  getCategories: () =>
+    apiClient.get('/categories/'),
+
+  /**
+   * Get all brands
+   * @returns List of brands
+   */
+  getBrands: () =>
+    apiClient.get('/brands/'),
 };

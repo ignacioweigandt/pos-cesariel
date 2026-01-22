@@ -6,7 +6,7 @@ Provides data access abstraction layer using the Repository pattern.
 
 from app.repositories.base import BaseRepository
 from app.repositories.user import UserRepository, BranchRepository
-from app.repositories.product import ProductRepository, CategoryRepository
+from app.repositories.product import ProductRepository, CategoryRepository, BrandRepository
 from app.repositories.inventory import (
     BranchStockRepository,
     ProductSizeRepository,
@@ -34,6 +34,7 @@ __all__ = [
     "BranchRepository",
     "ProductRepository",
     "CategoryRepository",
+    "BrandRepository",
     "BranchStockRepository",
     "ProductSizeRepository",
     "InventoryMovementRepository",

@@ -91,7 +91,7 @@ export const canAccessModule = (user: User | null, module: string): boolean => {
   
   const modulePermissions = {
     pos: ['admin', 'manager', 'seller', 'ADMIN', 'MANAGER', 'SELLER'],
-    inventory: ['admin', 'manager', 'ADMIN', 'MANAGER'],
+    inventory: ['admin', 'manager', 'seller', 'ADMIN', 'MANAGER', 'SELLER'], // SELLER tiene acceso limitado a Inventario
     reports: ['admin', 'manager', 'ADMIN', 'MANAGER'],
     ecommerce: ['admin', 'manager', 'ecommerce', 'ADMIN', 'MANAGER', 'ECOMMERCE'],
     users: ['admin', 'manager', 'ADMIN', 'MANAGER'],

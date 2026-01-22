@@ -155,10 +155,10 @@ export async function getCategories(): Promise<Array<{ id: number; name: string 
 
 /**
  * Fetch available brands from backend
- * Gets unique brands from products in the database
+ * Gets active brands from the brands table
  */
-export async function getBrands(): Promise<Array<{ name: string }>> {
-  const response = await apiFetch<ApiResponse<Array<{ name: string }>>>(
+export async function getBrands(): Promise<Array<{ id: number; name: string; description?: string | null; logo_url?: string | null }>> {
+  const response = await apiFetch<ApiResponse<Array<{ id: number; name: string; description: string | null; logo_url: string | null }>>>(
     '/ecommerce/brands',
     {
       revalidate: 300, // Revalidate every 5 minutes
@@ -170,6 +170,6 @@ export async function getBrands(): Promise<Array<{ name: string }>> {
     return [];
   }
 
-  // Return brands sorted alphabetically
-  return response.data.sort((a, b) => a.name.localeCompare(b.name));
+  // Return brands sorted alphabetically (already sorted by backend)
+  return response.data;
 }

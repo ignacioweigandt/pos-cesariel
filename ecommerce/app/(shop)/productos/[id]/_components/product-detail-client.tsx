@@ -141,7 +141,9 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
                   ))}
                 </div>
                 <span className="text-gray-600">({product.reviews} reseñas)</span>
-                <Badge variant="secondary">{product.brand}</Badge>
+                {product.brand && (
+                  <Badge variant="secondary">{product.brand.name}</Badge>
+                )}
               </div>
             </div>
 

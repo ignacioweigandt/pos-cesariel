@@ -31,7 +31,7 @@ function getApiBaseUrl(): string {
  * Used for all authenticated endpoints
  */
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: 'https://backend-production-c20a.up.railway.app', // Hardcoded for Railway
+  baseURL: getApiBaseUrl(), // Dynamic: localhost for dev, Railway for production
   timeout: 30000, // 30 second timeout (Railway cold starts can be slow)
   headers: {
     'Content-Type': 'application/json',
@@ -43,7 +43,7 @@ export const apiClient: AxiosInstance = axios.create({
  * Used for public e-commerce endpoints
  */
 export const publicApiClient: AxiosInstance = axios.create({
-  baseURL: 'https://backend-production-c20a.up.railway.app', // Hardcoded for Railway
+  baseURL: getApiBaseUrl(), // Dynamic: localhost for dev, Railway for production
   timeout: 30000, // 30 second timeout (Railway cold starts can be slow)
   headers: {
     'Content-Type': 'application/json',

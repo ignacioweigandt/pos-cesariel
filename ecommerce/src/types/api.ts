@@ -1,5 +1,13 @@
 // API Response Types - Backend POS Cesariel
 
+// ===== MARCAS =====
+export interface ApiBrand {
+  id: number | null;
+  name: string;
+  description: string | null;
+  logo_url: string | null;
+}
+
 // ===== PRODUCTOS =====
 export interface ApiProduct {
   id: number;
@@ -8,7 +16,7 @@ export interface ApiProduct {
   sku: string;
   barcode: string | null;
   category_id: number;
-  brand: string | null;
+  brand: ApiBrand | null;
   price: number;
   cost: number | null;
   stock_quantity: number;
@@ -32,7 +40,7 @@ export interface ApiPublicProduct {
   id: number;
   name: string;
   description: string | null;
-  brand: string | null;
+  brand: ApiBrand | null;
   price: number;
   stock: number;
   featured: boolean;

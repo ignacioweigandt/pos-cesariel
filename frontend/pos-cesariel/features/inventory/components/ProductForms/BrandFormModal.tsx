@@ -2,33 +2,43 @@
 
 import { useState, useEffect } from 'react';
 import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
-import type { Category, CategoryFormData } from '../../types/inventory.types';
 
-interface CategoryFormModalProps {
+interface Brand {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+interface BrandFormData {
+  name: string;
+  description: string;
+}
+
+interface BrandFormModalProps {
   isOpen: boolean;
-  category: Category | null;
-  categories: Category[];
+  brand: Brand | null;
+  brands: Brand[];
   onClose: () => void;
-  onSave: (categoryData: any) => Promise<void>;
-  onDelete: (categoryId: number) => Promise<void>;
+  onSave: (brandData: any) => Promise<void>;
+  onDelete: (brandId: number) => Promise<void>;
 }
 
 /**
- * CategoryFormModal Component
+ * BrandFormModal Component
  *
- * Modal for creating, editing, and deleting categories:
+ * Modal for creating, editing, and deleting brands:
  * - Create/Edit form
- * - List of existing categories with delete option
+ * - List of existing brands with delete option
  */
-export function CategoryFormModal({
+export function BrandFormModal({
   isOpen,
-  category,
-  categories,
+  brand,
+  brands,
   onClose,
   onSave,
   onDelete,
-}: CategoryFormModalProps) {
-  const [formData, setFormData] = useState<CategoryFormData>({
+}: BrandFormModalProps) {
+  const [formData, setFormData] = useState<BrandFormData>({
     name: '',
     description: '',
   });
@@ -36,12 +46,12 @@ export function CategoryFormModal({
   const [activeTab, setActiveTab] = useState<'form' | 'list'>('form');
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // Initialize form when category changes
+  // Initialize form when brand changes
   useEffect(() => {
-    if (category) {
+    if (brand) {
       setFormData({
-        name: category.name,
-        description: category.description || '',
+        name: brand.name,
+        description: brand.description || '',
       });
       setActiveTab('form');
     } else {
@@ -50,41 +60,41 @@ export function CategoryFormModal({
         description: '',
       });
     }
-  }, [category]);
+  }, [brand]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const categoryData = {
+      const brandData = {
         name: formData.name,
         description: formData.description || null,
       };
 
-      await onSave(categoryData);
+      await onSave(brandData);
       setFormData({ name: '', description: '' });
       setActiveTab('list');
-    } catch (error) {
-      console.error('Error submitting category:', error);
-      const errorMessage = (error as any).response?.data?.detail || (error as any).message || 'Error al guardar la categoría';
+    } catch (error: any) {
+      console.error('Error submitting brand:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Error al guardar la marca';
       alert(`Error: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (categoryId: number, categoryName: string) => {
-    if (!confirm(`¿Estás seguro de eliminar la categoría "${categoryName}"?\n\nEsta acción no se puede deshacer.`)) {
+  const handleDelete = async (brandId: number, brandName: string) => {
+    if (!confirm(`¿Estás seguro de eliminar la marca "${brandName}"?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
 
-    setDeletingId(categoryId);
+    setDeletingId(brandId);
     try {
-      await onDelete(categoryId);
+      await onDelete(brandId);
     } catch (error: any) {
-      console.error('Error deleting category:', error);
-      const errorMessage = error.response?.data?.detail || error.message || 'Error al eliminar la categoría';
+      console.error('Error deleting brand:', error);
+      const errorMessage = error.response?.data?.detail || error.message || 'Error al eliminar la marca';
       alert(`Error: ${errorMessage}`);
     } finally {
       setDeletingId(null);
@@ -100,7 +110,7 @@ export function CategoryFormModal({
           {/* Header */}
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-medium text-gray-900">
-              Gestión de Categorías
+              Gestión de Marcas
             </h3>
             <button
               onClick={onClose}
@@ -120,7 +130,7 @@ export function CategoryFormModal({
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              {category ? 'Editar Categoría' : 'Nueva Categoría'}
+              {brand ? 'Editar Marca' : 'Nueva Marca'}
             </button>
             <button
               onClick={() => setActiveTab('list')}
@@ -130,7 +140,7 @@ export function CategoryFormModal({
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Listar Categorías ({categories.length})
+              Listar Marcas ({brands.length})
             </button>
           </div>
 
@@ -150,7 +160,7 @@ export function CategoryFormModal({
                     setFormData({ ...formData, name: e.target.value })
                   }
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Ej: Zapatillas, Ropa..."
+                  placeholder="Ej: Nike, Adidas..."
                 />
               </div>
 
@@ -169,7 +179,7 @@ export function CategoryFormModal({
                   }
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   rows={3}
-                  placeholder="Descripción opcional de la categoría"
+                  placeholder="Descripción opcional de la marca"
                 />
               </div>
 
@@ -189,7 +199,7 @@ export function CategoryFormModal({
                 >
                   {isSubmitting
                     ? 'Guardando...'
-                    : category
+                    : brand
                     ? 'Actualizar'
                     : 'Crear'}
                 </button>
@@ -200,30 +210,30 @@ export function CategoryFormModal({
           {/* List Tab */}
           {activeTab === 'list' && (
             <div className="space-y-2">
-              {categories.length === 0 ? (
+              {brands.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
-                  No hay categorías creadas aún
+                  No hay marcas creadas aún
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {categories.map((c) => (
+                  {brands.map((b) => (
                     <div
-                      key={c.id}
+                      key={b.id}
                       className="flex items-center justify-between p-3 border border-gray-200 rounded-md hover:bg-gray-50"
                     >
                       <div className="flex-1">
-                        <p className="font-medium text-gray-900">{c.name}</p>
-                        {c.description && (
+                        <p className="font-medium text-gray-900">{b.name}</p>
+                        {b.description && (
                           <p className="text-sm text-gray-500 mt-1">
-                            {c.description}
+                            {b.description}
                           </p>
                         )}
                       </div>
                       <button
-                        onClick={() => handleDelete(c.id, c.name)}
-                        disabled={deletingId === c.id}
+                        onClick={() => handleDelete(b.id, b.name)}
+                        disabled={deletingId === b.id}
                         className="ml-3 p-2 text-red-600 hover:bg-red-50 rounded-md disabled:opacity-50"
-                        title="Eliminar categoría"
+                        title="Eliminar marca"
                       >
                         <TrashIcon className="h-5 w-5" />
                       </button>

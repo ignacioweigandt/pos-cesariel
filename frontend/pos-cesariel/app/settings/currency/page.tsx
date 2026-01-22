@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { configApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
@@ -33,6 +34,9 @@ const commonCurrencies: Currency[] = [
 ];
 
 export default function CurrencyPage() {
+  // Protección de ruta - redirige automáticamente si el usuario no tiene permisos
+  useRouteProtection();
+
   const { user } = useAuth();
   const router = useRouter();
   const [config, setConfig] = useState<SystemConfig>({
@@ -46,18 +50,11 @@ export default function CurrencyPage() {
 
   useEffect(() => {
     if (!user) {
-      router.push('/');
-      return;
-    }
-
-    if (!['admin', 'manager', 'ADMIN', 'MANAGER'].includes(user.role)) {
-      toast.error('No tienes permisos para acceder a la configuración');
-      router.push('/dashboard');
       return;
     }
 
     loadCurrencyConfig();
-  }, [user, router]);
+  }, [user]);
 
   const loadCurrencyConfig = async () => {
     try {

@@ -35,7 +35,7 @@ export default function Header() {
   const [storeConfig, setStoreConfig] = useState<StoreConfig | null>(null)
   const [isLoadingConfig, setIsLoadingConfig] = useState(true)
   const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([])
-  const [brands, setBrands] = useState<Array<{ name: string }>>([])
+  const [brands, setBrands] = useState<Array<{ id: number; name: string; description?: string | null; logo_url?: string | null }>>([])
   const [isLoadingData, setIsLoadingData] = useState(true)
   const { cartState } = useEcommerce()
 

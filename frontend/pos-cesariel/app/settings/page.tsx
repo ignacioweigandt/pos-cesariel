@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth';
 import { configApi } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import toast from 'react-hot-toast';
 import {
   CogIcon,
@@ -72,36 +73,25 @@ const configSections: ConfigSection[] = [
   },
 ];
 
+/**
+ * Settings Page
+ *
+ * Protected route: Only accessible by admin and manager roles.
+ */
 export default function SettingsPage() {
+  // Protección de ruta - redirige automáticamente si el usuario no tiene permisos
+  useRouteProtection();
+
   const { user } = useAuth();
   const router = useRouter();
   const [systemConfig, setSystemConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || authChecked) return;
-    
-    if (!user) {
-      router.push('/');
-      return;
-    }
-
-    // Solo admin y manager pueden acceder a configuración
-    if (!['admin', 'manager', 'ADMIN', 'MANAGER'].includes(user.role)) {
-      toast.error('No tienes permisos para acceder a la configuración');
-      router.push('/dashboard');
-      return;
-    }
-
-    setAuthChecked(true);
     loadSystemConfig();
-  }, [mounted, user, router, authChecked]);
+  }, []);
 
   const loadSystemConfig = async () => {
     try {
@@ -119,7 +109,7 @@ export default function SettingsPage() {
     router.push(section.path);
   };
 
-  if (!mounted || !authChecked || loading) {
+  if (!mounted || loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
