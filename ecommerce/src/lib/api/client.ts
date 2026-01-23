@@ -1,16 +1,35 @@
 // API Client - Server-side fetch wrapper with caching
 
+// Production backend URL for Railway deployment
+const PRODUCTION_BACKEND_URL = 'https://backend-production-c20a.up.railway.app';
+
 // Dynamic API URL detection
-// - Server-side (SSR): Use API_URL (Docker internal network: backend:8000)
-// - Client-side: Use NEXT_PUBLIC_API_URL (browser: localhost:8000)
+// - Server-side (SSR): Use API_URL env var, fallback to production URL or localhost
+// - Client-side: Use NEXT_PUBLIC_API_URL, fallback to production URL or localhost
 function getApiBaseUrl(): string {
-  // Server-side (Node.js in Docker)
+  // Server-side (Node.js)
   if (typeof window === 'undefined') {
-    return process.env.API_URL || 'http://backend:8000';
+    // Check for explicit API_URL first
+    if (process.env.API_URL) {
+      return process.env.API_URL;
+    }
+    // In production (Railway), use the production backend URL
+    if (process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT) {
+      return PRODUCTION_BACKEND_URL;
+    }
+    // Local Docker development
+    return 'http://backend:8000';
   }
 
   // Client-side (browser)
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  // Check if we're on production domain
+  if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
+    return PRODUCTION_BACKEND_URL;
+  }
+  return 'http://localhost:8000';
 }
 
 const API_BASE_URL = getApiBaseUrl();
