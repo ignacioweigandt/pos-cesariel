@@ -38,6 +38,33 @@ async def debug_brands(db: Session = Depends(get_db)):
             "traceback": traceback.format_exc()
         }
 
+
+@router.get("/debug-auth")
+async def debug_brands_with_auth(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Debug endpoint to test auth + db query (auth required).
+    TEMPORARY - Remove after debugging.
+    """
+    try:
+        # Test with ORM
+        brands = db.query(Brand).filter(Brand.is_active == True).all()
+        return {
+            "status": "ok",
+            "user": current_user.username,
+            "brands_count": len(brands),
+            "brands": [{"id": b.id, "name": b.name} for b in brands]
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
 @router.get("/", response_model=List[BrandSchema])
 async def get_brands(
     skip: int = 0,
