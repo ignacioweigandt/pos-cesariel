@@ -30,9 +30,14 @@ export function mapApiProductToFrontend(apiProduct: ApiProduct): Product {
   }
 
   // Generar imágenes
+  // Si hay imágenes en la relación, usarlas
+  // Si no, usar image_url si existe
+  // Si no hay ninguna, dejar vacío para que ProductCard cargue desde la API
   const images = apiProduct.images && apiProduct.images.length > 0
     ? apiProduct.images.map(img => img.image_url)
-    : [apiProduct.image_url || '/placeholder.svg?height=500&width=500'];
+    : apiProduct.image_url
+      ? [apiProduct.image_url]
+      : [];
 
   return {
     id: apiProduct.id.toString(),
@@ -95,9 +100,11 @@ export function mapApiPublicProductToFrontend(apiProduct: ApiPublicProduct): Pro
 
   // Generar array de imágenes
   // El backend solo devuelve image_url (string), no un array de imágenes
+  // Si no hay image_url, dejamos el array vacío para que ProductCard
+  // haga la llamada a /ecommerce/products/{id}/images y obtenga las imágenes de ProductImage
   const images = apiProduct.image_url
     ? [apiProduct.image_url]
-    : ['/placeholder.svg?height=500&width=500'];
+    : [];
 
   return {
     id: apiProduct.id.toString(),
