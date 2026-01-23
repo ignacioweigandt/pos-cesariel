@@ -49,13 +49,16 @@ export function SalesHistoryTab({ refreshTrigger }: SalesHistoryTabProps) {
     }
   }, [refreshTrigger]);
 
-  // Load sales - Only ECOMMERCE sales (sales created from e-commerce admin panel)
+  // Load sales - Only ECOMMERCE sales created from admin panel (without WhatsApp record)
   const loadSales = async (showAlert = false) => {
     setLoading(true);
     try {
-      // Filter to only show ECOMMERCE sales (created from e-commerce admin panel)
-      // POS sales from main sales module won't appear here
-      const response = await salesApi.getSales({ sale_type: 'ECOMMERCE' });
+      // Filter to only show ECOMMERCE sales created from admin panel (has_whatsapp_sale=false)
+      // Sales from public e-commerce (with WhatsApp record) are shown in WhatsAppSalesTab
+      const response = await salesApi.getSales({
+        sale_type: 'ECOMMERCE',
+        has_whatsapp_sale: false
+      });
       const newSales = response.data;
 
       // Check for new sales

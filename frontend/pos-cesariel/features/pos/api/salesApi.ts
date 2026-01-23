@@ -12,6 +12,13 @@ export interface SalesParams {
   branch_id?: number;
   status?: string;
   sale_type?: 'POS' | 'ECOMMERCE';
+  /**
+   * Filter by WhatsApp sale association:
+   * - true: Only sales WITH WhatsApp record (from public e-commerce)
+   * - false: Only sales WITHOUT WhatsApp record (from admin sales tab)
+   * - undefined: All sales
+   */
+  has_whatsapp_sale?: boolean;
 }
 
 export interface UpdateStatusData {

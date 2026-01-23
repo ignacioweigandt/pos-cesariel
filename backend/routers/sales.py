@@ -31,11 +31,23 @@ async def get_sales(
     branch_id: Optional[int] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    has_whatsapp_sale: Optional[bool] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """
+    Get sales with optional filters.
+
+    Parameters:
+    - has_whatsapp_sale: Filter by whether sale has associated WhatsApp record
+      - True: Only sales WITH WhatsApp record (from public e-commerce)
+      - False: Only sales WITHOUT WhatsApp record (from admin sales tab)
+      - None: All sales (no filter)
+    """
+    from app.models import WhatsAppSale
+
     query = db.query(Sale)
-    
+
     # Filter by branch if not admin, but always show ECOMMERCE sales
     if current_user.role.value.upper() != "ADMIN":
         # Include both sales from user's branch AND all ecommerce sales
@@ -47,17 +59,30 @@ async def get_sales(
         )
     elif branch_id:
         query = query.filter(Sale.branch_id == branch_id)
-    
+
     if sale_type:
         query = query.filter(Sale.sale_type == sale_type)
-    
+
     if start_date:
         query = query.filter(Sale.created_at >= start_date)
 
     if end_date:
         # Include the entire end_date day (until 23:59:59.999999)
         query = query.filter(Sale.created_at <= date_to_datetime_end(end_date))
-    
+
+    # Filter by WhatsApp sale association
+    if has_whatsapp_sale is not None:
+        whatsapp_sale_exists = db.query(WhatsAppSale.sale_id).filter(
+            WhatsAppSale.sale_id == Sale.id
+        ).exists()
+
+        if has_whatsapp_sale:
+            # Only sales WITH WhatsApp record
+            query = query.filter(whatsapp_sale_exists)
+        else:
+            # Only sales WITHOUT WhatsApp record
+            query = query.filter(~whatsapp_sale_exists)
+
     sales = query.order_by(desc(Sale.created_at)).offset(skip).limit(limit).all()
     return sales
 
