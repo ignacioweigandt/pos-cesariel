@@ -13,6 +13,31 @@ router = APIRouter(prefix="/brands", tags=["brands"])
 def get_brand_repo(db: Session = Depends(get_db)) -> BrandRepository:
     return BrandRepository(Brand, db)
 
+
+@router.get("/debug")
+async def debug_brands(db: Session = Depends(get_db)):
+    """
+    Debug endpoint to test database query directly (no auth required).
+    TEMPORARY - Remove after debugging.
+    """
+    from sqlalchemy import text
+    try:
+        # Test raw SQL query
+        result = db.execute(text("SELECT id, name, is_active FROM brands LIMIT 5"))
+        rows = result.fetchall()
+        return {
+            "status": "ok",
+            "query_result": [{"id": r[0], "name": r[1], "is_active": r[2]} for r in rows],
+            "count": len(rows)
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
 @router.get("/", response_model=List[BrandSchema])
 async def get_brands(
     skip: int = 0,
