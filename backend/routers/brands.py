@@ -21,8 +21,26 @@ async def get_brands(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get all active brands using repository pattern."""
-    brands = brand_repo.get_active_brands()
-    return brands[skip:skip+limit]
+    try:
+        brands = brand_repo.get_active_brands()
+        # Convert to list of dicts to avoid relationship serialization issues
+        result = []
+        for brand in brands[skip:skip+limit]:
+            result.append({
+                "id": brand.id,
+                "name": brand.name,
+                "description": brand.description,
+                "logo_url": brand.logo_url,
+                "is_active": brand.is_active,
+                "created_at": brand.created_at,
+                "updated_at": brand.updated_at
+            })
+        return result
+    except Exception as e:
+        import traceback
+        print(f"Error in get_brands: {str(e)}")
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error fetching brands: {str(e)}")
 
 @router.get("/{brand_id}", response_model=BrandSchema)
 async def get_brand(
