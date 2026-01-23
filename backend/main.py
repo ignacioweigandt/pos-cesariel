@@ -72,26 +72,6 @@ class OptionsMiddleware(BaseHTTPMiddleware):
         return response
 
 
-# Middleware para normalizar URLs - agregar trailing slash si falta
-# Esto permite que tanto /products como /products/ funcionen correctamente
-class TrailingSlashMiddleware(BaseHTTPMiddleware):
-    """Middleware que normaliza URLs agregando trailing slash si falta"""
-    async def dispatch(self, request: Request, call_next):
-        # Lista de paths que NO deben tener trailing slash normalizado
-        # (paths con parámetros dinámicos o que terminan en archivos)
-        path = request.scope["path"]
-
-        # Si el path no termina en slash y no es un archivo (no tiene extensión)
-        # y no es la raíz, agregar trailing slash
-        if (path != "/" and
-            not path.endswith("/") and
-            "." not in path.split("/")[-1] and
-            not any(path.startswith(p) for p in ["/docs", "/redoc", "/openapi.json", "/health", "/ws"])):
-            # Modificar el scope para agregar trailing slash
-            request.scope["path"] = path + "/"
-
-        response = await call_next(request)
-        return response
 
 # Crear la instancia principal de FastAPI con configuración centralizada
 # La configuración se obtiene desde config/settings.py basada en variables de entorno
@@ -101,16 +81,11 @@ app = FastAPI(
     version=settings.app_version,
     docs_url="/docs" if settings.debug_mode else None,  # Swagger UI solo en desarrollo
     redoc_url="/redoc" if settings.debug_mode else None,  # ReDoc solo en desarrollo
-    debug=settings.debug_mode,  # Habilita logs detallados y recarga automática
-    redirect_slashes=False  # Deshabilitar redirect 307 de /path a /path/ para evitar problemas de CORS
+    debug=settings.debug_mode  # Habilita logs detallados y recarga automática
 )
 
 # IMPORTANTE: Agregar middleware personalizado de OPTIONS PRIMERO para interceptar preflight requests
 app.add_middleware(OptionsMiddleware)
-
-# Agregar middleware para normalizar URLs (agregar trailing slash si falta)
-# Esto permite que las peticiones funcionen tanto con como sin trailing slash
-app.add_middleware(TrailingSlashMiddleware)
 
 # Configuración de middleware CORS para comunicación entre frontend y backend
 # Permite las solicitudes desde los dos frontends del sistema (POS admin y E-commerce)

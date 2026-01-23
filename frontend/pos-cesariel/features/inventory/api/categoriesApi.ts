@@ -15,7 +15,7 @@ export const categoriesApi = {
    * @returns List of all categories
    */
   getCategories: () =>
-    apiClient.get('/categories'),
+    apiClient.get('/categories/'),
 
   /**
    * Get single category by ID
@@ -31,7 +31,7 @@ export const categoriesApi = {
    * @returns Created category
    */
   createCategory: (data: any) =>
-    apiClient.post('/categories', data),
+    apiClient.post('/categories/', data),
 
   /**
    * Update existing category

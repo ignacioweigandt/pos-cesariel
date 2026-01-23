@@ -28,7 +28,7 @@ export const salesApi = {
    * @returns List of sales
    */
   getSales: (params?: SalesParams) =>
-    apiClient.get('/sales', { params }),
+    apiClient.get('/sales/', { params }),
 
   /**
    * Get single sale by ID
@@ -44,7 +44,7 @@ export const salesApi = {
    * @returns Created sale
    */
   createSale: (data: any) =>
-    apiClient.post('/sales', data),
+    apiClient.post('/sales/', data),
 
   /**
    * Update sale status
