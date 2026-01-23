@@ -65,7 +65,7 @@ async def debug_brands_with_auth(
             "traceback": traceback.format_exc()
         }
 
-@router.get("/", response_model=List[BrandSchema])
+@router.get("/")
 async def get_brands(
     skip: int = 0,
     limit: int = 100,
@@ -84,8 +84,8 @@ async def get_brands(
                 "description": brand.description,
                 "logo_url": brand.logo_url,
                 "is_active": brand.is_active,
-                "created_at": brand.created_at,
-                "updated_at": brand.updated_at
+                "created_at": brand.created_at.isoformat() if brand.created_at else None,
+                "updated_at": brand.updated_at.isoformat() if brand.updated_at else None
             })
         return result
     except Exception as e:
