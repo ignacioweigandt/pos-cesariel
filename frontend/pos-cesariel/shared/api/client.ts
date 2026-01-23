@@ -6,19 +6,25 @@
 
 import axios, { AxiosInstance } from 'axios';
 
-// Function to get API base URL - evaluated at runtime on client side
+// Production backend URL for Railway deployment
+const PRODUCTION_BACKEND_URL = 'https://backend-production-c20a.up.railway.app';
+
+/**
+ * Get API base URL dynamically at request time
+ * This function is called on each request to ensure correct URL in all environments
+ */
 function getApiBaseUrl(): string {
-  // If environment variable is set, use it
+  // If environment variable is set, use it (highest priority)
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
 
-  // Client-side detection: if running in production (not localhost), use Railway backend
+  // Client-side: detect production by hostname
   if (typeof window !== 'undefined') {
-    const isProduction = window.location.hostname !== 'localhost' &&
-                        window.location.hostname !== '127.0.0.1';
+    const hostname = window.location.hostname;
+    const isProduction = hostname !== 'localhost' && hostname !== '127.0.0.1';
     if (isProduction) {
-      return 'https://backend-production-c20a.up.railway.app';
+      return PRODUCTION_BACKEND_URL;
     }
   }
 
@@ -29,9 +35,10 @@ function getApiBaseUrl(): string {
 /**
  * Main API client with authentication
  * Used for all authenticated endpoints
+ *
+ * NOTE: baseURL is set dynamically via interceptor to handle SSR correctly
  */
 export const apiClient: AxiosInstance = axios.create({
-  baseURL: getApiBaseUrl(), // Dynamic: localhost for dev, Railway for production
   timeout: 30000, // 30 second timeout (Railway cold starts can be slow)
   headers: {
     'Content-Type': 'application/json',
@@ -41,9 +48,10 @@ export const apiClient: AxiosInstance = axios.create({
 /**
  * Public API client without authentication
  * Used for public e-commerce endpoints
+ *
+ * NOTE: baseURL is set dynamically via interceptor to handle SSR correctly
  */
 export const publicApiClient: AxiosInstance = axios.create({
-  baseURL: getApiBaseUrl(), // Dynamic: localhost for dev, Railway for production
   timeout: 30000, // 30 second timeout (Railway cold starts can be slow)
   headers: {
     'Content-Type': 'application/json',
@@ -51,11 +59,14 @@ export const publicApiClient: AxiosInstance = axios.create({
 });
 
 /**
- * Request interceptor - add authentication token to requests
- * Safely checks for browser environment before accessing localStorage
+ * Request interceptor - dynamically set baseURL and add authentication
+ * This ensures correct URL detection on client-side after hydration
  */
 apiClient.interceptors.request.use(
   (config) => {
+    // Set baseURL dynamically on each request (important for SSR/hydration)
+    config.baseURL = getApiBaseUrl();
+
     // Only access localStorage in browser environment (Next.js SSR safety)
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
@@ -63,6 +74,20 @@ apiClient.interceptors.request.use(
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+/**
+ * Request interceptor for public client - dynamically set baseURL
+ */
+publicApiClient.interceptors.request.use(
+  (config) => {
+    // Set baseURL dynamically on each request
+    config.baseURL = getApiBaseUrl();
     return config;
   },
   (error) => {
