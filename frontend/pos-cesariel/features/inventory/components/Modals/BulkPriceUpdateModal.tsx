@@ -73,16 +73,12 @@ export function BulkPriceUpdateModal({
     setLoadingProducts(true);
     try {
       const response = await apiClient.get(
-        `/products?limit=1000&search=${encodeURIComponent(brand)}`
+        `/products?limit=500&brand=${encodeURIComponent(brand)}`
       );
 
-      const allProducts = response.data;
-      // Filtrar solo productos de la marca seleccionada
-      const filtered = allProducts.filter(
-        (p: Product) => p.brand === brand
-      );
-      setBrandProducts(filtered);
-      setSelectedProductIds(filtered.map((p: Product) => p.id));
+      const products = response.data;
+      setBrandProducts(products);
+      setSelectedProductIds(products.map((p: Product) => p.id));
     } catch (error) {
       console.error('Error loading products:', error);
       alert('Error al cargar productos de la marca');

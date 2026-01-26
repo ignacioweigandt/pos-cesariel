@@ -51,15 +51,16 @@ async def get_products(
     limit: int = 100,
     search: Optional[str] = None,
     category_id: Optional[int] = None,
+    brand: Optional[str] = None,
     low_stock: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     # Obtener la sucursal del usuario para filtros específicos
     user_branch_id = current_user.branch_id if current_user.branch_id else None
-    
+
     query = db.query(Product).filter(Product.is_active == True)
-    
+
     if search:
         query = query.filter(
             or_(
@@ -68,9 +69,12 @@ async def get_products(
                 Product.barcode.ilike(f"%{search}%")
             )
         )
-    
+
     if category_id:
         query = query.filter(Product.category_id == category_id)
+
+    if brand:
+        query = query.filter(Product.brand == brand)
     
     # Para filtro low_stock, consideramos stock de la sucursal específica
     if low_stock and user_branch_id:
