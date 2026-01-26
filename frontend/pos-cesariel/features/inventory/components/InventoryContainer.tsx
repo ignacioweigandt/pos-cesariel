@@ -604,7 +604,7 @@ export function InventoryContainer() {
       <BulkPriceUpdateModal
         isOpen={showBulkPriceModal}
         onClose={() => setShowBulkPriceModal(false)}
-        brands={brands}
+        brands={brands.map(b => b.name)}
         onSuccess={handleBulkPriceSuccess}
       />
     </div>
