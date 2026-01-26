@@ -12,10 +12,22 @@ router = APIRouter(prefix="/branches", tags=["branches"])
 async def get_branches(
     skip: int = 0,
     limit: int = 100,
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    branches = db.query(Branch).offset(skip).limit(limit).all()
+    """
+    Get all branches.
+
+    By default, only returns active branches. Use include_inactive=true to get all branches.
+    """
+    query = db.query(Branch)
+
+    # By default, only return active branches
+    if not include_inactive:
+        query = query.filter(Branch.is_active == True)
+
+    branches = query.offset(skip).limit(limit).all()
     return branches
 
 @router.get("/{branch_id}", response_model=BranchSchema)
@@ -90,7 +102,9 @@ async def delete_branch(
     if has_users or has_sales or has_inventory or has_product_sizes or has_movements or has_notifications:
         # Soft delete: mark as inactive instead of deleting
         branch.is_active = False
-        branch.name = f"{branch.name} (Eliminada)"
+        # Avoid adding "(Eliminada)" multiple times
+        if not branch.name.endswith("(Eliminada)"):
+            branch.name = f"{branch.name} (Eliminada)"
         db.commit()
         db.refresh(branch)
 
