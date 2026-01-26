@@ -6,7 +6,7 @@ import pandas as pd
 import io
 from datetime import datetime
 from database import get_db
-from app.models import Product, User, InventoryMovement, BranchStock, ProductSize, ImportLog, Category, Branch
+from app.models import Product, User, InventoryMovement, BranchStock, ProductSize, ImportLog, Category, Branch, Brand
 from app.schemas import (
     Product as ProductSchema, ProductCreate, ProductUpdate,
     InventoryMovement as InventoryMovementSchema, StockAdjustment,
@@ -74,7 +74,13 @@ async def get_products(
         query = query.filter(Product.category_id == category_id)
 
     if brand:
-        query = query.filter(func.lower(Product.brand) == func.lower(brand))
+        # Search both legacy brand field and brand_rel relationship
+        query = query.outerjoin(Brand, Product.brand_id == Brand.id).filter(
+            or_(
+                func.lower(Product.brand) == func.lower(brand),
+                func.lower(Brand.name) == func.lower(brand)
+            )
+        )
     
     # Para filtro low_stock, consideramos stock de la sucursal específica
     if low_stock and user_branch_id:
