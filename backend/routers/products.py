@@ -74,7 +74,7 @@ async def get_products(
         query = query.filter(Product.category_id == category_id)
 
     if brand:
-        query = query.filter(Product.brand == brand)
+        query = query.filter(func.lower(Product.brand) == func.lower(brand))
     
     # Para filtro low_stock, consideramos stock de la sucursal específica
     if low_stock and user_branch_id:
