@@ -73,7 +73,7 @@ export function BulkPriceUpdateModal({
     setLoadingProducts(true);
     try {
       const response = await apiClient.get(
-        `/products?limit=500&brand=${encodeURIComponent(brand)}`
+        `/products/?limit=500&brand=${encodeURIComponent(brand)}`
       );
 
       const products = response.data;
