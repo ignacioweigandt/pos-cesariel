@@ -273,3 +273,121 @@ async def migrate_brands_table(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
 
     return results
+
+
+@router.post("/migrate/consolidate-brands")
+async def consolidate_brands(db: Session = Depends(get_db)):
+    """
+    Consolida todos los productos para usar brand_id en lugar del campo legacy brand.
+
+    Esta migración:
+    1. Para productos con brand (string) pero sin brand_id: busca/crea la marca y asigna brand_id
+    2. Limpia el campo legacy 'brand' de todos los productos
+
+    Es seguro ejecutar múltiples veces (idempotente).
+    """
+    from app.models import Product, Brand
+    from sqlalchemy import func
+
+    results = {
+        "status": "success",
+        "before": {},
+        "after": {},
+        "actions": []
+    }
+
+    try:
+        # Estado antes de la migración
+        total_products = db.query(Product).count()
+        with_brand_string = db.query(Product).filter(
+            Product.brand.isnot(None),
+            Product.brand != ''
+        ).count()
+        with_brand_id = db.query(Product).filter(
+            Product.brand_id.isnot(None)
+        ).count()
+
+        results["before"] = {
+            "total_products": total_products,
+            "with_brand_string": with_brand_string,
+            "with_brand_id": with_brand_id
+        }
+
+        # Paso 1: Migrar productos con brand string pero sin brand_id
+        products_to_migrate = db.query(Product).filter(
+            Product.brand.isnot(None),
+            Product.brand != '',
+            Product.brand_id.is_(None)
+        ).all()
+
+        brands_created = 0
+        products_migrated = 0
+
+        for product in products_to_migrate:
+            brand_name = product.brand.strip()
+
+            # Buscar marca existente (case-insensitive)
+            existing_brand = db.query(Brand).filter(
+                func.lower(Brand.name) == func.lower(brand_name)
+            ).first()
+
+            if existing_brand:
+                product.brand_id = existing_brand.id
+            else:
+                # Crear nueva marca
+                new_brand = Brand(name=brand_name, is_active=True)
+                db.add(new_brand)
+                db.flush()
+                product.brand_id = new_brand.id
+                brands_created += 1
+
+            products_migrated += 1
+
+        results["actions"].append({
+            "step": "migrate_to_brand_id",
+            "products_migrated": products_migrated,
+            "brands_created": brands_created
+        })
+
+        # Paso 2: Limpiar campo legacy brand de todos los productos
+        products_with_brand = db.query(Product).filter(
+            Product.brand.isnot(None),
+            Product.brand != ''
+        ).all()
+
+        cleared_count = 0
+        for product in products_with_brand:
+            product.brand = None
+            cleared_count += 1
+
+        results["actions"].append({
+            "step": "clear_legacy_brand",
+            "products_cleared": cleared_count
+        })
+
+        db.commit()
+
+        # Estado después de la migración
+        with_brand_string_after = db.query(Product).filter(
+            Product.brand.isnot(None),
+            Product.brand != ''
+        ).count()
+        with_brand_id_after = db.query(Product).filter(
+            Product.brand_id.isnot(None)
+        ).count()
+
+        results["after"] = {
+            "total_products": total_products,
+            "with_brand_string": with_brand_string_after,
+            "with_brand_id": with_brand_id_after
+        }
+
+        results["summary"] = f"Migración completada: {products_migrated} productos migrados, {brands_created} marcas creadas, {cleared_count} campos legacy limpiados"
+
+    except Exception as e:
+        db.rollback()
+        results["status"] = "error"
+        results["error"] = str(e)
+        raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
+    return results
