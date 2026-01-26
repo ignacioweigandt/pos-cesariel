@@ -105,6 +105,9 @@ async def get_products(
             # Admin sin sucursal - mostrar stock total calculado
             branch_stock = product.calculate_total_stock()
         
+        # Get brand name from relationship (preferred) or legacy field (fallback)
+        brand_name = product.brand_rel.name if product.brand_rel else product.brand
+
         product_data = {
             "id": product.id,
             "name": product.name,
@@ -113,7 +116,7 @@ async def get_products(
             "barcode": product.barcode,
             "category_id": product.category_id,
             "brand_id": product.brand_id,
-            "brand": product.brand,
+            "brand": brand_name,
             "price": float(product.price),
             "cost": float(product.cost) if product.cost else None,
             "stock_quantity": branch_stock,
@@ -164,7 +167,7 @@ async def search_products(
             "sku": product.sku,
             "barcode": product.barcode,
             "brand_id": product.brand_id,
-            "brand": product.brand,
+            "brand": product.brand_rel.name if product.brand_rel else product.brand,
             "price": product.price,
             "stock_quantity": branch_stock
         })
@@ -203,7 +206,7 @@ async def get_product_by_barcode(
         "barcode": product.barcode,
         "category_id": product.category_id,
         "brand_id": product.brand_id,
-        "brand": product.brand,
+        "brand": product.brand_rel.name if product.brand_rel else product.brand,
         "price": float(product.price),
         "cost": float(product.cost) if product.cost else None,
         "stock_quantity": branch_stock,
@@ -1405,9 +1408,14 @@ async def bulk_price_update(
         # Construir query base
         query = db.query(Product).filter(Product.is_active == True)
 
-        # Filtrar por marca si se especifica
+        # Filtrar por marca si se especifica (buscar en ambos campos)
         if update_data.brand:
-            query = query.filter(Product.brand == update_data.brand)
+            query = query.outerjoin(Brand, Product.brand_id == Brand.id).filter(
+                or_(
+                    func.lower(Product.brand) == func.lower(update_data.brand),
+                    func.lower(Brand.name) == func.lower(update_data.brand)
+                )
+            )
 
         # Filtrar por IDs de productos si se especifican
         if update_data.product_ids:
@@ -1449,7 +1457,7 @@ async def bulk_price_update(
                     "id": product.id,
                     "name": product.name,
                     "sku": product.sku,
-                    "brand": product.brand,
+                    "brand": product.brand_rel.name if product.brand_rel else product.brand,
                     "old_price": old_price,
                     "new_price": new_price,
                     "old_ecommerce_price": old_ecommerce_price,
