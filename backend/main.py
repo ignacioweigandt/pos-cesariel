@@ -121,7 +121,7 @@ app.include_router(products.router)       # /products/* - CRUD productos, stock,
 app.include_router(sales.router)          # /sales/* - Ventas POS, reportes, dashboard
 
 # ===== COMUNICACIÓN EN TIEMPO REAL =====
-# app.include_router(websockets.router)   # DESHABILITADO: WebSockets para sincronización en tiempo real
+app.include_router(websockets.router)     # WebSockets para sincronización en tiempo real
 
 # ===== CONFIGURACIÓN Y ADMINISTRACIÓN =====
 app.include_router(config.router)         # /config/* - Configuración general del sistema

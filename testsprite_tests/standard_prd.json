@@ -1,0 +1,299 @@
+{
+  "meta": {
+    "project": "POS Cesariel",
+    "date": "2026-01-21",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "POS Cesariel is a comprehensive Point of Sale (POS) system integrated with an e-commerce platform designed for retail businesses with multiple branches. It unifies in-store sales, inventory management across locations, and online sales into a single, streamlined system.",
+  "core_goals": [
+    "Provide a unified sales platform combining in-store POS and e-commerce with real-time stock synchronization.",
+    "Enable efficient multi-branch inventory management with granular stock control by size and location.",
+    "Deliver insightful consolidated dashboards and sales reports for better business visibility.",
+    "Integrate WhatsApp for post-purchase coordination and sales tracking.",
+    "Offer role-based access control ensuring secure and appropriate permissions across users.",
+    "Maintain system responsiveness and reliability with scalable architecture supporting growth."
+  ],
+  "key_features": [
+    "Real-time analytics dashboard with sales metrics, inventory alerts, and quick actions.",
+    "Complete POS terminal with product search, barcode scanning, cart management, multi-payment processing, and thermal printing.",
+    "Multi-branch inventory management supporting product variants, bulk imports, and alerts on low stock.",
+    "Comprehensive e-commerce platform with product catalog, filters, shopping cart, checkout, and promotional banners.",
+    "User and branch administration with role-based access and permission management.",
+    "WhatsApp Business integration for post-purchase communication and sales coordination.",
+    "Extensive reporting tools with export capabilities by sales channel, product, and branch.",
+    "Robust authentication using JWT with session management and route protection.",
+    "System configuration including payment methods, tax rates, currency, and custom installments."
+  ],
+  "user_flow_summary": [
+    "Seller searches for products by name, SKU, or barcode and adds them to the POS cart with quantity and size selection if applicable.",
+    "Seller proceeds through payment steps selecting method, applies discounts if authorized, confirms sale, and prints thermal receipt.",
+    "Manager accesses the dashboard to monitor branch stock levels, receives alerts on low inventory, and reviews sales and stock reports.",
+    "Admin manages users, roles, branches, product catalog, and system configurations ensuring data consistency and access control.",
+    "Customer browses the e-commerce catalog with filters and searches, selects products with size and quantity, completes checkout by inputting delivery details, and receives order confirmation with WhatsApp integration link.",
+    "Post-purchase, customers and sellers coordinate delivery or pickup logistics via WhatsApp chat links generated automatically by the system.",
+    "Administrators and managers generate and export detailed sales reports filtered by period, branch, and sales type for business insights."
+  ],
+  "validation_criteria": [
+    "User authentication enforces JWT token expiration of 8 hours and correct role-based access.",
+    "Product SKU and barcode uniqueness validated at creation and bulk import.",
+    "Stock availability is verified before adding items to cart and before sale completion to avoid stock conflicts.",
+    "Sales transactions generate unique sale numbers and trigger accurate stock adjustment and inventory movement logs.",
+    "E-commerce checkout validates required customer data and stock prior to order confirmation.",
+    "WhatsApp chat link includes accurate order details and functions correctly for direct customer communication.",
+    "Dashboard metrics update in real time reflecting current sales and inventory status filtered by user role and branch.",
+    "All forms provide clear feedback messages for success and error states adhering to usability standards.",
+    "Performance targets met: API responses under 200ms, page load <3s on 3G, product searches <100ms, and sale processing <500ms.",
+    "System supports up to 100,000 products, 500 concurrent users, 50 branches, and 10,000 daily transactions with 99.5% uptime availability."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "Next.js 15 (App Router)",
+      "React 19",
+      "Tailwind CSS 4",
+      "Zustand (state management)",
+      "React Context",
+      "Axios (HTTP client)",
+      "React Query 3",
+      "React Hook Form 7",
+      "Headless UI",
+      "Heroicons 2",
+      "React Hot Toast",
+      "Recharts 2",
+      "Jest",
+      "React Testing Library",
+      "Cypress 13"
+    ],
+    "features": [
+      {
+        "name": "Dashboard",
+        "description": "Real-time analytics dashboard with sales metrics, inventory alerts, module navigation cards, and quick action buttons",
+        "files": [
+          "frontend/pos-cesariel/features/dashboard/DashboardContainer.tsx",
+          "frontend/pos-cesariel/features/dashboard/components/ModuleCards/ModuleGrid.tsx",
+          "frontend/pos-cesariel/features/dashboard/components/ModuleCards/ModuleCard.tsx",
+          "frontend/pos-cesariel/features/dashboard/components/Stats/StatsGrid.tsx",
+          "frontend/pos-cesariel/features/dashboard/components/Stats/StatsCard.tsx",
+          "frontend/pos-cesariel/features/dashboard/components/Alerts/LowStockAlert.tsx",
+          "frontend/pos-cesariel/features/dashboard/components/QuickActions/QuickActionsPanel.tsx",
+          "frontend/pos-cesariel/features/dashboard/hooks/useDashboardStats.ts",
+          "frontend/pos-cesariel/features/dashboard/hooks/useRealTimeUpdates.ts",
+          "frontend/pos-cesariel/features/dashboard/api/dashboardApi.ts",
+          "frontend/pos-cesariel/features/dashboard/types/dashboard.types.ts"
+        ]
+      },
+      {
+        "name": "POS (Point of Sale)",
+        "description": "Complete POS terminal with product search, cart management, barcode scanning, multi-payment processing, and thermal receipt printing",
+        "files": [
+          "frontend/pos-cesariel/features/pos/POSContainer.tsx",
+          "frontend/pos-cesariel/features/pos/components/ProductGrid/ProductGrid.tsx",
+          "frontend/pos-cesariel/features/pos/components/ProductGrid/ProductSearch.tsx",
+          "frontend/pos-cesariel/features/pos/components/ProductGrid/ProductCard.tsx",
+          "frontend/pos-cesariel/features/pos/components/Cart/FloatingCart.tsx",
+          "frontend/pos-cesariel/features/pos/components/Cart/_steps/PaymentMethodStep.tsx",
+          "frontend/pos-cesariel/features/pos/components/Cart/_steps/CardDetailsStep.tsx",
+          "frontend/pos-cesariel/features/pos/components/Cart/_steps/ConfirmationStep.tsx",
+          "frontend/pos-cesariel/features/pos/components/BarcodeScanner.tsx",
+          "frontend/pos-cesariel/features/pos/components/ThermalTicket.tsx",
+          "frontend/pos-cesariel/features/pos/components/Modals/SaleConfirmation.tsx",
+          "frontend/pos-cesariel/features/pos/components/Modals/SaleSuccessModal.tsx",
+          "frontend/pos-cesariel/features/pos/hooks/useCart.ts",
+          "frontend/pos-cesariel/features/pos/hooks/useProductSearch.ts",
+          "frontend/pos-cesariel/features/pos/hooks/useSaleProcessing.ts",
+          "frontend/pos-cesariel/features/pos/hooks/useBarcodeScanner.ts",
+          "frontend/pos-cesariel/features/pos/hooks/usePOSKeyboard.ts",
+          "frontend/pos-cesariel/features/pos/hooks/useCartKeyboard.ts",
+          "frontend/pos-cesariel/features/pos/hooks/useCartCalculations.ts",
+          "frontend/pos-cesariel/features/pos/hooks/usePaymentMethods.ts",
+          "frontend/pos-cesariel/features/pos/api/salesApi.ts",
+          "frontend/pos-cesariel/features/pos/types/pos.types.ts",
+          "frontend/pos-cesariel/features/pos/utils/cartCalculations.ts",
+          "frontend/pos-cesariel/features/pos/utils/printTicket.ts"
+        ]
+      },
+      {
+        "name": "Inventory Management",
+        "description": "Product catalog management with stock tracking, bulk imports, multi-branch stock levels, size variants, and category/brand management",
+        "files": [
+          "frontend/pos-cesariel/features/inventory/InventoryContainer.tsx",
+          "frontend/pos-cesariel/features/inventory/components/ProductList/ProductList.tsx",
+          "frontend/pos-cesariel/features/inventory/components/ProductList/ProductListItem.tsx",
+          "frontend/pos-cesariel/features/inventory/components/ProductList/ProductFilters.tsx",
+          "frontend/pos-cesariel/features/inventory/components/ProductForms/ProductFormModal.tsx",
+          "frontend/pos-cesariel/features/inventory/components/ProductForms/BrandFormModal.tsx",
+          "frontend/pos-cesariel/features/inventory/components/ProductForms/CategoryFormModal.tsx",
+          "frontend/pos-cesariel/features/inventory/components/ProductForms/BarcodeInput.tsx",
+          "frontend/pos-cesariel/features/inventory/components/StockManagement/SizeStockModal.tsx",
+          "frontend/pos-cesariel/features/inventory/components/StockManagement/MultiBranchStockView.tsx",
+          "frontend/pos-cesariel/features/inventory/components/StockManagement/EditSizeStockView.tsx",
+          "frontend/pos-cesariel/features/inventory/components/Modals/StockAdjustmentModal.tsx",
+          "frontend/pos-cesariel/features/inventory/components/Modals/BulkPriceUpdateModal.tsx",
+          "frontend/pos-cesariel/features/inventory/components/Modals/DeleteConfirmationModal.tsx",
+          "frontend/pos-cesariel/features/inventory/components/Import/FileUploadStep.tsx",
+          "frontend/pos-cesariel/features/inventory/components/Import/PreviewStep.tsx",
+          "frontend/pos-cesariel/features/inventory/components/Import/ResultStep.tsx",
+          "frontend/pos-cesariel/features/inventory/components/Stats/InventoryStatsCards.tsx",
+          "frontend/pos-cesariel/features/inventory/hooks/useProducts.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useCategories.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useBrands.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useProductFilters.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useMultiBranchStock.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useProductBranchStock.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useSizeStock.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useImportFile.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useImportPreview.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useImportConfirm.ts",
+          "frontend/pos-cesariel/features/inventory/hooks/useCategoryDetection.ts",
+          "frontend/pos-cesariel/features/inventory/api/inventoryApi.ts",
+          "frontend/pos-cesariel/features/inventory/types/inventory.types.ts",
+          "frontend/pos-cesariel/features/inventory/utils/stockCalculations.ts"
+        ]
+      },
+      {
+        "name": "Reports & Analytics",
+        "description": "Sales analytics with interactive charts, data tables, date range filtering, and export capabilities (CSV/PDF)",
+        "files": [
+          "frontend/pos-cesariel/features/reports/ReportsContainer.tsx",
+          "frontend/pos-cesariel/features/reports/components/Charts/DailySalesChart.tsx",
+          "frontend/pos-cesariel/features/reports/components/Charts/BranchSalesChart.tsx",
+          "frontend/pos-cesariel/features/reports/components/Charts/BranchesBarChart.tsx",
+          "frontend/pos-cesariel/features/reports/components/Charts/ProductsPieChart.tsx",
+          "frontend/pos-cesariel/features/reports/components/Tables/BranchSalesTable.tsx",
+          "frontend/pos-cesariel/features/reports/components/Tables/TopProductsTable.tsx",
+          "frontend/pos-cesariel/features/reports/components/Stats/StatsCards.tsx",
+          "frontend/pos-cesariel/features/reports/components/Stats/TotalSalesCard.tsx",
+          "frontend/pos-cesariel/features/reports/components/Filters/DateRangeFilter.tsx",
+          "frontend/pos-cesariel/features/reports/hooks/useReportsData.ts",
+          "frontend/pos-cesariel/features/reports/hooks/useReportFilters.ts",
+          "frontend/pos-cesariel/features/reports/hooks/useReportExport.ts",
+          "frontend/pos-cesariel/features/reports/api/reportsApi.ts",
+          "frontend/pos-cesariel/features/reports/types/reports.types.ts"
+        ]
+      },
+      {
+        "name": "User Management",
+        "description": "Admin panel for users and branch management with role-based access control, user CRUD, and branch configuration",
+        "files": [
+          "frontend/pos-cesariel/features/users/UsersContainer.tsx",
+          "frontend/pos-cesariel/features/users/components/Tabs/UsersTab.tsx",
+          "frontend/pos-cesariel/features/users/components/Tabs/BranchesTab.tsx",
+          "frontend/pos-cesariel/features/users/components/Tabs/RolesTab.tsx",
+          "frontend/pos-cesariel/features/users/components/Forms/UserFormModal.tsx",
+          "frontend/pos-cesariel/features/users/components/Forms/BranchFormModal.tsx",
+          "frontend/pos-cesariel/features/users/components/Modals/UserViewModal.tsx",
+          "frontend/pos-cesariel/features/users/components/Modals/BranchViewModal.tsx",
+          "frontend/pos-cesariel/features/users/components/Modals/DeleteUserModal.tsx",
+          "frontend/pos-cesariel/features/users/components/Modals/DeleteBranchModal.tsx",
+          "frontend/pos-cesariel/features/users/components/Modals/ResetPasswordModal.tsx"
+        ]
+      },
+      {
+        "name": "E-commerce Management",
+        "description": "Admin panel for e-commerce store including product visibility, sales history, banners, logo management, and WhatsApp sales integration",
+        "files": [
+          "frontend/pos-cesariel/features/ecommerce/EcommerceContainer.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Products/ProductsTab.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Products/ProductEditModal.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Products/ProductViewModal.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Products/ProductImageManager.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Products/ProductFilters.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Sales/SalesTab.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Sales/SalesHistoryTab.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Sales/ProcessedEcommerceSales.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Sales/SaleSuccessModal.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Content/ContentTab.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Content/BannerManager.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Content/LogoManager.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Content/SocialMediaManager.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/Dashboard/DashboardTab.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/WhatsAppSalesManager.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/WhatsAppSalesTab.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/WhatsAppConfigModal.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/SalesAlertsPanel.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_components/WhatsAppSaleCard.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_components/SalesTable.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_components/SalesFilters.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_components/SalesStatsGrid.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_components/SaleDetailsModal.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_components/SimpleSaleDetailsModal.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_forms/WhatsAppSaleForm.tsx",
+          "frontend/pos-cesariel/features/ecommerce/components/WhatsApp/_forms/WhatsAppConfigForm.tsx",
+          "frontend/pos-cesariel/features/ecommerce/hooks/useWhatsAppSales.ts",
+          "frontend/pos-cesariel/features/ecommerce/hooks/useWhatsAppSaleForm.ts",
+          "frontend/pos-cesariel/features/ecommerce/hooks/useWhatsAppConfig.ts",
+          "frontend/pos-cesariel/features/ecommerce/hooks/useWhatsAppStats.ts",
+          "frontend/pos-cesariel/features/ecommerce/hooks/useWhatsAppFilters.ts",
+          "frontend/pos-cesariel/features/ecommerce/hooks/useAvailableSales.ts",
+          "frontend/pos-cesariel/features/ecommerce/hooks/useProductFilters.ts",
+          "frontend/pos-cesariel/features/ecommerce/api/ecommerceAdvancedApi.ts",
+          "frontend/pos-cesariel/features/ecommerce/api/ecommercePublicApi.ts",
+          "frontend/pos-cesariel/features/ecommerce/types/ecommerce.types.ts"
+        ]
+      },
+      {
+        "name": "Configuration & Settings",
+        "description": "System settings for payment methods, currency, tax rates, custom installments, and payment configurations",
+        "files": [
+          "frontend/pos-cesariel/features/configuracion/components/CustomInstallments/CustomInstallmentsManager.tsx",
+          "frontend/pos-cesariel/features/configuracion/hooks/useCurrencyConfig.ts",
+          "frontend/pos-cesariel/features/configuracion/hooks/usePaymentConfig.ts",
+          "frontend/pos-cesariel/features/configuracion/hooks/useTaxRates.ts",
+          "frontend/pos-cesariel/features/configuracion/hooks/useCustomInstallments.ts",
+          "frontend/pos-cesariel/features/configuracion/api/configApi.ts",
+          "frontend/pos-cesariel/features/configuracion/types/config.types.ts",
+          "frontend/pos-cesariel/features/configuracion/utils/validators.ts",
+          "frontend/pos-cesariel/features/configuracion/utils/formatters.ts"
+        ]
+      },
+      {
+        "name": "Authentication & Authorization",
+        "description": "JWT-based authentication with role-based access control, session timeout, and route protection",
+        "files": [
+          "frontend/pos-cesariel/shared/hooks/useAuth.ts",
+          "frontend/pos-cesariel/shared/hooks/useSessionTimeout.ts",
+          "frontend/pos-cesariel/shared/hooks/useRouteProtection.ts",
+          "frontend/pos-cesariel/shared/api/authApi.ts",
+          "frontend/pos-cesariel/shared/components/auth/SessionTimeoutWrapper.tsx"
+        ]
+      },
+      {
+        "name": "Shared UI Components",
+        "description": "Reusable UI components including buttons, inputs, cards, dialogs, layout, and notification system",
+        "files": [
+          "frontend/pos-cesariel/shared/components/ui/button.tsx",
+          "frontend/pos-cesariel/shared/components/ui/input.tsx",
+          "frontend/pos-cesariel/shared/components/ui/card.tsx",
+          "frontend/pos-cesariel/shared/components/ui/label.tsx",
+          "frontend/pos-cesariel/shared/components/ui/switch.tsx",
+          "frontend/pos-cesariel/shared/components/ui/textarea.tsx",
+          "frontend/pos-cesariel/shared/components/ui/dialog.tsx",
+          "frontend/pos-cesariel/shared/components/layout/Layout.tsx",
+          "frontend/pos-cesariel/shared/components/feedback/NotificationCenter.tsx",
+          "frontend/pos-cesariel/shared/components/feedback/Toast.tsx",
+          "frontend/pos-cesariel/shared/components/product/SizeSelectorModal.tsx"
+        ]
+      },
+      {
+        "name": "API Client & Utilities",
+        "description": "Axios client configuration with JWT interceptors, and shared utility functions for formatting and validation",
+        "files": [
+          "frontend/pos-cesariel/shared/api/client.ts",
+          "frontend/pos-cesariel/shared/api/configApi.ts",
+          "frontend/pos-cesariel/shared/utils/currency.ts",
+          "frontend/pos-cesariel/shared/utils/date.ts",
+          "frontend/pos-cesariel/shared/utils/numbers.ts",
+          "frontend/pos-cesariel/shared/utils/status.tsx",
+          "frontend/pos-cesariel/shared/utils/string.ts",
+          "frontend/pos-cesariel/shared/utils/storage.ts",
+          "frontend/pos-cesariel/shared/utils/classNames.ts",
+          "frontend/pos-cesariel/shared/utils/color.ts",
+          "frontend/pos-cesariel/shared/utils/validators.ts",
+          "frontend/pos-cesariel/shared/utils/routes.ts",
+          "frontend/pos-cesariel/shared/utils/roles.ts",
+          "frontend/pos-cesariel/shared/utils/config.ts"
+        ]
+      }
+    ]
+  }
+}

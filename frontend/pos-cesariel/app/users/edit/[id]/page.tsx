@@ -327,7 +327,7 @@ export default function EditUserPage({ params }: EditUserPageProps) {
         <div className="px-4 py-6 sm:px-0">
           <div className="bg-white shadow rounded-lg">
             <div className="px-4 py-5 sm:p-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                 {/* Personal Information Section */}
                 <div>
                   <h3 className="text-lg leading-6 font-medium text-black mb-4">

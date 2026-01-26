@@ -1,0 +1,509 @@
+[
+  {
+    "id": "TC001",
+    "title": "Authentication Success with Valid Credentials and JWT Token Expiration",
+    "description": "Verify that user login succeeds with correct credentials and that a JWT token is issued with an 8-hour expiration.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page."
+      },
+      {
+        "type": "action",
+        "description": "Input valid username and password."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify login is successful and JWT token is stored with an expiration time of 8 hours."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Authentication Failure with Invalid Credentials",
+    "description": "Verify that login fails when invalid username or password is provided with proper error message.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page."
+      },
+      {
+        "type": "action",
+        "description": "Input invalid username or password."
+      },
+      {
+        "type": "action",
+        "description": "Submit login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify login failure and appropriate error message displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Role-Based Access Control Enforcement",
+    "description": "Ensure that users with different roles (seller, manager, admin) have access restrictions enforced correctly on various routes and features.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as seller and attempt to access admin-only pages."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied and proper redirect or error is shown."
+      },
+      {
+        "type": "action",
+        "description": "Login as manager and try to access user management features."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify access is denied or limited according to permissions."
+      },
+      {
+        "type": "action",
+        "description": "Login as admin and verify full access to user and branch management."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify all admin features are accessible."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Product SKU and Barcode Uniqueness Validation on Creation",
+    "description": "Ensure that products cannot be created with duplicate SKUs or barcodes individually or during bulk import.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to create a new product with an SKU or barcode that already exists."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the system rejects creation with an appropriate error message."
+      },
+      {
+        "type": "action",
+        "description": "Upload a bulk import file containing duplicate SKUs or barcodes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify duplicates are detected and import is blocked or flagged with error feedback."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Add Product to POS Cart with Stock Availability Check",
+    "description": "Validate that products can only be added to the POS cart if sufficient stock is available for the selected size in the specific branch.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Search for a product by name, SKU, or barcode."
+      },
+      {
+        "type": "action",
+        "description": "Select quantity and size variant."
+      },
+      {
+        "type": "action",
+        "description": "Add product to POS cart."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify product is successfully added if stock is sufficient."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to add more quantity than available stock."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify system prevents adding and shows clear feedback about insufficient stock."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Complete Sale Transaction Processing and Stock Adjustment",
+    "description": "Ensure sales transaction processes correctly with payment method selection, discount application (if authorized), receipt printing, and proper stock decrement with inventory logs updated.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Add products with valid quantity and sizes to POS cart."
+      },
+      {
+        "type": "action",
+        "description": "Proceed to payment step and select payment method."
+      },
+      {
+        "type": "action",
+        "description": "Apply discount with authorized user."
+      },
+      {
+        "type": "action",
+        "description": "Confirm sale transaction."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sale number is uniquely generated."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify stock levels are reduced accordingly."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify inventory movement logs are created."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify thermal receipt is printed or generated."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "POS Cart Sale Failure on Stock Conflict Before Completion",
+    "description": "Simulate stock reduction by another transaction to verify that sales cannot be completed if stock is insufficient at confirmation time, preventing overselling.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Add product to POS cart with quantity available."
+      },
+      {
+        "type": "action",
+        "description": "Before confirming sale, simulate stock reduction externally."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to complete sale transaction."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sale is blocked and error is shown indicating stock conflict."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "E-commerce Product Browsing and Filtering",
+    "description": "Ensure customers can browse the e-commerce product catalog with filters (category, brand, size) and search functionality working correctly.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Access e-commerce catalog page."
+      },
+      {
+        "type": "action",
+        "description": "Apply filters such as category, brand, and size."
+      },
+      {
+        "type": "action",
+        "description": "Perform text search by product name or SKU."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify product list updates correctly according to filters and search input."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "E-commerce Checkout Validation and Order Confirmation",
+    "description": "Verify that the e-commerce checkout form validates all required delivery details and checks stock availability before confirming the order.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Add products with selected sizes and quantities to cart."
+      },
+      {
+        "type": "action",
+        "description": "Proceed to checkout page and fill in incomplete customer or delivery details."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to confirm order."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors are shown for missing required data."
+      },
+      {
+        "type": "action",
+        "description": "Fill all required fields correctly."
+      },
+      {
+        "type": "action",
+        "description": "Simulate stock insufficient for one product before confirmation."
+      },
+      {
+        "type": "action",
+        "description": "Attempt to confirm order."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify order confirmation is blocked with stock error."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Dashboard Real-Time Analytics and Low Stock Alerts",
+    "description": "Validate that sales metrics, inventory alerts, and quick action modules on the dashboard update in real-time and reflect correct data filtered by user role and branch.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as manager with access to dashboard."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sales metrics and inventory alerts display current data."
+      },
+      {
+        "type": "action",
+        "description": "Trigger a low stock condition by selling or adjusting stock."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify low stock alert appears dynamically on dashboard."
+      },
+      {
+        "type": "action",
+        "description": "Check quick action buttons (e.g., stock adjustment, report navigation) work correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Inventory Management: Multi-Branch Stock Updates and Alerts",
+    "description": "Verify that stock can be managed accurately per branch with size variants, bulk imports are processed validating SKU/barcode, and low stock alerts are triggered when thresholds reached.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open inventory management and select a product."
+      },
+      {
+        "type": "action",
+        "description": "Update stock quantities by size for multiple branches."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify stock levels update correctly per branch and size."
+      },
+      {
+        "type": "action",
+        "description": "Upload bulk import file with product SKUs and barcodes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify bulk import processes successfully if no duplicates; otherwise errors shown."
+      },
+      {
+        "type": "action",
+        "description": "Reduce stock below alert threshold."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify low stock alert notification is generated."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Sales Reporting: Filter, Export CSV and PDF",
+    "description": "Verify that administrators and managers can generate and export detailed sales reports filtered by date range, branch, and sales type with accurate data.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to sales reports section."
+      },
+      {
+        "type": "action",
+        "description": "Select date range filter."
+      },
+      {
+        "type": "action",
+        "description": "Select one or multiple branches and sales channels."
+      },
+      {
+        "type": "action",
+        "description": "Generate report."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify report data matches expected sales according to filters."
+      },
+      {
+        "type": "action",
+        "description": "Export report as CSV."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify CSV file downloads correctly with proper format."
+      },
+      {
+        "type": "action",
+        "description": "Export report as PDF."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify PDF file downloads correctly and data is represented properly."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "User and Branch Management CRUD with Role Assignments",
+    "description": "Ensure admin users can create, read, update, and delete users and branches while assigning roles and permissions correctly, verifying data consistency and UI feedback.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Login as admin and navigate to user management."
+      },
+      {
+        "type": "action",
+        "description": "Create a new user with specified role."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify new user appears in list with correct role."
+      },
+      {
+        "type": "action",
+        "description": "Edit existing user details and roles."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify updates are saved and reflected."
+      },
+      {
+        "type": "action",
+        "description": "Delete a user and confirm removal."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is removed from system."
+      },
+      {
+        "type": "action",
+        "description": "Repeat CRUD tests for branch management."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify branches are correctly managed similarly."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "System Configuration Settings Validation",
+    "description": "Validate that system configuration for payment methods, tax rates, currency, and custom installments can be created, updated, and saved with proper validation and error feedback.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open system configuration settings page."
+      },
+      {
+        "type": "action",
+        "description": "Add a new payment method with valid details."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify payment method appears in the list."
+      },
+      {
+        "type": "action",
+        "description": "Update tax rates with valid and invalid values."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify validation errors for invalid input and success for valid input."
+      },
+      {
+        "type": "action",
+        "description": "Configure currency and custom installments."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify configurations save successfully and reflect in relevant forms."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Performance Benchmark: API Response and Load Times",
+    "description": "Ensure the system meets performance targets: API responses under 200ms, page load under 3 seconds on 3G, product search under 100ms, and sale processing under 500ms under simulated load conditions.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Measure API response times for key endpoints under typical load."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify API responses are less than 200ms."
+      },
+      {
+        "type": "action",
+        "description": "Load main pages (dashboard, POS, inventory) on 3G simulation."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page loads complete within 3 seconds."
+      },
+      {
+        "type": "action",
+        "description": "Perform product search operations."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify search results appear within 100ms."
+      },
+      {
+        "type": "action",
+        "description": "Perform sale transaction through POS."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify sale processing completes within 500ms."
+      }
+    ]
+  }
+]

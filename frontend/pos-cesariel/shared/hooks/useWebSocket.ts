@@ -1,10 +1,30 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { apiClient } from '@/shared/api/client';
 
-// Helper to convert HTTP(S) URL to WS(S) URL
-const getWebSocketUrl = (httpUrl: string): string => {
-  return httpUrl.replace(/^http/, 'ws');
-};
+// Production backend URL for Railway deployment
+const PRODUCTION_BACKEND_URL = 'https://backend-production-c20a.up.railway.app';
+
+/**
+ * Get WebSocket base URL dynamically
+ * Uses the same logic as the API client for consistency
+ */
+function getWebSocketBaseUrl(): string {
+  // If environment variable is set, use it (highest priority)
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws');
+  }
+
+  // Client-side: detect production by hostname
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const isProduction = hostname !== 'localhost' && hostname !== '127.0.0.1';
+    if (isProduction) {
+      return PRODUCTION_BACKEND_URL.replace(/^http/, 'ws');
+    }
+  }
+
+  // Default: localhost for development
+  return 'ws://localhost:8000';
+}
 
 export interface WebSocketMessage {
   type: string;
@@ -154,9 +174,8 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Only create URL when we have all required data
-  // Convert HTTP(S) base URL to WS(S) for WebSocket connection
-  const baseUrl = apiClient.defaults.baseURL || 'https://backend-production-c20a.up.railway.app';
-  const wsBaseUrl = getWebSocketUrl(baseUrl);
+  // Use dynamic WebSocket URL detection (same logic as API client)
+  const wsBaseUrl = getWebSocketBaseUrl();
   const url = enabled && token && branchId ? `${wsBaseUrl}/ws/${branchId}?token=${token}` : '';
   
   // Only log WebSocket connection attempts if there are issues

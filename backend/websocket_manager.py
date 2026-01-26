@@ -16,23 +16,34 @@ class ConnectionManager:
         # Mapea websockets a branch_id para identificación
         self.connection_branch_map: Dict[WebSocket, int] = {}
 
-    async def connect(self, websocket: WebSocket, branch_id: int):
-        """Acepta una nueva conexión WebSocket"""
-        await websocket.accept()
-        
+    async def register_connection(self, websocket: WebSocket, branch_id: int, username: str = None):
+        """
+        Registra una conexión WebSocket ya aceptada.
+        NOTA: La conexión debe ser aceptada ANTES de llamar a este método.
+        """
         # Agregar a la lista de todas las conexiones
-        self.all_connections.append(websocket)
-        
+        if websocket not in self.all_connections:
+            self.all_connections.append(websocket)
+
         # Agregar a la lista de conexiones por sucursal
         if branch_id not in self.active_connections:
             self.active_connections[branch_id] = []
-        self.active_connections[branch_id].append(websocket)
-        
+        if websocket not in self.active_connections[branch_id]:
+            self.active_connections[branch_id].append(websocket)
+
         # Mapear conexión a sucursal
         self.connection_branch_map[websocket] = branch_id
-        
-        logger.info(f"Nueva conexión WebSocket para sucursal {branch_id}")
-        
+
+        logger.info(f"Conexión WebSocket registrada: usuario={username}, sucursal={branch_id}")
+
+    async def connect(self, websocket: WebSocket, branch_id: int):
+        """
+        Acepta y registra una nueva conexión WebSocket.
+        DEPRECATED: Usar register_connection() después de aceptar manualmente.
+        """
+        await websocket.accept()
+        await self.register_connection(websocket, branch_id)
+
         # Enviar mensaje de bienvenida
         await self.send_personal_message({
             "type": "connection_established",

@@ -42,3 +42,13 @@ async def login_json(user_login: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=User)
 async def read_users_me(current_user: UserModel = Depends(get_current_active_user)):
     return current_user
+
+
+@router.post("/logout")
+async def logout():
+    """
+    Logout endpoint.
+    Since JWT tokens are stateless, the actual logout is handled client-side
+    by removing the token from storage. This endpoint just returns success.
+    """
+    return {"message": "Successfully logged out", "success": True}
