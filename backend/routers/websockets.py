@@ -2,13 +2,19 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from websocket_manager import manager
 import json
 import logging
+import asyncio
 from typing import Optional
+from datetime import datetime
 from jose import jwt, JWTError
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Configuración de keepalive
+HEARTBEAT_INTERVAL = 20  # Enviar heartbeat cada 20 segundos
+RECEIVE_TIMEOUT = 60  # Timeout para recibir mensajes (segundos)
 
 
 def validate_ws_token(token: str) -> Optional[str]:
@@ -25,6 +31,30 @@ def validate_ws_token(token: str) -> Optional[str]:
     except JWTError as e:
         logger.debug(f"Token JWT inválido: {e}")
         return None
+
+
+async def server_heartbeat(websocket: WebSocket, username: str, branch_id: int):
+    """
+    Tarea asíncrona que envía heartbeats del servidor al cliente.
+    Esto mantiene la conexión activa incluso si el cliente no envía mensajes.
+    Importante para proxies como Railway que cierran conexiones idle.
+    """
+    try:
+        while True:
+            await asyncio.sleep(HEARTBEAT_INTERVAL)
+            try:
+                await websocket.send_json({
+                    "type": "server_heartbeat",
+                    "timestamp": datetime.now().isoformat(),
+                    "branch_id": branch_id
+                })
+                logger.debug(f"Heartbeat enviado a usuario={username}, sucursal={branch_id}")
+            except Exception as e:
+                logger.debug(f"Error enviando heartbeat: {e}")
+                break
+    except asyncio.CancelledError:
+        # Tarea cancelada normalmente cuando la conexión se cierra
+        pass
 
 
 @router.websocket("/ws/{branch_id}")
@@ -85,28 +115,48 @@ async def websocket_endpoint(
             "total_connections": manager.get_connection_count()
         })
 
-        # Mantener conexión activa y escuchar mensajes
-        while True:
+        # Crear tarea de heartbeat del servidor para mantener conexión activa
+        heartbeat_task = asyncio.create_task(
+            server_heartbeat(websocket, username, branch_id)
+        )
+
+        try:
+            # Mantener conexión activa y escuchar mensajes
+            while True:
+                try:
+                    # Recibir mensaje del cliente con timeout
+                    data = await asyncio.wait_for(
+                        websocket.receive_text(),
+                        timeout=RECEIVE_TIMEOUT
+                    )
+                    message = json.loads(data)
+
+                    # Procesar diferentes tipos de mensajes
+                    await handle_websocket_message(message, websocket, branch_id)
+
+                except asyncio.TimeoutError:
+                    # No se recibió mensaje en el tiempo esperado, pero la conexión sigue activa
+                    # El heartbeat mantiene la conexión viva
+                    continue
+                except WebSocketDisconnect:
+                    logger.info(f"WebSocket desconectado: usuario={username}, sucursal={branch_id}")
+                    break
+                except json.JSONDecodeError:
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Formato de mensaje inválido (JSON esperado)"
+                    })
+                except Exception as e:
+                    logger.error(f"Error procesando mensaje WebSocket: {e}")
+                    # No enviar mensaje de error aquí para evitar loops
+                    break
+        finally:
+            # Cancelar la tarea de heartbeat cuando termina la conexión
+            heartbeat_task.cancel()
             try:
-                # Recibir mensaje del cliente
-                data = await websocket.receive_text()
-                message = json.loads(data)
-
-                # Procesar diferentes tipos de mensajes
-                await handle_websocket_message(message, websocket, branch_id)
-
-            except WebSocketDisconnect:
-                logger.info(f"WebSocket desconectado: usuario={username}, sucursal={branch_id}")
-                break
-            except json.JSONDecodeError:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": "Formato de mensaje inválido (JSON esperado)"
-                })
-            except Exception as e:
-                logger.error(f"Error procesando mensaje WebSocket: {e}")
-                # No enviar mensaje de error aquí para evitar loops
-                break
+                await heartbeat_task
+            except asyncio.CancelledError:
+                pass
 
     except WebSocketDisconnect:
         # La conexión se cerró antes de completar el handshake
