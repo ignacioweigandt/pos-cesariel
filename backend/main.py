@@ -29,6 +29,9 @@ import os
 # Configuración de base de datos y aplicación
 from database import engine, Base
 from config.settings import settings
+from config.rate_limit import limiter, rate_limit_exceeded_handler, RateLimits
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 # Importación de todos los routers modulares del sistema
 from routers import (
@@ -48,9 +51,23 @@ from routers import (
     init_db_endpoint       # Inicialización de base de datos
 )
 
-# Inicialización automática de la base de datos
-# Crea todas las tablas definidas en models.py si no existen
-Base.metadata.create_all(bind=engine)
+# ===== IMPORTANTE: MIGRACIONES DE BASE DE DATOS =====
+# NOTA: Ya NO usamos Base.metadata.create_all() en producción
+# Ahora usamos Alembic para gestionar migraciones de esquema de forma controlada
+#
+# Para aplicar migraciones:
+#   docker compose exec backend alembic upgrade head
+#
+# Para crear nuevas migraciones después de modificar modelos:
+#   docker compose exec backend alembic revision --autogenerate -m "descripción"
+#
+# Solo para desarrollo local (comentar en producción):
+if os.getenv("ENV", "development") == "development":
+    # Auto-crear tablas SOLO en desarrollo
+    Base.metadata.create_all(bind=engine)
+else:
+    # En producción, usar Alembic migrations
+    print("⚠️  PRODUCCIÓN: Asegurate de ejecutar 'alembic upgrade head' para aplicar migraciones")
 
 # Middleware personalizado para manejar peticiones OPTIONS (CORS preflight)
 class OptionsMiddleware(BaseHTTPMiddleware):
@@ -83,6 +100,16 @@ app = FastAPI(
     redoc_url="/redoc" if settings.debug_mode else None,  # ReDoc solo en desarrollo
     debug=settings.debug_mode  # Habilita logs detallados y recarga automática
 )
+
+# ===== RATE LIMITING SETUP =====
+# Attach limiter to app state for access in endpoints
+app.state.limiter = limiter
+
+# Add rate limit exception handler
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+# Add SlowAPI middleware for rate limiting
+app.add_middleware(SlowAPIMiddleware)
 
 # IMPORTANTE: Agregar middleware personalizado de OPTIONS PRIMERO para interceptar preflight requests
 app.add_middleware(OptionsMiddleware)

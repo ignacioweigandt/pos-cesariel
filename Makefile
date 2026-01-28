@@ -177,6 +177,42 @@ init-db: ## Inicializar base de datos con datos de prueba
 	@echo "✅ Base de datos inicializada"
 
 # ==================================
+# MIGRACIONES (ALEMBIC)
+# ==================================
+migrate-create: ## Crear nueva migración (usar MSG="descripción")
+	@if [ -z "$(MSG)" ]; then \
+		echo "❌ Error: Especifica MSG=\"descripción de la migración\""; \
+		echo "💡 Ejemplo: make migrate-create MSG=\"add user email column\""; \
+		exit 1; \
+	fi
+	@echo "🔨 Creando migración: $(MSG)"
+	$(DOCKER_COMPOSE_DEV) exec backend alembic revision --autogenerate -m "$(MSG)"
+	@echo "✅ Migración creada en backend/alembic/versions/"
+	@echo "⚠️  IMPORTANTE: Revisá el archivo generado antes de aplicarlo"
+
+migrate-upgrade: ## Aplicar todas las migraciones pendientes
+	@echo "⬆️  Aplicando migraciones..."
+	$(DOCKER_COMPOSE_DEV) exec backend alembic upgrade head
+	@echo "✅ Migraciones aplicadas"
+
+migrate-downgrade: ## Revertir última migración
+	@echo "⬇️  Revirtiendo última migración..."
+	$(DOCKER_COMPOSE_DEV) exec backend alembic downgrade -1
+	@echo "✅ Migración revertida"
+
+migrate-history: ## Ver historial de migraciones
+	$(DOCKER_COMPOSE_DEV) exec backend alembic history
+
+migrate-current: ## Ver migración actual aplicada
+	$(DOCKER_COMPOSE_DEV) exec backend alembic current
+
+migrate-init: ## Crear migración inicial desde esquema actual
+	@echo "🚀 Creando migración inicial desde esquema existente..."
+	$(DOCKER_COMPOSE_DEV) exec backend alembic revision --autogenerate -m "initial_schema"
+	@echo "✅ Migración inicial creada"
+	@echo "📝 Revisá backend/alembic/versions/ antes de aplicar"
+
+# ==================================
 # TESTING
 # ==================================
 test-backend: ## Ejecutar tests del backend

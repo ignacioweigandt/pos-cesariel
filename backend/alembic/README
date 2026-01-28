@@ -1,0 +1,58 @@
+# Alembic Migrations for POS Cesariel
+
+This directory contains database migration scripts managed by Alembic.
+
+## Directory Structure
+
+```
+alembic/
+├── versions/          # Migration scripts (auto-generated)
+├── env.py            # Migration environment configuration
+├── script.py.mako    # Template for new migration files
+└── README            # This file
+```
+
+## Common Commands
+
+### Create a new migration (auto-generate from models)
+```bash
+docker compose exec backend alembic revision --autogenerate -m "description of changes"
+```
+
+### Apply migrations (upgrade to latest)
+```bash
+docker compose exec backend alembic upgrade head
+```
+
+### Revert last migration
+```bash
+docker compose exec backend alembic downgrade -1
+```
+
+### View migration history
+```bash
+docker compose exec backend alembic history
+```
+
+### View current revision
+```bash
+docker compose exec backend alembic current
+```
+
+## Workflow
+
+1. **Modify models** in `app/models/`
+2. **Generate migration**: `alembic revision --autogenerate -m "add new column"`
+3. **Review migration** in `alembic/versions/`
+4. **Apply migration**: `alembic upgrade head`
+5. **Test changes** in development
+6. **Commit migration** to git
+7. **Deploy to production** and run `alembic upgrade head`
+
+## Important Notes
+
+- Always review auto-generated migrations before applying
+- Never edit applied migrations (create a new one instead)
+- Always test migrations in development first
+- Migrations are version-controlled with git
+- Each migration has an upgrade() and downgrade() function

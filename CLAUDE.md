@@ -31,6 +31,20 @@ make down             # Stop all services
 make status           # View container status
 make health           # Check service health via curl
 make logs-all         # View all logs combined
+
+# Database migrations (Alembic)
+make migrate-create MSG="description"  # Create new migration
+make migrate-upgrade                   # Apply pending migrations
+make migrate-downgrade                 # Revert last migration
+make migrate-history                   # View migration history
+make migrate-current                   # Show current migration
+
+# Production builds (individual services)
+make build-backend    # Build backend only
+make build-frontend   # Build POS frontend only
+make build-ecommerce  # Build e-commerce only
+make build-prod       # Build all production images
+make deploy-prod      # Deploy to production (requires .env.production)
 ```
 
 **Key URLs:**
@@ -54,25 +68,48 @@ docker compose exec backend pytest tests/unit/test_specific.py
 docker compose exec backend pytest -m unit
 docker compose exec backend pytest -m integration
 docker compose exec backend pytest -m auth
+docker compose exec backend pytest -m websocket
+docker compose exec backend pytest -m slow
 
 # Run with verbose output
 docker compose exec backend pytest -v
 
-# Run with coverage
+# Run with coverage (80% minimum required)
 docker compose exec backend pytest --cov=app
 
-# Frontend (Jest/Cypress)
+# Frontend (Jest/Cypress) - run from frontend directories
 cd frontend/pos-cesariel && npm test
 npm run test:e2e
+
+# Frontend linting
+cd frontend/pos-cesariel && npm run lint
+cd ecommerce && npm run lint
+
+# Performance testing (POS frontend only)
+cd frontend/pos-cesariel && npm run test:lighthouse  # Lighthouse CI
+cd frontend/pos-cesariel && npm run test:load        # Artillery load testing
 ```
 
 **Test structure:**
 ```
 backend/tests/
-├── conftest.py           # Test fixtures (test DB, users, products)
+├── conftest.py           # Test fixtures (test DB, SQLite, users, products)
 ├── unit/                 # Unit tests for models, auth, database
 └── integration/          # API endpoint tests
 ```
+
+**Available test fixtures** (from `conftest.py`):
+- `db_session` - Fresh SQLite session per test
+- `client` - FastAPI TestClient with overridden DB
+- `test_branch`, `test_branch_secondary` - Branch fixtures
+- `test_admin_user`, `test_manager_user`, `test_seller_user` - User fixtures by role
+- `test_category`, `test_clothing_category`, `test_footwear_category` - Category fixtures
+- `test_product`, `test_product_with_sizes` - Product fixtures
+- `test_import_log` - Import log fixture for testing imports
+- `auth_headers_admin`, `auth_headers_manager`, `auth_headers_seller` - JWT headers
+- `mock_websocket_manager` - Mocked WebSocket for isolated tests (patches global notification functions)
+
+**Async test support**: `asyncio_mode = auto` in pytest.ini enables automatic async test detection.
 
 ## Architecture
 
@@ -105,7 +142,7 @@ from app.models import User, Product, Sale, UserRole, SaleType  # Correct
 from app.models.user import User  # Avoid
 ```
 
-**User roles and enums:**
+**Enums** (see `backend/app/models/enums.py` and domain-specific model files):
 ```python
 # User roles
 UserRole.ADMIN      # Full system access
@@ -123,7 +160,30 @@ OrderStatus.PENDING     # Awaiting processing
 OrderStatus.CONFIRMED   # Order confirmed
 OrderStatus.COMPLETED   # Order delivered/picked up
 OrderStatus.CANCELLED   # Order cancelled
+
+# Notifications
+NotificationType.LOW_STOCK, .NEW_SALE, .ORDER_STATUS, .SYSTEM
+NotificationPriority.LOW, .MEDIUM, .HIGH, .URGENT
+
+# System config
+CurrencyCode.ARS, .USD, .EUR, .BRL
+CurrencyPosition.BEFORE, .AFTER
+
+# Audit
+ChangeAction.CREATE, .UPDATE, .DELETE
 ```
+
+**Domain models by category** (see `backend/app/models/__init__.py`):
+- **User**: `Branch`, `User`
+- **Product**: `Category`, `Product`, `Brand`
+- **Inventory**: `BranchStock`, `InventoryMovement`, `ProductSize`, `ImportLog`
+- **Sales**: `Sale`, `SaleItem`
+- **Ecommerce**: `EcommerceConfig`, `StoreBanner`, `ProductImage`
+- **Payment**: `PaymentConfig`, `CustomInstallment`, `PaymentMethod`
+- **WhatsApp**: `WhatsAppConfig`, `WhatsAppSale`, `SocialMediaConfig`
+- **System**: `SystemConfig` (currency settings), `TaxRate`, `Notification`, `NotificationSetting`
+- **Audit**: `ConfigChangeLog`, `SecurityAuditLog` (tracks config changes with `ChangeAction`)
+- **Branch Config**: `BranchTaxRate`, `BranchPaymentMethod`
 
 ### Frontend (Feature-Based Architecture)
 
@@ -142,10 +202,12 @@ frontend/pos-cesariel/
     └── hooks/useAuth.ts   # Auth state (Zustand)
 ```
 
-**E-commerce** (`ecommerce/`):
-- Data Service (`app/lib/data-service.ts`): Caching layer with 5-min cache, fallback data
+**E-commerce** (`ecommerce/`) - See also `ecommerce/CLAUDE.md` for detailed e-commerce guidance:
+- Data Service (`app/lib/data-service.ts`): Caching layer with 5-min cache, fallback to static data
 - EcommerceContext (`app/context/EcommerceContext.tsx`): Cart management, stock validation, checkout flow
 - API Layer (`app/lib/api.ts`): Public endpoints, no auth required
+- Types (`app/lib/api-types.ts`): TypeScript interfaces matching backend schemas
+- Dual URL config: `API_URL` (server-side, Docker internal) + `NEXT_PUBLIC_API_URL` (client-side)
 
 ### WebSockets (Real-time Updates)
 
@@ -220,6 +282,41 @@ When deleting branches, categories, or products, check for dependent records:
 - Product → SaleItems, BranchStock, ProductSizes
 - Category → Products
 
+### Database Migrations (Alembic)
+**CRITICAL**: We use Alembic for schema migrations, NOT `Base.metadata.create_all()`.
+
+**Creating migrations after model changes:**
+```bash
+# 1. Modify models in backend/app/models/
+# 2. Generate migration
+make migrate-create MSG="add user avatar field"
+
+# 3. Review generated migration in backend/alembic/versions/
+# 4. Apply migration
+make migrate-upgrade
+```
+
+**Common migration commands:**
+```bash
+make migrate-current      # Show current migration
+make migrate-history      # View all migrations
+make migrate-upgrade      # Apply pending migrations
+make migrate-downgrade    # Rollback last migration
+```
+
+**First-time setup (if DB already has tables):**
+```bash
+# Mark current schema as migration baseline without applying
+docker compose exec backend alembic stamp head
+```
+
+**Important notes:**
+- Always review auto-generated migrations before applying
+- Never edit applied migrations (create new one instead)
+- Always test in development first
+- Backup before migrating in production: `make backup-db`
+- See `backend/MIGRATIONS.md` for detailed guide
+
 ## Common Workflows
 
 ### Adding a New Backend Model
@@ -232,6 +329,11 @@ When deleting branches, categories, or products, check for dependent records:
 6. Register router in `backend/main.py`
 
 Note: No Alembic migrations - use manual scripts (`backend/migrate_*.py`) or database recreation.
+
+```bash
+# Run a migration script inside the container
+docker compose exec backend python migrate_add_brand.py
+```
 
 ### Adding a New Frontend Feature
 
@@ -275,16 +377,20 @@ PORT=3001
 /users/             - User management
 /categories/        - Category CRUD
 /brands/            - Brand management
-/products/          - Product CRUD, stock, imports
+/products/          - Product CRUD, stock, imports, available-sizes
 /sales/             - Sales records, POS operations
-/ecommerce-advanced/ - Admin e-commerce features (banners, config)
-/ecommerce/         - Public storefront API (no auth)
-/config/            - System configuration
-/notifications/     - Notification management
-/content/           - Banner and CMS content management
+/ecommerce-advanced/ - Admin e-commerce features (banners, config, WhatsApp)
+/ecommerce/         - Public storefront API (no auth required)
+/config/            - System configuration (currency, tax rates, payment methods)
+/notifications/     - Notification management and settings
+/content/           - Banner, logo, and social media content management
 /api/init/          - Database initialization endpoints
-/ws/                - WebSocket endpoint for real-time updates
+/ws/{branch_id}     - WebSocket endpoint for real-time updates (branch-aware)
 ```
+
+**Public vs Protected Endpoints:**
+- `/ecommerce/*` - Public (no auth), used by e-commerce frontend
+- All other endpoints require JWT auth via `Authorization: Bearer <token>`
 
 ## Troubleshooting
 
@@ -295,3 +401,6 @@ PORT=3001
 - **Stock issues**: Remember stock is per-branch in BranchStock, not in Product table
 - **WebSocket not connecting**: Ensure backend is running, check browser console for WS errors
 - **CORS preflight failing**: Check `OptionsMiddleware` in `backend/main.py`, verify allowed origins
+- **E-commerce server-side fetch fails**: Use `API_URL` (Docker internal: `http://backend:8000`), not `NEXT_PUBLIC_API_URL`
+- **Tests failing with WebSocket errors**: Use `mock_websocket_manager` fixture to isolate tests
+- **Docker cleanup**: Run `make prune` to clean unused Docker resources (images, containers, volumes)
