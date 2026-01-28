@@ -7,9 +7,9 @@ services:
     container_name: pos-cesariel-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: pos_cesariel
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${DB_NAME:-pos_cesariel}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
     ports:
       - "5432:5432"
     volumes:
@@ -38,16 +38,25 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    env_file:
+      - .env  # Load environment variables from .env file
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/pos_cesariel
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=pos_cesariel
-      - DB_USER=postgres
-      - DB_PASSWORD=password
-      - CLOUDINARY_CLOUD_NAME=dgnflxfgh
-      - CLOUDINARY_API_KEY=699583869153912
-      - CLOUDINARY_API_SECRET=t9aXNi4rXvr8JGQmL9m0YMM8piU
+      # Database configuration (override with .env values)
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@${DB_HOST:-db}:${DB_PORT:-5432}/${DB_NAME:-pos_cesariel}
+      - DB_HOST=${DB_HOST:-db}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-pos_cesariel}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      # Application config
+      - ENV=${ENV:-development}
+      - DEBUG=${DEBUG:-true}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-insecure_dev_key_change_in_production}
+      - JWT_EXPIRE_MINUTES=${JWT_EXPIRE_MINUTES:-480}
+      # Cloudinary (from .env)
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
     depends_on:
       - db
     networks:
@@ -63,10 +72,12 @@ services:
     volumes:
       - ./frontend/pos-cesariel:/app
       - /app/node_modules  # Evita sobrescribir node_modules
+    env_file:
+      - .env
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
-      - WATCHPACK_POLLING=true
-      - CHOKIDAR_USEPOLLING=true
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - WATCHPACK_POLLING=${WATCHPACK_POLLING:-true}
+      - CHOKIDAR_USEPOLLING=${CHOKIDAR_USEPOLLING:-true}
     depends_on:
       - backend
     networks:
@@ -82,14 +93,16 @@ services:
     volumes:
       - ./ecommerce:/app
       - /app/node_modules  # Evita sobrescribir node_modules
+    env_file:
+      - .env
     environment:
       # Server-side URL (Docker internal network)
-      - API_URL=http://backend:8000
+      - API_URL=${API_URL:-http://backend:8000}
       # Client-side URL (browser from host machine)
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
       - PORT=3001
-      - WATCHPACK_POLLING=true
-      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=${WATCHPACK_POLLING:-true}
+      - CHOKIDAR_USEPOLLING=${CHOKIDAR_USEPOLLING:-true}
     depends_on:
       - backend
     networks:
