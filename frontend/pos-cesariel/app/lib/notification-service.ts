@@ -67,7 +67,7 @@ class NotificationService {
     is_read?: boolean;
     type?: string;
   }): Promise<Notification[]> {
-    const response = await api.get('/notifications', { params });
+    const response = await api.get('/notifications/', { params });
     return response.data;
   }
 
@@ -75,7 +75,7 @@ class NotificationService {
    * Obtener estadísticas de notificaciones
    */
   async getStats(): Promise<NotificationStats> {
-    const response = await api.get('/notifications/stats');
+    const response = await api.get('/notifications/stats/');
     return response.data;
   }
 
@@ -83,7 +83,7 @@ class NotificationService {
    * Obtener resumen completo de notificaciones
    */
   async getSummary(): Promise<any> {
-    const response = await api.get('/notifications/summary');
+    const response = await api.get('/notifications/summary/');
     return response.data;
   }
 
@@ -91,7 +91,7 @@ class NotificationService {
    * Obtener cantidad de notificaciones no leídas
    */
   async getUnreadCount(): Promise<number> {
-    const response = await api.get('/notifications/unread-count');
+    const response = await api.get('/notifications/unread-count/');
     return response.data.count;
   }
 
@@ -99,7 +99,7 @@ class NotificationService {
    * Obtener una notificación específica
    */
   async getNotification(id: number): Promise<Notification> {
-    const response = await api.get(`/notifications/${id}`);
+    const response = await api.get(`/notifications/${id}/`);
     return response.data;
   }
 
@@ -107,7 +107,7 @@ class NotificationService {
    * Marcar notificación como leída
    */
   async markAsRead(id: number): Promise<Notification> {
-    const response = await api.patch(`/notifications/${id}/mark-read`);
+    const response = await api.patch(`/notifications/${id}/mark-read/`);
     return response.data;
   }
 
@@ -115,7 +115,7 @@ class NotificationService {
    * Marcar todas las notificaciones como leídas
    */
   async markAllAsRead(): Promise<{ message: string; count: number }> {
-    const response = await api.post('/notifications/mark-all-read');
+    const response = await api.post('/notifications/mark-all-read/');
     return response.data;
   }
 
@@ -123,7 +123,7 @@ class NotificationService {
    * Marcar múltiples notificaciones como leídas
    */
   async markMultipleAsRead(notification_ids: number[]): Promise<{ message: string; count: number }> {
-    const response = await api.post('/notifications/mark-multiple-read', { notification_ids });
+    const response = await api.post('/notifications/mark-multiple-read/', { notification_ids });
     return response.data;
   }
 
@@ -131,7 +131,7 @@ class NotificationService {
    * Eliminar una notificación
    */
   async deleteNotification(id: number): Promise<{ message: string }> {
-    const response = await api.delete(`/notifications/${id}`);
+    const response = await api.delete(`/notifications/${id}/`);
     return response.data;
   }
 
@@ -139,7 +139,7 @@ class NotificationService {
    * Eliminar múltiples notificaciones
    */
   async bulkDelete(notification_ids: number[]): Promise<{ message: string; count: number }> {
-    const response = await api.post('/notifications/bulk-delete', { notification_ids });
+    const response = await api.post('/notifications/bulk-delete/', { notification_ids });
     return response.data;
   }
 
@@ -147,7 +147,7 @@ class NotificationService {
    * Obtener configuración de notificaciones del usuario
    */
   async getSettings(): Promise<NotificationSettings> {
-    const response = await api.get('/notifications/settings/my-settings');
+    const response = await api.get('/notifications/settings/my-settings/');
     return response.data;
   }
 
@@ -155,7 +155,7 @@ class NotificationService {
    * Actualizar configuración de notificaciones
    */
   async updateSettings(data: NotificationSettingsUpdate): Promise<NotificationSettings> {
-    const response = await api.put('/notifications/settings/my-settings', data);
+    const response = await api.put('/notifications/settings/my-settings/', data);
     return response.data;
   }
 
@@ -163,7 +163,7 @@ class NotificationService {
    * Trigger manual de verificación de stock bajo (solo ADMIN)
    */
   async triggerLowStockCheck(): Promise<{ message: string; alerts_created: number }> {
-    const response = await api.post('/notifications/admin/trigger-low-stock-check');
+    const response = await api.post('/notifications/admin/trigger-low-stock-check/');
     return response.data;
   }
 
@@ -171,7 +171,7 @@ class NotificationService {
    * Trigger manual de reporte diario (solo ADMIN)
    */
   async triggerDailySalesReport(): Promise<{ message: string; reports_created: number }> {
-    const response = await api.post('/notifications/admin/trigger-daily-sales-report');
+    const response = await api.post('/notifications/admin/trigger-daily-sales-report/');
     return response.data;
   }
 
@@ -179,7 +179,7 @@ class NotificationService {
    * Trigger manual de recordatorio de respaldo (solo ADMIN)
    */
   async triggerBackupReminder(frequency: 'daily' | 'weekly' | 'monthly' = 'weekly'): Promise<{ message: string; reminders_created: number }> {
-    const response = await api.post(`/notifications/admin/trigger-backup-reminder?frequency=${frequency}`);
+    const response = await api.post(`/notifications/admin/trigger-backup-reminder/?frequency=${frequency}`);
     return response.data;
   }
 
@@ -187,7 +187,7 @@ class NotificationService {
    * Limpiar notificaciones antiguas (solo ADMIN)
    */
   async cleanupOldNotifications(days: number = 30): Promise<{ message: string; cleaned: number }> {
-    const response = await api.post(`/notifications/admin/cleanup-old?days=${days}`);
+    const response = await api.post(`/notifications/admin/cleanup-old/?days=${days}`);
     return response.data;
   }
 
@@ -195,7 +195,7 @@ class NotificationService {
    * Desactivar notificaciones expiradas (solo ADMIN)
    */
   async deactivateExpired(): Promise<{ message: string; deactivated: number }> {
-    const response = await api.post('/notifications/admin/deactivate-expired');
+    const response = await api.post('/notifications/admin/deactivate-expired/');
     return response.data;
   }
 
