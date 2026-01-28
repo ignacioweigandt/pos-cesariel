@@ -10,6 +10,7 @@ from app.services.product_service import ProductService
 from app.services.sale_service import SaleService
 from app.services.user_service import UserService
 from app.services.config_service import ConfigService
+from app.services.reports_service import ReportsService
 
 __all__ = [
     "InventoryService",
@@ -17,4 +18,5 @@ __all__ = [
     "SaleService",
     "UserService",
     "ConfigService",
+    "ReportsService",
 ]

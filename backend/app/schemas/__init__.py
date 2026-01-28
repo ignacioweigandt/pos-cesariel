@@ -147,12 +147,28 @@ from app.schemas.whatsapp import (
     WhatsAppSaleWithDetails
 )
 
-# Import dashboard schemas
+# Import dashboard schemas (legacy - kept for backward compatibility)
 from app.schemas.dashboard import (
+    DashboardStats as DashboardStatsLegacy,
+    SalesReport as SalesReportLegacy,
+    DailySales as DailySalesLegacy,
+    ChartData as ChartDataLegacy
+)
+
+# Import new reports schemas (with strong typing)
+from app.schemas.reports import (
+    TopProduct,
+    BranchSalesData,
+    PaymentMethodData,
+    SaleTypeData,
     DashboardStats,
     SalesReport,
+    DetailedSalesReport,
     DailySales,
-    ChartData
+    ChartData,
+    ReportFilters,
+    ReportMetadata,
+    SalesReportWithMetadata
 )
 
 # Import system config schemas
@@ -315,11 +331,19 @@ __all__ = [
     "WhatsAppSale",
     "WhatsAppSaleWithDetails",
     
-    # Dashboard
+    # Dashboard & Reports (new with strong typing)
+    "TopProduct",
+    "BranchSalesData",
+    "PaymentMethodData",
+    "SaleTypeData",
     "DashboardStats",
     "SalesReport",
+    "DetailedSalesReport",
     "DailySales",
     "ChartData",
+    "ReportFilters",
+    "ReportMetadata",
+    "SalesReportWithMetadata",
 
     # System Config
     "SystemConfigBase",

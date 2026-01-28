@@ -42,6 +42,7 @@ from routers import (
     brands,                # Gestión de marcas de productos
     products,              # CRUD de productos, inventario y stock
     sales,                 # Ventas, reportes y analytics
+    reports,               # Reportes y analytics (Clean Architecture)
     websockets,            # Comunicación en tiempo real
     config,                # Configuración general del sistema
     ecommerce_advanced,    # Funcionalidades avanzadas de e-commerce
@@ -145,7 +146,8 @@ app.include_router(brands.router)         # /brands/* - Gestión de marcas de pr
 
 # ===== ROUTERS DE INVENTARIO Y VENTAS =====
 app.include_router(products.router)       # /products/* - CRUD productos, stock, talles, importación
-app.include_router(sales.router)          # /sales/* - Ventas POS, reportes, dashboard
+app.include_router(sales.router)          # /sales/* - Ventas POS, reportes, dashboard (legacy)
+app.include_router(reports.router)        # /reports/* - Reportes y analytics (Clean Architecture)
 
 # ===== COMUNICACIÓN EN TIEMPO REAL =====
 app.include_router(websockets.router)     # WebSockets para sincronización en tiempo real

@@ -27,6 +27,7 @@ from app.repositories.config import (
     ConfigChangeLogRepository,
     SecurityAuditLogRepository
 )
+from app.repositories.reports import ReportsRepository
 
 __all__ = [
     "BaseRepository",
@@ -52,4 +53,5 @@ __all__ = [
     "BranchPaymentMethodRepository",
     "ConfigChangeLogRepository",
     "SecurityAuditLogRepository",
+    "ReportsRepository",
 ]
