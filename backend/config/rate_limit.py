@@ -34,26 +34,32 @@ def get_identifier(request: Request) -> str:
     Returns:
         str: Client identifier (IP address)
     """
-    # Get real IP even if behind proxy
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
-    
-    # Fallback to direct connection IP
-    return get_remote_address(request)
+    try:
+        # Get real IP even if behind proxy
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        
+        real_ip = request.headers.get("X-Real-IP")
+        if real_ip:
+            return real_ip
+        
+        # Fallback to direct connection IP
+        return get_remote_address(request)
+    except Exception as e:
+        # If all fails, return a default identifier
+        print(f"Error getting identifier for rate limiting: {e}")
+        return "unknown"
 
 
 # ===== RATE LIMITER INSTANCE =====
 
 # Create limiter instance with configuration
+# Temporarily disabled in production until proper error handling is configured
 limiter = Limiter(
     key_func=get_identifier,
     default_limits=["60/minute"],  # Default: 60 requests per minute
-    enabled=os.getenv("ENV", "development") != "test",  # Disable in tests
+    enabled=os.getenv("RATE_LIMIT_ENABLED", "false").lower() == "true",  # Disabled by default, enable with env var
     headers_enabled=True,  # Send rate limit info in response headers
     storage_uri="memory://",  # Use in-memory storage (Redis recommended for production)
 )
