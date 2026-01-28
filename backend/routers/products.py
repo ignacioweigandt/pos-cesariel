@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, distinct
 from typing import List, Optional
@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from auth_compat import get_current_active_user, require_manager_or_admin, require_stock_management_permission
 from websocket_manager import notify_inventory_change, notify_low_stock
+from config.rate_limit import limiter, RateLimits
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -757,7 +758,9 @@ async def import_products_confirm(
         raise HTTPException(status_code=500, detail=f"Error procesando importación: {str(e)}")
 
 @router.post("/import", response_model=BulkImportResponse)
+@limiter.limit(RateLimits.BULK_IMPORT)  # 10 requests per hour
 async def import_products_bulk(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_admin)
@@ -765,6 +768,8 @@ async def import_products_bulk(
     """
     Importar productos masivamente desde archivo CSV/Excel (método legacy)
     Columnas esperadas: codigo_barra, modelo, efectivo
+    
+    Rate limit: 10 imports per hour to prevent system overload.
     """
     if not file.filename.endswith(('.csv', '.xlsx', '.xls')):
         raise HTTPException(

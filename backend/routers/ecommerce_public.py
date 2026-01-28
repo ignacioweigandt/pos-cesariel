@@ -1,5 +1,5 @@
 # Rutas públicas para e-commerce (sin autenticación)
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, exists, or_
 from typing import List, Optional
@@ -9,6 +9,7 @@ from database import get_db
 from app.models import Product, Category, Sale, SaleItem, InventoryMovement, User, Branch, SaleType, StoreBanner, SocialMediaConfig, EcommerceConfig, WhatsAppSale, ProductSize, WhatsAppConfig, ProductImage, BranchStock, Brand
 from app.schemas import SaleCreate
 from websocket_manager import notify_new_sale
+from config.rate_limit import limiter, RateLimits
 
 def generate_sale_number(sale_type: SaleType) -> str:
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -81,7 +82,9 @@ def ecommerce_health():
     }
 
 @router.get("/products")
+@limiter.limit(RateLimits.ECOMMERCE_READ)  # 100 requests per minute
 def get_ecommerce_products(
+    request: Request,
     db: Session = Depends(get_db),
     limit: int = Query(500, le=1000),  # Increased default from 100 to 500 for larger catalogs
     offset: int = Query(0, ge=0),
@@ -553,9 +556,12 @@ def get_ecommerce_whatsapp_config(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error al obtener configuración de WhatsApp: {str(e)}")
 
 @router.post("/sales")
-async def create_ecommerce_sale(sale_data: SaleCreate, db: Session = Depends(get_db)):
+@limiter.limit(RateLimits.ECOMMERCE_WRITE)  # 10 requests per minute
+async def create_ecommerce_sale(request: Request, sale_data: SaleCreate, db: Session = Depends(get_db)):
     """
     Crear venta desde e-commerce (sin autenticación requerida)
+    
+    Rate limit: 10 purchases per minute per IP to prevent abuse.
     """
     try:
         # Obtener el primer usuario admin/manager para asignar la venta
