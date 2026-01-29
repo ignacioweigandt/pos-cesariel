@@ -147,46 +147,20 @@ export function AdvancedReportsContainer() {
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           {/* Shared Filters Section */}
-          <div className="bg-white rounded-lg shadow-sm border p-6">
-            <div className="flex flex-col lg:flex-row lg:items-end gap-4">
-              {/* Date Range Filter */}
-              <div className="flex-1">
-                <DateRangeFilter
-                  startDate={filters.startDate}
-                  endDate={filters.endDate}
-                  reportType={filters.reportType}
-                  selectedYear={filters.selectedYear}
-                  selectedBranch={filters.selectedBranch}
-                  branches={branches}
-                  error={filters.error}
-                  isApplying={filters.isApplying}
-                  isValid={filters.isValid}
-                  onStartDateChange={filters.setStartDate}
-                  onEndDateChange={filters.setEndDate}
-                  onReportTypeChange={filters.setReportType}
-                  onSelectedYearChange={filters.setSelectedYear}
-                  onBranchChange={filters.setSelectedBranch}
-                  onQuickFilter={filters.handleQuickFilter}
-                  onMonthFilter={filters.handleMonthFilter}
-                  onYearFilter={filters.handleYearFilter}
-                  onApplyFilter={filters.applyFilter}
-                />
-              </div>
-
-              {/* Branch Selector (Admin only) */}
-              {isAdmin && (
-                <div className="lg:ml-4">
-                  <BranchSelector
-                    branches={branches}
-                    selectedBranch={filters.selectedBranch}
-                    onBranchChange={filters.setSelectedBranch}
-                    disabled={filters.isApplying}
-                    showAllOption={true}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
+          <DateRangeFilter
+            startDate={filters.startDate}
+            endDate={filters.endDate}
+            selectedBranch={filters.selectedBranch}
+            branches={branches}
+            error={filters.error}
+            isApplying={filters.isApplying}
+            isValid={filters.isValid}
+            onStartDateChange={filters.setStartDate}
+            onEndDateChange={filters.setEndDate}
+            onBranchChange={filters.setSelectedBranch}
+            onQuickFilter={filters.handleQuickFilter}
+            onApplyFilter={filters.applyFilter}
+          />
 
           {/* Tabs Navigation + Content */}
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ReportTab)} className="space-y-6">

@@ -1,18 +1,17 @@
 /**
  * DateRangeFilter Component
  *
- * Provides date filtering UI for reports with:
- * - Quick filter buttons (Today, This Month, This Year, etc.)
- * - Month selector with year
- * - Full year selector
- * - Custom date range picker
+ * Simplified date filtering UI for reports with:
+ * - Quick filter buttons (Today, Last 7, Last 30, This Month, This Year)
+ * - Custom date range picker (start/end dates)
+ * - Branch selector (admin only)
  * - Validation and error handling
  *
- * FIXES:
- * - Timezone handling issues
- * - Incorrect date range calculations
- * - Race conditions with setTimeout
- * - Missing validations
+ * CHANGES:
+ * - Removed individual month selector (redundant with quick filters)
+ * - Removed individual year selector (redundant with quick filters)
+ * - Removed report type selector (not used)
+ * - Simplified to essential filters only
  */
 
 import { useState } from "react";
@@ -23,8 +22,7 @@ import {
   CheckCircleIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
-import { MONTH_NAMES, getAvailableYears } from "@/lib/utils/date";
-import type { QuickFilterPeriod, ReportType } from "../../hooks/useReportFilters";
+import type { QuickFilterPeriod } from "../../hooks/useReportFilters";
 
 interface Branch {
   id: number;
@@ -34,8 +32,6 @@ interface Branch {
 interface DateRangeFilterProps {
   startDate: string;
   endDate: string;
-  reportType: ReportType;
-  selectedYear: number;
   selectedBranch?: number;
   branches: Branch[];
   error: { type: string | null; message: string };
@@ -43,20 +39,14 @@ interface DateRangeFilterProps {
   isValid: boolean;
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
-  onReportTypeChange: (type: ReportType) => void;
-  onSelectedYearChange: (year: number) => void;
   onBranchChange: (branchId: number | undefined) => void;
   onQuickFilter: (period: QuickFilterPeriod) => void;
-  onMonthFilter: (month: number) => void;
-  onYearFilter: (year: number) => void;
   onApplyFilter: () => void;
 }
 
 export function DateRangeFilter({
   startDate,
   endDate,
-  reportType,
-  selectedYear,
   selectedBranch,
   branches,
   error,
@@ -64,29 +54,19 @@ export function DateRangeFilter({
   isValid,
   onStartDateChange,
   onEndDateChange,
-  onReportTypeChange,
-  onSelectedYearChange,
   onBranchChange,
   onQuickFilter,
-  onMonthFilter,
-  onYearFilter,
   onApplyFilter,
 }: DateRangeFilterProps) {
-  const years = getAvailableYears(5);
-
-  // Local states to track filter selections
+  // Local state to track quick filter selection
   const [quickFilterValue, setQuickFilterValue] = useState<string>('');
-  const [selectedMonthValue, setSelectedMonthValue] = useState<string>('');
-  const [selectedFullYearValue, setSelectedFullYearValue] = useState<string>('');
 
-  // Check if any quick filter is active
-  const hasActiveFilters = quickFilterValue !== '' || selectedMonthValue !== '' || selectedFullYearValue !== '';
+  // Check if quick filter is active
+  const hasActiveFilters = quickFilterValue !== '';
 
-  // Clear all filter selections
+  // Clear filter selection
   const handleClearFilters = () => {
     setQuickFilterValue('');
-    setSelectedMonthValue('');
-    setSelectedFullYearValue('');
   };
 
   return (
@@ -133,13 +113,13 @@ export function DateRangeFilter({
           </div>
         )}
 
-        {/* Compact Filter Selectors */}
+        {/* Quick Filters */}
         <div>
           {/* Header with Clear Button */}
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-gray-700">
               <CalendarIcon className="h-4 w-4 inline mr-1" />
-              Filtros de Fecha
+              Filtros Rápidos
             </h3>
             {hasActiveFilters && (
               <button
@@ -148,102 +128,29 @@ export function DateRangeFilter({
                 type="button"
               >
                 <XMarkIcon className="h-3 w-3 mr-1" />
-                Limpiar filtros
+                Limpiar
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {/* Quick Filters */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Filtros Rápidos
-              </label>
-              <select
-                value={quickFilterValue}
-                onChange={(e) => {
-                  const value = e.target.value as QuickFilterPeriod;
-                  if (value) {
-                    setQuickFilterValue(value);
-                    onQuickFilter(value);
-                  }
-                }}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="">Seleccionar período...</option>
-                <option value="today">Hoy</option>
-                <option value="last7">Últimos 7 días</option>
-                <option value="last30">Últimos 30 días</option>
-                <option value="month">Este Mes</option>
-                <option value="year">Este Año</option>
-              </select>
-            </div>
-
-            {/* View by Specific Month */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ver por Mes Específico
-              </label>
-              <div className="flex gap-2">
-                <select
-                  value={selectedYear}
-                  onChange={(e) => onSelectedYearChange(Number(e.target.value))}
-                  className="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  {years.map((year) => (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={selectedMonthValue}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value !== '') {
-                      const monthIndex = Number(value);
-                      setSelectedMonthValue(value);
-                      onMonthFilter(monthIndex);
-                    }
-                  }}
-                  className="mt-1 block w-1/2 border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                >
-                  <option value="">Mes...</option>
-                  {MONTH_NAMES.map((monthName, index) => (
-                    <option key={index} value={index}>
-                      {monthName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* View Full Year */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ver Año Completo
-              </label>
-              <select
-                value={selectedFullYearValue}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value !== '') {
-                    const year = Number(value);
-                    setSelectedFullYearValue(value);
-                    onYearFilter(year);
-                  }
-                }}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="">Seleccionar año...</option>
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <select
+            value={quickFilterValue}
+            onChange={(e) => {
+              const value = e.target.value as QuickFilterPeriod;
+              if (value) {
+                setQuickFilterValue(value);
+                onQuickFilter(value);
+              }
+            }}
+            className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="">Seleccionar período...</option>
+            <option value="today">Hoy</option>
+            <option value="last7">Últimos 7 días</option>
+            <option value="last30">Últimos 30 días</option>
+            <option value="month">Este Mes</option>
+            <option value="year">Este Año</option>
+          </select>
         </div>
 
         {/* Custom Date Range */}
@@ -251,7 +158,7 @@ export function DateRangeFilter({
           <label className="block text-sm font-medium text-gray-700 mb-3">
             Filtro Personalizado
           </label>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Fecha Inicio
@@ -301,21 +208,6 @@ export function DateRangeFilter({
                     {branch.name}
                   </option>
                 ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tipo de Reporte
-              </label>
-              <select
-                value={reportType}
-                onChange={(e) => onReportTypeChange(e.target.value as ReportType)}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              >
-                <option value="sales">Ventas</option>
-                <option value="products">Productos</option>
-                <option value="branches">Sucursales</option>
               </select>
             </div>
 

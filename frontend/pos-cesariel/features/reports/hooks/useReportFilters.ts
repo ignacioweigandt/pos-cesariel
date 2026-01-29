@@ -1,28 +1,24 @@
 /**
  * useReportFilters Hook
  *
- * Custom hook for managing report date filters with validation and auto-apply.
- * Fixes bugs with date handling, timezone issues, and validation.
+ * Simplified hook for managing report date filters.
+ * Supports quick filters and custom date ranges only.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
-  formatDateToYYYYMMDD,
   getTodayRange,
   getCurrentMonthRange,
   getCurrentYearRange,
-  getMonthRange,
-  getYearRange,
   getLastNDaysRange,
   isValidDateRange,
   getDaysBetween
 } from '@/lib/utils/date';
 
 export type QuickFilterPeriod = 'today' | 'month' | 'year' | 'last30' | 'last7';
-export type ReportType = 'sales' | 'products' | 'branches';
 
 interface UseReportFiltersOptions {
-  onFilterChange?: (startDate: string, endDate: string, reportType: ReportType, branchId?: number) => void;
+  onFilterChange?: (startDate: string, endDate: string, branchId?: number) => void;
   initialDays?: number; // Default: 30
   autoApply?: boolean; // Default: true
 }
@@ -39,22 +35,12 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     autoApply = true
   } = options;
 
-  // Filter states
+  // Filter states (simplified - removed reportType and selectedYear)
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [reportType, setReportType] = useState<ReportType>('sales');
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedBranch, setSelectedBranch] = useState<number | undefined>(undefined);
   const [error, setError] = useState<FilterError>({ type: null, message: '' });
   const [isApplying, setIsApplying] = useState(false);
-
-  // Ref to always have the latest selectedYear value
-  // FIX: This prevents stale closure issues when clicking months after changing year
-  const selectedYearRef = useRef<number>(selectedYear);
-
-  useEffect(() => {
-    selectedYearRef.current = selectedYear;
-  }, [selectedYear]);
 
   // Initialize with default date range
   useEffect(() => {
@@ -109,18 +95,17 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
 
     // Call the onChange callback
     if (onFilterChange) {
-      onFilterChange(startDate, endDate, reportType, selectedBranch);
+      onFilterChange(startDate, endDate, selectedBranch);
     }
 
     // Small delay for UX feedback
     setTimeout(() => {
       setIsApplying(false);
     }, 500);
-  }, [startDate, endDate, reportType, selectedBranch, validateDates, onFilterChange]);
+  }, [startDate, endDate, selectedBranch, validateDates, onFilterChange]);
 
   /**
    * Sets date range and optionally auto-applies
-   * FIX: Removed setTimeout to avoid stale state issues
    */
   const setDateRange = useCallback((start: string, end: string, shouldAutoApply = true) => {
     setStartDate(start);
@@ -128,10 +113,9 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
 
     // Auto-apply if enabled - directly call with the new values
     if (autoApply && shouldAutoApply && isValidDateRange(start, end)) {
-      // Call immediately with the new values (not from state)
-      onFilterChange?.(start, end, reportType, selectedBranch);
+      onFilterChange?.(start, end, selectedBranch);
     }
-  }, [autoApply, reportType, selectedBranch, onFilterChange]);
+  }, [autoApply, selectedBranch, onFilterChange]);
 
   /**
    * Quick filter handlers
@@ -162,23 +146,7 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     setDateRange(range.start, range.end, true);
   }, [setDateRange]);
 
-  /**
-   * Month filter handler
-   * FIX: Uses ref to get the latest selectedYear value, avoiding stale closure
-   */
-  const handleMonthFilter = useCallback((month: number) => {
-    // Use ref to get the most recent year value
-    const range = getMonthRange(selectedYearRef.current, month);
-    setDateRange(range.start, range.end, true);
-  }, [setDateRange]);
 
-  /**
-   * Year filter handler
-   */
-  const handleYearFilter = useCallback((year: number) => {
-    const range = getYearRange(year);
-    setDateRange(range.start, range.end, true);
-  }, [setDateRange]);
 
   /**
    * Manual date change handlers
@@ -193,10 +161,6 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     setError({ type: null, message: '' });
   }, []);
 
-  const handleReportTypeChange = useCallback((type: ReportType) => {
-    setReportType(type);
-  }, []);
-
   const handleBranchChange = useCallback((branchId: number | undefined) => {
     setSelectedBranch(branchId);
   }, []);
@@ -205,8 +169,6 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     // State
     startDate,
     endDate,
-    reportType,
-    selectedYear,
     selectedBranch,
     error,
     isApplying,
@@ -215,15 +177,11 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     // Setters
     setStartDate: handleStartDateChange,
     setEndDate: handleEndDateChange,
-    setReportType: handleReportTypeChange,
-    setSelectedYear,
     setSelectedBranch: handleBranchChange,
 
     // Actions
     applyFilter,
     validateDates,
     handleQuickFilter,
-    handleMonthFilter,
-    handleYearFilter,
   };
 }
