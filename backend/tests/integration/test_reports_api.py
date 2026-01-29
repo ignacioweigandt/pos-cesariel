@@ -81,7 +81,7 @@ class TestSalesReportEndpoint:
             discount_amount=Decimal("0.00"),
             total_amount=Decimal("112.00"),
             payment_method="CASH",
-            order_status=OrderStatus.COMPLETED
+            order_status=OrderStatus.DELIVERED
         )
         db_session.add(sale)
         db_session.commit()
@@ -289,7 +289,7 @@ class TestDailySalesEndpoint:
             discount_amount=Decimal("0.00"),
             total_amount=Decimal("56.00"),
             payment_method="CASH",
-            order_status=OrderStatus.COMPLETED
+            order_status=OrderStatus.DELIVERED
         )
         db_session.add(sale)
         db_session.commit()
@@ -386,7 +386,7 @@ class TestProductsChartEndpoint:
                 tax_amount=Decimal("3.60"),
                 total_amount=Decimal("33.60"),
                 payment_method="CASH",
-                order_status=OrderStatus.COMPLETED
+                order_status=OrderStatus.DELIVERED
             )
             db_session.add(sale)
             db_session.commit()
@@ -520,3 +520,352 @@ class TestDetailedSalesReportEndpoint:
         
         assert isinstance(data["sales_by_payment_method"], list)
         assert isinstance(data["sales_by_type"], list)
+
+
+class TestSalesListEndpoint:
+    """Test /reports/sales-list endpoint with advanced filters."""
+    
+    @pytest.fixture
+    def test_sales_for_filtering(
+        self,
+        db_session,
+        test_branch,
+        test_admin_user,
+        test_product
+    ):
+        """Create multiple sales with different characteristics for filter testing."""
+        sales = []
+        
+        # Sale 1: Efectivo, POS, Juan Pérez, $30000
+        sale1 = Sale(
+            sale_number="FILTER-001",
+            sale_type=SaleType.POS,
+            branch_id=test_branch.id,
+            user_id=test_admin_user.id,
+            customer_name="Juan Pérez",
+            subtotal=Decimal("30000.00"),
+            tax_amount=Decimal("0.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("30000.00"),
+            payment_method="Efectivo",
+            order_status=OrderStatus.PENDING
+        )
+        sales.append(sale1)
+        
+        # Sale 2: tarjeta de crédito (lowercase), ECOMMERCE, María González, $50000
+        sale2 = Sale(
+            sale_number="FILTER-002",
+            sale_type=SaleType.ECOMMERCE,
+            branch_id=test_branch.id,
+            user_id=test_admin_user.id,
+            customer_name="María González",
+            subtotal=Decimal("50000.00"),
+            tax_amount=Decimal("0.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("50000.00"),
+            payment_method="tarjeta de crédito",  # lowercase intentional
+            order_status=OrderStatus.PROCESSING
+        )
+        sales.append(sale2)
+        
+        # Sale 3: Transferencia, POS, TEST-SEARCH-001, $15000
+        sale3 = Sale(
+            sale_number="FILTER-003",
+            sale_type=SaleType.POS,
+            branch_id=test_branch.id,
+            user_id=test_admin_user.id,
+            customer_name="TEST-SEARCH-001",
+            subtotal=Decimal("15000.00"),
+            tax_amount=Decimal("0.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("15000.00"),
+            payment_method="Transferencia",
+            order_status=OrderStatus.DELIVERED
+        )
+        sales.append(sale3)
+        
+        # Sale 4: EFECTIVO (uppercase), POS, Carlos López, $100000
+        sale4 = Sale(
+            sale_number="FILTER-004",
+            sale_type=SaleType.POS,
+            branch_id=test_branch.id,
+            user_id=test_admin_user.id,
+            customer_name="Carlos López",
+            subtotal=Decimal("100000.00"),
+            tax_amount=Decimal("0.00"),
+            discount_amount=Decimal("0.00"),
+            total_amount=Decimal("100000.00"),
+            payment_method="EFECTIVO",  # uppercase intentional
+            order_status=OrderStatus.CANCELLED
+        )
+        sales.append(sale4)
+        
+        for sale in sales:
+            db_session.add(sale)
+        db_session.commit()
+        
+        return sales
+    
+    def test_sales_list_text_search_by_customer_name(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Text search should find sales by customer name (case-insensitive)."""
+        today = date.today()
+        
+        # Search for "Juan"
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "search": "Juan"
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["customer_name"] == "Juan Pérez"
+    
+    def test_sales_list_text_search_by_sale_number(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Text search should find sales by sale number."""
+        today = date.today()
+        
+        # Search for "TEST-SEARCH"
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "search": "TEST-SEARCH"
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert "TEST-SEARCH" in data["items"][0]["customer_name"]
+    
+    def test_sales_list_filter_by_payment_method_case_insensitive(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Payment method filter should be case-insensitive."""
+        today = date.today()
+        
+        # Filter by "Efectivo" (should match "Efectivo" and "EFECTIVO")
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "payment_method": "Efectivo"
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Should find both "Efectivo" and "EFECTIVO"
+        assert data["total"] == 2
+    
+    def test_sales_list_filter_by_payment_method_lowercase(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Payment method filter should work with lowercase input."""
+        today = date.today()
+        
+        # Filter by "tarjeta de crédito" (lowercase)
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "payment_method": "Tarjeta de Crédito"
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Should find "tarjeta de crédito" (stored in lowercase)
+        assert data["total"] == 1
+    
+    def test_sales_list_filter_by_order_status(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Order status filter should work correctly."""
+        today = date.today()
+        
+        # Filter by PENDING
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "order_status": "PENDING"
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 1
+        assert data["items"][0]["order_status"] == "PENDING"
+    
+    def test_sales_list_filter_by_min_amount(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Min amount filter should return sales >= min_amount."""
+        today = date.today()
+        
+        # Filter by min_amount = 40000 (should get sales with 50000 and 100000)
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "min_amount": 40000
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        for item in data["items"]:
+            assert float(item["total_amount"]) >= 40000
+    
+    def test_sales_list_filter_by_max_amount(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Max amount filter should return sales <= max_amount."""
+        today = date.today()
+        
+        # Filter by max_amount = 40000 (should get sales with 30000 and 15000)
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "max_amount": 40000
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        for item in data["items"]:
+            assert float(item["total_amount"]) <= 40000
+    
+    def test_sales_list_filter_by_amount_range(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Amount range filter should return sales within range."""
+        today = date.today()
+        
+        # Filter by range 20000-60000 (should get 30000 and 50000)
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "min_amount": 20000,
+                "max_amount": 60000
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == 2
+        for item in data["items"]:
+            amount = float(item["total_amount"])
+            assert 20000 <= amount <= 60000
+    
+    def test_sales_list_combined_filters(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Multiple filters should work together."""
+        today = date.today()
+        
+        # Combine: payment_method=Efectivo + sale_type=POS + search=Juan
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "payment_method": "Efectivo",
+                "sale_type": "POS",
+                "search": "Juan"
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        # Should find exactly Juan Pérez (Efectivo, POS)
+        assert data["total"] == 1
+        assert data["items"][0]["customer_name"] == "Juan Pérez"
+        assert data["items"][0]["payment_method"].lower() == "efectivo"
+        assert data["items"][0]["sale_type"] == "POS"
+    
+    def test_sales_list_pagination(
+        self,
+        client,
+        auth_headers_admin,
+        test_sales_for_filtering
+    ):
+        """Pagination should work correctly."""
+        today = date.today()
+        
+        # Page 1, page_size 2
+        response = client.get(
+            "/reports/sales-list",
+            params={
+                "start_date": str(today - timedelta(days=1)),
+                "end_date": str(today + timedelta(days=1)),
+                "page": 1,
+                "page_size": 2
+            },
+            headers=auth_headers_admin
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["page"] == 1
+        assert data["page_size"] == 2
+        assert len(data["items"]) <= 2
+        assert data["total"] == 4  # We created 4 sales
+        assert data["total_pages"] == 2  # 4 sales / 2 per page = 2 pages

@@ -19,6 +19,8 @@ import {
   ArrowDownIcon,
   FunnelIcon,
   ArrowPathIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import {
   Table,
@@ -37,8 +39,10 @@ import {
 } from "@/shared/components/ui/select";
 import { Badge } from "@/shared/components/ui/badge";
 import { Card } from "@/shared/components/ui/card";
+import { Input } from "@/shared/components/ui/input";
 import { apiClient } from "@/shared/api/client";
 import { LoadingSkeleton, EmptyState } from "../shared";
+import { useDebounce } from "@/shared/hooks/useDebounce";
 
 interface SalesTabProps {
   startDate: string;
@@ -83,6 +87,15 @@ export function SalesTab({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string | undefined>(undefined);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string | undefined>(undefined);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string | undefined>(undefined);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [minAmount, setMinAmount] = useState<string>("");
+  const [maxAmount, setMaxAmount] = useState<string>("");
+
+  // Debounce search and amounts to avoid hammering backend and losing focus
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  const debouncedMinAmount = useDebounce(minAmount, 500);
+  const debouncedMaxAmount = useDebounce(maxAmount, 500);
 
   // Fetch sales list
   const {
@@ -103,6 +116,10 @@ export function SalesTab({
       sortDirection,
       saleTypeFilter,
       paymentMethodFilter,
+      orderStatusFilter,
+      debouncedSearch, // Use debounced values to avoid losing focus
+      debouncedMinAmount,
+      debouncedMaxAmount,
     ],
     queryFn: async () => {
       const params: any = {
@@ -117,6 +134,10 @@ export function SalesTab({
       if (branchId) params.branch_id = branchId;
       if (saleTypeFilter) params.sale_type = saleTypeFilter;
       if (paymentMethodFilter) params.payment_method = paymentMethodFilter;
+      if (orderStatusFilter) params.order_status = orderStatusFilter;
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (debouncedMinAmount) params.min_amount = parseFloat(debouncedMinAmount);
+      if (debouncedMaxAmount) params.max_amount = parseFloat(debouncedMaxAmount);
 
       const response = await apiClient.get("/reports/sales-list", { params });
       return response.data;
@@ -135,6 +156,26 @@ export function SalesTab({
     }
     setPage(1); // Reset to first page
   };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSaleTypeFilter(undefined);
+    setPaymentMethodFilter(undefined);
+    setOrderStatusFilter(undefined);
+    setSearchQuery("");
+    setMinAmount("");
+    setMaxAmount("");
+    setPage(1);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters =
+    saleTypeFilter ||
+    paymentMethodFilter ||
+    orderStatusFilter ||
+    searchQuery ||
+    minAmount ||
+    maxAmount;
 
   // Sort indicator component
   const SortIndicator = ({ field }: { field: SortField }) => {
@@ -179,7 +220,7 @@ export function SalesTab({
   const getStatusBadge = (status: string | null) => {
     if (!status) return null;
 
-    const colors = {
+    const colors: Record<string, string> = {
       PENDING: "bg-yellow-100 text-yellow-800",
       PROCESSING: "bg-blue-100 text-blue-800",
       DELIVERED: "bg-green-100 text-green-800",
@@ -187,7 +228,7 @@ export function SalesTab({
       CANCELLED: "bg-red-100 text-red-800",
     };
 
-    const labels = {
+    const labels: Record<string, string> = {
       PENDING: "Pendiente",
       PROCESSING: "Procesando",
       DELIVERED: "Entregado",
@@ -196,8 +237,8 @@ export function SalesTab({
     };
 
     return (
-      <Badge variant="secondary" className={colors[status as keyof typeof colors]}>
-        {labels[status as keyof typeof labels] || status}
+      <Badge variant="secondary" className={colors[status] || "bg-gray-100 text-gray-800"}>
+        {labels[status] || status}
       </Badge>
     );
   };
@@ -242,13 +283,67 @@ export function SalesTab({
 
       {/* Filters Row */}
       <Card className="p-4">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FunnelIcon className="h-5 w-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Filtros:</span>
+        <div className="flex flex-col gap-4">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FunnelIcon className="h-5 w-5 text-gray-500" />
+              <span className="text-sm font-medium text-gray-700">Filtros:</span>
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-2 bg-blue-100 text-blue-800">
+                  Filtros activos
+                </Badge>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="px-3 py-1 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 flex items-center gap-1"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                  Limpiar filtros
+                </button>
+              )}
+              <button
+                onClick={() => refetch()}
+                disabled={isFetching}
+                className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
+                title="Actualizar"
+              >
+                <ArrowPathIcon className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 items-center">
+          {/* Search Bar */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="Buscar por N° de venta o nombre de cliente..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="pl-10 pr-10"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setPage(1);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Dropdowns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {/* Sale Type Filter */}
             <Select
               value={saleTypeFilter || "all"}
@@ -257,7 +352,7 @@ export function SalesTab({
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger>
                 <SelectValue placeholder="Tipo de venta" />
               </SelectTrigger>
               <SelectContent>
@@ -275,7 +370,7 @@ export function SalesTab({
                 setPage(1);
               }}
             >
-              <SelectTrigger className="w-48">
+              <SelectTrigger>
                 <SelectValue placeholder="Método de pago" />
               </SelectTrigger>
               <SelectContent>
@@ -284,19 +379,55 @@ export function SalesTab({
                 <SelectItem value="Tarjeta de Crédito">Tarjeta de Crédito</SelectItem>
                 <SelectItem value="Tarjeta de Débito">Tarjeta de Débito</SelectItem>
                 <SelectItem value="Transferencia">Transferencia</SelectItem>
-                <SelectItem value="MercadoPago">MercadoPago</SelectItem>
               </SelectContent>
             </Select>
 
-            {/* Refresh Button */}
-            <button
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50"
-              title="Actualizar"
+            {/* Order Status Filter */}
+            <Select
+              value={orderStatusFilter || "all"}
+              onValueChange={(value) => {
+                setOrderStatusFilter(value === "all" ? undefined : value);
+                setPage(1);
+              }}
             >
-              <ArrowPathIcon className={`h-5 w-5 ${isFetching ? "animate-spin" : ""}`} />
-            </button>
+              <SelectTrigger>
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="PENDING">Pendiente</SelectItem>
+                <SelectItem value="PROCESSING">Procesando</SelectItem>
+                <SelectItem value="SHIPPED">Enviado</SelectItem>
+                <SelectItem value="DELIVERED">Entregado</SelectItem>
+                <SelectItem value="CANCELLED">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Min Amount Filter */}
+            <Input
+              type="number"
+              placeholder="Monto mínimo"
+              value={minAmount}
+              onChange={(e) => {
+                setMinAmount(e.target.value);
+                setPage(1);
+              }}
+              min="0"
+              step="0.01"
+            />
+
+            {/* Max Amount Filter */}
+            <Input
+              type="number"
+              placeholder="Monto máximo"
+              value={maxAmount}
+              onChange={(e) => {
+                setMaxAmount(e.target.value);
+                setPage(1);
+              }}
+              min="0"
+              step="0.01"
+            />
           </div>
         </div>
       </Card>

@@ -435,13 +435,17 @@ class ReportsRepository:
         branch_id: Optional[int] = None,
         sale_type: Optional[str] = None,
         payment_method: Optional[str] = None,
+        order_status: Optional[str] = None,
+        search: Optional[str] = None,
+        min_amount: Optional[Decimal] = None,
+        max_amount: Optional[Decimal] = None,
         page: int = 1,
         page_size: int = 25,
         order_by: str = "created_at",
         order_dir: str = "desc"
     ) -> Dict[str, Any]:
         """
-        Get paginated list of individual sales with details.
+        Get paginated list of individual sales with details and advanced filters.
         
         Args:
             start: Start datetime
@@ -449,6 +453,10 @@ class ReportsRepository:
             branch_id: Optional branch filter
             sale_type: Optional sale type filter (POS/ECOMMERCE)
             payment_method: Optional payment method filter
+            order_status: Optional order status filter (PENDING/CONFIRMED/COMPLETED/CANCELLED)
+            search: Optional text search (sale_number or customer_name)
+            min_amount: Optional minimum amount filter
+            max_amount: Optional maximum amount filter
             page: Page number (1-indexed)
             page_size: Number of items per page
             order_by: Column to order by (created_at, total_amount, sale_number)
@@ -486,7 +494,32 @@ class ReportsRepository:
             query = query.filter(Sale.sale_type == sale_type)
         
         if payment_method is not None:
-            query = query.filter(Sale.payment_method == payment_method)
+            # Case-insensitive comparison for payment_method
+            query = query.filter(func.lower(Sale.payment_method) == payment_method.lower())
+        
+        if order_status is not None:
+            # Convert string to OrderStatus enum
+            try:
+                status_enum = OrderStatus(order_status)
+                query = query.filter(Sale.order_status == status_enum)
+            except ValueError:
+                # Invalid status value, ignore filter
+                pass
+        
+        # Text search: sale_number OR customer_name (case-insensitive)
+        if search is not None and search.strip():
+            search_term = f"%{search.strip()}%"
+            query = query.filter(
+                (Sale.sale_number.ilike(search_term)) |
+                (Sale.customer_name.ilike(search_term))
+            )
+        
+        # Amount range filters
+        if min_amount is not None:
+            query = query.filter(Sale.total_amount >= min_amount)
+        
+        if max_amount is not None:
+            query = query.filter(Sale.total_amount <= max_amount)
         
         # Group by all non-aggregated columns
         query = query.group_by(

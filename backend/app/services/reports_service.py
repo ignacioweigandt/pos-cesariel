@@ -541,13 +541,17 @@ class ReportsService:
         branch_id: Optional[int] = None,
         sale_type: Optional[str] = None,
         payment_method: Optional[str] = None,
+        order_status: Optional[str] = None,
+        search: Optional[str] = None,
+        min_amount: Optional[Decimal] = None,
+        max_amount: Optional[Decimal] = None,
         page: int = 1,
         page_size: int = 25,
         order_by: str = "created_at",
         order_dir: str = "desc"
     ):
         """
-        Get paginated list of individual sales.
+        Get paginated list of individual sales with advanced filters.
         
         Args:
             user: Current user
@@ -556,6 +560,10 @@ class ReportsService:
             branch_id: Optional branch filter
             sale_type: Optional sale type filter
             payment_method: Optional payment method filter
+            order_status: Optional order status filter
+            search: Optional text search (sale_number or customer_name)
+            min_amount: Optional minimum amount filter
+            max_amount: Optional maximum amount filter
             page: Page number (1-indexed)
             page_size: Number of items per page
             order_by: Column to order by
@@ -577,6 +585,10 @@ class ReportsService:
             branch_id=effective_branch_id,
             sale_type=sale_type,
             payment_method=payment_method,
+            order_status=order_status,
+            search=search,
+            min_amount=min_amount,
+            max_amount=max_amount,
             page=page,
             page_size=page_size,
             order_by=order_by,

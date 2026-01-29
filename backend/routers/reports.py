@@ -305,6 +305,10 @@ async def get_sales_list(
     branch_id: Optional[int] = None,
     sale_type: Optional[str] = None,
     payment_method: Optional[str] = None,
+    order_status: Optional[str] = None,
+    search: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
     page: int = 1,
     page_size: int = 25,
     order_by: str = "created_at",
@@ -313,13 +317,17 @@ async def get_sales_list(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get paginated list of individual sales with full details.
+    Get paginated list of individual sales with full details and advanced filters.
     
     - **start_date**: Start date
     - **end_date**: End date
     - **branch_id**: Optional branch filter
     - **sale_type**: Optional sale type filter (POS/ECOMMERCE)
     - **payment_method**: Optional payment method filter
+    - **order_status**: Optional order status filter (PENDING/CONFIRMED/COMPLETED/CANCELLED)
+    - **search**: Optional text search (sale_number or customer_name)
+    - **min_amount**: Optional minimum amount filter
+    - **max_amount**: Optional maximum amount filter
     - **page**: Page number (default: 1)
     - **page_size**: Items per page (default: 25, max: 100)
     - **order_by**: Sort column (created_at, total_amount, sale_number)
@@ -328,11 +336,17 @@ async def get_sales_list(
     Returns paginated list of sales with metadata.
     """
     try:
+        from decimal import Decimal
+        
         # Validate page_size
         if page_size > 100:
             page_size = 100
         if page_size < 1:
             page_size = 25
+        
+        # Convert float amounts to Decimal
+        min_amount_decimal = Decimal(str(min_amount)) if min_amount is not None else None
+        max_amount_decimal = Decimal(str(max_amount)) if max_amount is not None else None
         
         service = ReportsService(db)
         return service.get_sales_list(
@@ -342,6 +356,10 @@ async def get_sales_list(
             branch_id=branch_id,
             sale_type=sale_type,
             payment_method=payment_method,
+            order_status=order_status,
+            search=search,
+            min_amount=min_amount_decimal,
+            max_amount=max_amount_decimal,
             page=page,
             page_size=page_size,
             order_by=order_by,
