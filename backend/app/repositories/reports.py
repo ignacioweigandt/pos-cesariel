@@ -235,6 +235,64 @@ class ReportsRepository:
             func.sum(SaleItem.quantity).desc()
         ).limit(limit).all()
     
+    # ==================== BRAND ANALYTICS ====================
+    
+    def get_top_brands(
+        self,
+        start: datetime,
+        end: datetime,
+        branch_id: Optional[int] = None,
+        limit: int = 10,
+        order_by: str = "revenue"
+    ) -> List[Any]:
+        """
+        Get top selling brands for a period.
+        
+        Args:
+            start: Start datetime
+            end: End datetime
+            branch_id: Optional branch filter
+            limit: Maximum number of brands to return
+            order_by: Sort by 'quantity' or 'revenue'
+            
+        Returns:
+            List of tuples (brand_id, brand_name, products_count, total_quantity, total_revenue)
+        """
+        from app.models import Brand
+        
+        query = self.db.query(
+            Brand.id.label('brand_id'),
+            Brand.name.label('brand_name'),
+            func.count(func.distinct(Product.id)).label('products_count'),
+            func.sum(SaleItem.quantity).label('total_quantity'),
+            func.sum(SaleItem.total_price).label('total_revenue')
+        ).join(
+            Product, Product.brand_id == Brand.id
+        ).join(
+            SaleItem, SaleItem.product_id == Product.id
+        ).join(
+            Sale, Sale.id == SaleItem.sale_id
+        ).filter(
+            Sale.created_at >= start,
+            Sale.created_at <= end,
+            Sale.order_status != OrderStatus.CANCELLED,
+            Product.brand_id.isnot(None)  # Only products with assigned brand
+        )
+        
+        if branch_id is not None:
+            query = query.filter(Sale.branch_id == branch_id)
+        
+        # Group by brand
+        query = query.group_by(Brand.id, Brand.name)
+        
+        # Order by specified metric
+        if order_by == "quantity":
+            query = query.order_by(func.sum(SaleItem.quantity).desc())
+        else:  # Default to revenue
+            query = query.order_by(func.sum(SaleItem.total_price).desc())
+        
+        return query.limit(limit).all()
+    
     # ==================== BRANCH ANALYTICS ====================
     
     def get_branch_sales(
@@ -277,7 +335,7 @@ class ReportsRepository:
         exclude_cancelled: bool = True
     ) -> List[Any]:
         """
-        Get branch sales data optimized for charts.
+        Get branch sales data with complete details.
         
         Args:
             start: Start datetime
@@ -285,11 +343,13 @@ class ReportsRepository:
             exclude_cancelled: Whether to exclude cancelled sales
             
         Returns:
-            List of tuples (branch_name, total_sales)
+            List of objects with attributes: id, name, total_sales, orders_count
         """
         query = self.db.query(
+            Branch.id,
             Branch.name,
-            func.sum(Sale.total_amount).label('total_sales')
+            func.sum(Sale.total_amount).label('total_sales'),
+            func.count(Sale.id).label('orders_count')
         ).join(Sale).filter(
             Sale.created_at >= start,
             Sale.created_at <= end
@@ -298,7 +358,7 @@ class ReportsRepository:
         if exclude_cancelled:
             query = query.filter(Sale.order_status != OrderStatus.CANCELLED)
         
-        return query.group_by(Branch.name).order_by(
+        return query.group_by(Branch.id, Branch.name).order_by(
             func.sum(Sale.total_amount).desc()
         ).all()
     
@@ -367,3 +427,106 @@ class ReportsRepository:
             query = query.filter(Sale.branch_id == branch_id)
         
         return query.group_by(Sale.sale_type).all()
+    
+    def get_sales_list(
+        self,
+        start: datetime,
+        end: datetime,
+        branch_id: Optional[int] = None,
+        sale_type: Optional[str] = None,
+        payment_method: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 25,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ) -> Dict[str, Any]:
+        """
+        Get paginated list of individual sales with details.
+        
+        Args:
+            start: Start datetime
+            end: End datetime
+            branch_id: Optional branch filter
+            sale_type: Optional sale type filter (POS/ECOMMERCE)
+            payment_method: Optional payment method filter
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+            order_by: Column to order by (created_at, total_amount, sale_number)
+            order_dir: Order direction (asc/desc)
+            
+        Returns:
+            Dict with 'items', 'total', 'page', 'page_size', 'total_pages'
+        """
+        # Base query with joins
+        query = self.db.query(
+            Sale.id,
+            Sale.sale_number,
+            Sale.sale_type,
+            Branch.name.label('branch_name'),
+            Sale.customer_name,
+            func.count(SaleItem.id).label('items_count'),
+            Sale.total_amount,
+            Sale.payment_method,
+            Sale.order_status,
+            Sale.created_at
+        ).join(
+            Branch, Sale.branch_id == Branch.id
+        ).outerjoin(
+            SaleItem, SaleItem.sale_id == Sale.id
+        ).filter(
+            Sale.created_at >= start,
+            Sale.created_at <= end
+        )
+        
+        # Apply filters
+        if branch_id is not None:
+            query = query.filter(Sale.branch_id == branch_id)
+        
+        if sale_type is not None:
+            query = query.filter(Sale.sale_type == sale_type)
+        
+        if payment_method is not None:
+            query = query.filter(Sale.payment_method == payment_method)
+        
+        # Group by all non-aggregated columns
+        query = query.group_by(
+            Sale.id,
+            Sale.sale_number,
+            Sale.sale_type,
+            Branch.name,
+            Sale.customer_name,
+            Sale.total_amount,
+            Sale.payment_method,
+            Sale.order_status,
+            Sale.created_at
+        )
+        
+        # Count total before pagination
+        total = query.count()
+        
+        # Apply ordering
+        order_column = Sale.created_at
+        if order_by == "total_amount":
+            order_column = Sale.total_amount
+        elif order_by == "sale_number":
+            order_column = Sale.sale_number
+        
+        if order_dir == "asc":
+            query = query.order_by(order_column.asc())
+        else:
+            query = query.order_by(order_column.desc())
+        
+        # Apply pagination
+        offset = (page - 1) * page_size
+        items = query.offset(offset).limit(page_size).all()
+        
+        # Calculate total pages
+        total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+        
+        return {
+            'items': items,
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': total_pages
+        }

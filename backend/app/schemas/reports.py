@@ -61,6 +61,33 @@ class SaleTypeData(BaseModel):
         }
 
 
+class TopBrand(BaseModel):
+    """Top selling brand data with strong typing."""
+    brand_id: int = Field(..., ge=1, description="Brand ID")
+    brand_name: str = Field(..., min_length=1, max_length=100, description="Brand name")
+    products_count: int = Field(..., ge=0, description="Number of products sold from this brand")
+    quantity_sold: int = Field(..., ge=0, description="Total units sold")
+    total_revenue: Decimal = Field(..., ge=0, description="Total revenue generated")
+    
+    class Config:
+        json_encoders = {
+            Decimal: str
+        }
+
+
+class BranchData(BaseModel):
+    """Branch sales data with complete details."""
+    branch_id: int = Field(..., ge=1, description="Branch ID")
+    branch_name: str = Field(..., min_length=1, max_length=100, description="Branch name")
+    total_sales: Decimal = Field(..., ge=0, description="Total sales amount")
+    orders_count: int = Field(..., ge=0, description="Number of orders")
+    
+    class Config:
+        json_encoders = {
+            Decimal: str
+        }
+
+
 # ==================== DASHBOARD SCHEMAS ====================
 
 class DashboardStats(BaseModel):
@@ -215,3 +242,33 @@ class SalesReportWithMetadata(BaseModel):
     """Sales report with generation metadata."""
     report: SalesReport = Field(..., description="The actual report data")
     metadata: ReportMetadata = Field(..., description="Report generation metadata")
+
+
+# ==================== SALES LIST (DETAILED TABLE) ====================
+
+class SaleListItem(BaseModel):
+    """Individual sale item for detailed sales table."""
+    id: int = Field(..., description="Sale ID")
+    sale_number: str = Field(..., description="Unique sale number")
+    sale_type: str = Field(..., description="Sale type (POS/ECOMMERCE)")
+    branch_name: str = Field(..., description="Branch name")
+    customer_name: Optional[str] = Field(None, description="Customer name (if available)")
+    items_count: int = Field(..., ge=0, description="Number of items in sale")
+    total_amount: Decimal = Field(..., ge=0, description="Total sale amount")
+    payment_method: str = Field(..., description="Payment method used")
+    order_status: Optional[str] = Field(None, description="Order status (for e-commerce)")
+    created_at: str = Field(..., description="Sale timestamp (ISO format)")
+    
+    class Config:
+        json_encoders = {
+            Decimal: str
+        }
+
+
+class SalesListResponse(BaseModel):
+    """Paginated response for sales list."""
+    items: List[SaleListItem] = Field(..., description="List of sales")
+    total: int = Field(..., ge=0, description="Total number of sales (before pagination)")
+    page: int = Field(..., ge=1, description="Current page number")
+    page_size: int = Field(..., ge=1, description="Number of items per page")
+    total_pages: int = Field(..., ge=0, description="Total number of pages")

@@ -251,3 +251,40 @@ prune: ## Limpiar recursos Docker no utilizados
 	else \
 		echo "❌ Operación cancelada"; \
 	fi
+
+# ============================================
+# PRODUCCIÓN
+# ============================================
+
+.PHONY: build-prod deploy-prod logs-prod down-prod status-prod
+
+build-prod: ## Build production images
+	docker compose -f docker-compose.prod.yml build
+	@echo "✅ Production images built successfully"
+
+deploy-prod: ## Deploy to production
+	@echo "🚀 Deploying to production..."
+	docker compose -f docker-compose.prod.yml up -d
+	@echo "✅ Production deployment complete"
+	@echo "📍 Frontend: http://localhost:3000"
+	@echo "📍 E-commerce: http://localhost:3001"
+	@echo "📍 API: http://localhost:8000"
+
+logs-prod: ## View production logs
+	docker compose -f docker-compose.prod.yml logs -f
+
+down-prod: ## Stop production services
+	docker compose -f docker-compose.prod.yml down
+
+status-prod: ## Check production services status
+	docker compose -f docker-compose.prod.yml ps
+
+restart-prod: ## Restart production services
+	docker compose -f docker-compose.prod.yml restart
+
+health-prod: ## Check health of production services
+	@echo "Checking production services health..."
+	@curl -f http://localhost:8000/ || echo "❌ Backend unhealthy"
+	@curl -f http://localhost:3000/ || echo "❌ Frontend unhealthy"
+	@curl -f http://localhost:3001/ || echo "❌ E-commerce unhealthy"
+

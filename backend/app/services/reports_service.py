@@ -20,6 +20,7 @@ from app.schemas.reports import (
     DailySales,
     ChartData,
     TopProduct,
+    TopBrand,
     BranchSalesData,
     PaymentMethodData,
     SaleTypeData
@@ -448,9 +449,9 @@ class ReportsService:
         user: User,
         start_date: date,
         end_date: date
-    ) -> List[ChartData]:
+    ):
         """
-        Get branch comparison data for charts (admin only).
+        Get branch comparison data with complete details (admin only).
         
         Args:
             user: Current user
@@ -458,11 +459,13 @@ class ReportsService:
             end_date: End date
             
         Returns:
-            List of ChartData points
+            List of BranchData with complete branch information
             
         Raises:
             PermissionError: If user is not admin
         """
+        from app.schemas.reports import BranchData
+        
         # Only admins can see branch comparison
         if user.role != UserRole.ADMIN:
             raise PermissionError("Admin access required to view branch comparison")
@@ -476,9 +479,131 @@ class ReportsService:
         )
         
         return [
-            ChartData(
-                name=b.name,
-                value=b.total_sales or Decimal(0)
+            BranchData(
+                branch_id=b.id,
+                branch_name=b.name,
+                total_sales=b.total_sales or Decimal(0),
+                orders_count=b.orders_count or 0
             )
             for b in branches_data
         ]
+    
+    def get_brands_chart_data(
+        self,
+        user: User,
+        start_date: date,
+        end_date: date,
+        branch_id: Optional[int] = None,
+        limit: int = 10
+    ) -> List[TopBrand]:
+        """
+        Get top brands data with complete details.
+        
+        Args:
+            user: Current user
+            start_date: Start date
+            end_date: End date
+            branch_id: Optional branch filter
+            limit: Number of brands to return
+            
+        Returns:
+            List of TopBrand with complete brand data (id, name, products, quantity, revenue)
+        """
+        effective_branch_id = self._validate_branch_access(user, branch_id)
+        
+        start_datetime = self._date_to_datetime(start_date)
+        end_datetime = self._date_to_datetime(end_date, end_of_day=True)
+        
+        brands_data = self.reports_repo.get_top_brands(
+            start=start_datetime,
+            end=end_datetime,
+            branch_id=effective_branch_id,
+            limit=limit,
+            order_by="revenue"
+        )
+        
+        return [
+            TopBrand(
+                brand_id=b.brand_id,
+                brand_name=b.brand_name,
+                products_count=b.products_count or 0,
+                quantity_sold=b.total_quantity or 0,  # Repository returns 'total_quantity'
+                total_revenue=b.total_revenue or Decimal(0)
+            )
+            for b in brands_data
+        ]
+    
+    def get_sales_list(
+        self,
+        user: User,
+        start_date: date,
+        end_date: date,
+        branch_id: Optional[int] = None,
+        sale_type: Optional[str] = None,
+        payment_method: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 25,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ):
+        """
+        Get paginated list of individual sales.
+        
+        Args:
+            user: Current user
+            start_date: Start date
+            end_date: End date
+            branch_id: Optional branch filter
+            sale_type: Optional sale type filter
+            payment_method: Optional payment method filter
+            page: Page number (1-indexed)
+            page_size: Number of items per page
+            order_by: Column to order by
+            order_dir: Order direction (asc/desc)
+            
+        Returns:
+            SalesListResponse with paginated data
+        """
+        from app.schemas.reports import SalesListResponse, SaleListItem
+        
+        effective_branch_id = self._validate_branch_access(user, branch_id)
+        
+        start_datetime = self._date_to_datetime(start_date)
+        end_datetime = self._date_to_datetime(end_date, end_of_day=True)
+        
+        result = self.reports_repo.get_sales_list(
+            start=start_datetime,
+            end=end_datetime,
+            branch_id=effective_branch_id,
+            sale_type=sale_type,
+            payment_method=payment_method,
+            page=page,
+            page_size=page_size,
+            order_by=order_by,
+            order_dir=order_dir
+        )
+        
+        # Transform to Pydantic models
+        items = [
+            SaleListItem(
+                id=sale.id,
+                sale_number=sale.sale_number,
+                sale_type=sale.sale_type.value if hasattr(sale.sale_type, 'value') else str(sale.sale_type),
+                branch_name=sale.branch_name,
+                customer_name=sale.customer_name,
+                items_count=sale.items_count or 0,
+                total_amount=sale.total_amount or Decimal(0),
+                payment_method=sale.payment_method or "N/A",
+                order_status=sale.order_status.value if sale.order_status and hasattr(sale.order_status, 'value') else None,
+                created_at=sale.created_at.isoformat() if sale.created_at else ""
+            )
+            for sale in result['items']
+        ]
+        
+        return SalesListResponse(
+            items=items,
+            total=result['total'],
+            page=result['page'],
+            page_size=result['page_size'],
+            total_pages=result['total_pages']
+        )

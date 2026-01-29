@@ -20,15 +20,27 @@ VALID_SIZES_BY_CATEGORY = {
 CATEGORY_NAME_TO_TYPE = {
     "calzado deportivo": "calzado",
     "calzado": "calzado",
+    "zapatillas": "calzado",
+    "zapatos": "calzado",
+    "botas": "calzado",
+    "sandalias": "calzado",
     "indumentaria superior": "indumentaria", 
     "indumentaria inferior": "indumentaria",
     "indumentaria": "indumentaria",
     "ropa": "indumentaria",
+    "remeras": "indumentaria",
+    "camisetas": "indumentaria",
+    "pantalones": "indumentaria",
+    "shorts": "indumentaria",
+    "buzos": "indumentaria",
+    "camperas": "indumentaria",
     "accesorios deportivos": "accesorios",
-    "accesorios": "accesorios"
+    "accesorios": "accesorios",
+    "medias": "accesorios",
+    "gorras": "accesorios"
 }
 
-def get_category_type(category_name: str) -> str:
+def get_category_type(category_name: str) -> Optional[str]:
     """
     Determina el tipo de categoría basado en el nombre.
     
@@ -36,16 +48,19 @@ def get_category_type(category_name: str) -> str:
         category_name (str): Nombre de la categoría
         
     Returns:
-        str: Tipo de categoría ('calzado', 'indumentaria', 'accesorios')
+        Optional[str]: Tipo de categoría ('calzado', 'indumentaria', 'accesorios') o None si no se reconoce
     """
+    if not category_name:
+        return None
+        
     category_name_lower = category_name.lower()
     
     for name_pattern, category_type in CATEGORY_NAME_TO_TYPE.items():
         if name_pattern in category_name_lower:
             return category_type
     
-    # Por defecto, si no coincide con ningún patrón
-    return "indumentaria"
+    # Si no coincide con ningún patrón, retornar None (permitir cualquier talle)
+    return None
 
 def get_valid_sizes_for_category(category_name: str) -> List[str]:
     """
@@ -121,6 +136,13 @@ def validate_sizes_for_product(db: Session, sizes: List[str], product_id: int) -
         Dict[str, List[str]]: Diccionario con 'valid' e 'invalid' talles
     """
     valid_sizes = get_valid_sizes_for_product(db, product_id)
+    
+    # Si no hay talles válidos definidos (categoría no reconocida), aceptar todos
+    if not valid_sizes:
+        return {
+            "valid": sizes,
+            "invalid": []
+        }
     
     valid = [size for size in sizes if size in valid_sizes]
     invalid = [size for size in sizes if size not in valid_sizes]

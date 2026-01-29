@@ -65,9 +65,9 @@ export function StatsCards({
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat) => (
+      {stats.map((stat, index) => (
         <div
-          key={stat.name}
+          key={`stat-${stat.name}-${index}`}
           className="bg-white overflow-hidden shadow rounded-lg"
         >
           <div className="p-5">

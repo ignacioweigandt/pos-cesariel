@@ -19,7 +19,7 @@ export function BranchSalesTable({ branches, isAdmin }: BranchSalesTableProps) {
         <div className="space-y-4">
           {branches.map((branch, index) => (
             <div
-              key={branch.branch_name}
+              key={`branch-${branch.branch_name}-${index}`}
               className="flex items-center justify-between p-4 border rounded-lg"
             >
               <div className="flex items-center space-x-3">

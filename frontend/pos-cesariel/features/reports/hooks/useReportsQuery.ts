@@ -14,6 +14,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { apiClient } from '@/shared/api/client';
+import type { BranchData } from '../types/reports.types';
 
 // ============================================================================
 // Types (matching backend schemas from backend/app/schemas/reports.py)
@@ -49,12 +50,8 @@ export interface TopProduct {
   total_revenue: number;
 }
 
-export interface BranchSalesData {
-  branch_id: number;
-  branch_name: string;
-  total_sales: number;
-  orders_count: number;
-}
+// Legacy alias for backward compatibility
+export type BranchSalesData = BranchData;
 
 // ============================================================================
 // Query Keys (for cache management)
@@ -134,14 +131,21 @@ async function fetchProductsChart(
 async function fetchBranchesChart(
   startDate: string,
   endDate: string
-): Promise<BranchSalesData[]> {
+): Promise<BranchData[]> {
   const params = {
     start_date: startDate,
     end_date: endDate,
   };
 
   const response = await apiClient.get('/reports/branches-chart', { params });
-  return response.data;
+  
+  // Transform backend Decimal strings to numbers
+  return response.data.map((branch: any) => ({
+    branch_id: branch.branch_id,
+    branch_name: branch.branch_name,
+    total_sales: Number(branch.total_sales || 0),
+    orders_count: branch.orders_count,
+  }));
 }
 
 // ============================================================================
@@ -235,10 +239,75 @@ export function useBranchesChart(
   startDate: string,
   endDate: string,
   enabled = true
-): UseQueryResult<BranchSalesData[], Error> {
+): UseQueryResult<BranchData[], Error> {
   return useQuery({
     queryKey: reportsKeys.branchesChart(startDate, endDate),
     queryFn: () => fetchBranchesChart(startDate, endDate),
+    enabled: enabled && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// ==================== NEW HOOKS FOR ADVANCED REPORTS ====================
+
+/**
+ * Fetch top brands data for charts
+ * @param startDate - Start date
+ * @param endDate - End date
+ * @param branchId - Optional branch filter
+ * @param enabled - Whether to run the query
+ * @param limit - Maximum number of brands (default: 10)
+ */
+export function useBrandsChart(
+  startDate: string,
+  endDate: string,
+  branchId?: number,
+  enabled = true,
+  limit = 10
+): UseQueryResult<TopProduct[], Error> {
+  return useQuery({
+    queryKey: [...reportsKeys.all, 'brands-chart', startDate, endDate, branchId, limit] as const,
+    queryFn: async () => {
+      const params: any = {
+        start_date: startDate,
+        end_date: endDate,
+        limit,
+      };
+      if (branchId) params.branch_id = branchId;
+
+      const response = await apiClient.get('/reports/brands-chart', { params });
+      return response.data;
+    },
+    enabled: enabled && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/**
+ * Fetch detailed sales report with payment methods and sale types
+ * @param startDate - Start date
+ * @param endDate - End date
+ * @param branchId - Optional branch filter
+ * @param enabled - Whether to run the query
+ */
+export function useDetailedSalesReport(
+  startDate: string,
+  endDate: string,
+  branchId?: number,
+  enabled = true
+): UseQueryResult<any, Error> {
+  return useQuery({
+    queryKey: [...reportsKeys.all, 'detailed-sales', startDate, endDate, branchId] as const,
+    queryFn: async () => {
+      const params: any = {
+        start_date: startDate,
+        end_date: endDate,
+      };
+      if (branchId) params.branch_id = branchId;
+
+      const response = await apiClient.get('/reports/sales/detailed', { params });
+      return response.data;
+    },
     enabled: enabled && !!startDate && !!endDate,
     staleTime: 5 * 60 * 1000,
   });

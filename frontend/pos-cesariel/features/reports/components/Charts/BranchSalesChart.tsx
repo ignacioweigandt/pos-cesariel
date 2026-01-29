@@ -10,10 +10,10 @@ import {
   Cell,
 } from "recharts";
 import { BuildingStorefrontIcon, TrophyIcon } from "@heroicons/react/24/outline";
-import type { ChartData } from "../../types/reports.types";
+import type { BranchData } from "../../types/reports.types";
 
 interface BranchSalesChartProps {
-  data: ChartData[];
+  data: BranchData[];
   loading: boolean;
   isAdmin: boolean;
 }
@@ -65,13 +65,19 @@ export function BranchSalesChart({
     );
   }
 
+  // Transform data to ensure numbers (backend sends Decimal as strings)
+  const chartData = data.map(branch => ({
+    ...branch,
+    total_sales: Number(branch.total_sales || 0)
+  }));
+
   // Calculate statistics
-  const totalSales = data.reduce((sum, branch) => sum + branch.value, 0);
-  const maxSales = Math.max(...data.map((b) => b.value));
-  const minSales = Math.min(...data.map((b) => b.value));
-  const avgSales = totalSales / data.length;
-  const topBranch = data.find((b) => b.value === maxSales);
-  const bottomBranch = data.find((b) => b.value === minSales);
+  const totalSales = chartData.reduce((sum, branch) => sum + branch.total_sales, 0);
+  const maxSales = Math.max(...chartData.map((b) => b.total_sales));
+  const minSales = Math.min(...chartData.map((b) => b.total_sales));
+  const avgSales = totalSales / chartData.length;
+  const topBranch = chartData.find((b) => b.total_sales === maxSales);
+  const bottomBranch = chartData.find((b) => b.total_sales === minSales);
 
   // Format currency
   const formatCurrency = (value: number) => {
@@ -136,7 +142,7 @@ export function BranchSalesChart({
               <p className="text-xs text-green-600 font-medium">Mejor</p>
             </div>
             <p className="text-sm font-bold text-green-900 truncate">
-              {topBranch?.name}
+              {topBranch?.branch_name || "N/A"}
             </p>
             <p className="text-xs text-green-700">
               {formatCurrency(maxSales)}
@@ -149,7 +155,7 @@ export function BranchSalesChart({
               Menor Venta
             </p>
             <p className="text-sm font-bold text-amber-900 truncate">
-              {bottomBranch?.name}
+              {bottomBranch?.branch_name || "N/A"}
             </p>
             <p className="text-xs text-amber-700">
               {formatCurrency(minSales)}
@@ -168,10 +174,10 @@ export function BranchSalesChart({
         {/* Bar Chart */}
         <div className="h-80 mb-4">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis
-                dataKey="name"
+                dataKey="branch_name"
                 tick={{ fill: "#6b7280", fontSize: 12 }}
                 tickLine={{ stroke: "#d1d5db" }}
               />
@@ -193,9 +199,9 @@ export function BranchSalesChart({
                 }}
               />
               <Legend />
-              <Bar dataKey="value" name="Ventas" radius={[8, 8, 0, 0]}>
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getBarColor(entry.value, index)} />
+              <Bar dataKey="total_sales" name="Ventas" radius={[8, 8, 0, 0]}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={getBarColor(entry.total_sales, index)} />
                 ))}
               </Bar>
             </BarChart>
@@ -208,30 +214,30 @@ export function BranchSalesChart({
             Detalle por Sucursal
           </h4>
           <div className="space-y-2">
-            {data
-              .sort((a, b) => b.value - a.value)
+            {chartData
+              .sort((a, b) => b.total_sales - a.total_sales)
               .map((branch, index) => (
                 <div
-                  key={branch.name}
+                  key={`branch-${branch.branch_name}-${index}`}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
                     <div
                       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                      style={{ backgroundColor: getBarColor(branch.value, index) }}
+                      style={{ backgroundColor: getBarColor(branch.total_sales, index) }}
                     >
                       {index + 1}
                     </div>
                     <span className="font-medium text-gray-900">
-                      {branch.name}
+                      {branch.branch_name}
                     </span>
                   </div>
                   <div className="text-right">
                     <div className="font-semibold text-gray-900">
-                      {formatCurrency(branch.value)}
+                      {formatCurrency(branch.total_sales)}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {calculatePercentage(branch.value)}% del total
+                      {calculatePercentage(branch.total_sales)}% del total
                     </div>
                   </div>
                 </div>

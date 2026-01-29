@@ -10,6 +10,8 @@ export {
   useDailySales,
   useProductsChart,
   useBranchesChart,
+  useBrandsChart,
+  useDetailedSalesReport,
   reportsKeys,
 } from "./useReportsQuery";
 export type {

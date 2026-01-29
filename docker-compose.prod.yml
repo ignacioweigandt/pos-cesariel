@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  db:
+    image: postgres:15
+    container_name: pos-cesariel-db-prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pos_cesariel}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - pos-cesariel-network-prod
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend FastAPI (Producción)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: pos-cesariel-backend:production
+    container_name: pos-cesariel-backend-prod
+    restart: always
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - .env.production
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-pos_cesariel}
+      - ENV=production
+      - DEBUG=false
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pos-cesariel-network-prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Next.js POS Admin (Producción - Build optimizado)
+  frontend:
+    build:
+      context: ./frontend/pos-cesariel
+      dockerfile: Dockerfile.prod
+    image: pos-cesariel-frontend:production
+    container_name: pos-cesariel-frontend-prod
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    depends_on:
+      - backend
+    networks:
+      - pos-cesariel-network-prod
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # E-commerce Frontend (Producción)
+  ecommerce:
+    build:
+      context: ./ecommerce
+      dockerfile: Dockerfile.prod
+    image: pos-cesariel-ecommerce:production
+    container_name: pos-cesariel-ecommerce-prod
+    restart: always
+    ports:
+      - "${ECOMMERCE_PORT:-3001}:3001"
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://backend:8000
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      - PORT=3001
+    depends_on:
+      - backend
+    networks:
+      - pos-cesariel-network-prod
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy (Opcional pero recomendado)
+  nginx:
+    image: nginx:alpine
+    container_name: pos-cesariel-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - ecommerce
+      - backend
+    networks:
+      - pos-cesariel-network-prod
+
+volumes:
+  postgres_data_prod:
+    driver: local
+
+networks:
+  pos-cesariel-network-prod:
+    driver: bridge

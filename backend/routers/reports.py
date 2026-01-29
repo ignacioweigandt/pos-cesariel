@@ -18,7 +18,10 @@ from app.schemas.reports import (
     SalesReport,
     DetailedSalesReport,
     DailySales,
-    ChartData
+    ChartData,
+    TopBrand,
+    SalesListResponse,
+    BranchData
 )
 from auth_compat import get_current_active_user
 
@@ -220,7 +223,7 @@ async def get_products_chart_data(
         )
 
 
-@router.get("/branches-chart", response_model=List[ChartData])
+@router.get("/branches-chart", response_model=List[BranchData])
 async def get_branches_chart_data(
     start_date: date,
     end_date: date,
@@ -228,12 +231,12 @@ async def get_branches_chart_data(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Get branch sales comparison data for charts (admin only).
+    Get branch sales comparison data with full details (admin only).
     
     - **start_date**: Start date
     - **end_date**: End date
     
-    Returns sales data by branch suitable for bar/column charts.
+    Returns complete branch data including id, name, total sales, and orders count.
     Admin access required.
     """
     try:
@@ -252,4 +255,110 @@ async def get_branches_chart_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error fetching branches chart data: {str(e)}"
+        )
+
+
+@router.get("/brands-chart", response_model=List[TopBrand])
+async def get_brands_chart_data(
+    start_date: date,
+    end_date: date,
+    limit: int = 10,
+    branch_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get top selling brands data with complete details.
+    
+    - **start_date**: Start date
+    - **end_date**: End date
+    - **limit**: Maximum number of brands (default: 10)
+    - **branch_id**: Optional branch filter
+    
+    Returns complete brand data including id, name, products count, quantity sold, and total revenue.
+    """
+    try:
+        service = ReportsService(db)
+        return service.get_brands_chart_data(
+            user=current_user,
+            start_date=start_date,
+            end_date=end_date,
+            branch_id=branch_id,
+            limit=limit
+        )
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching brands chart data: {str(e)}"
+        )
+
+
+@router.get("/sales-list", response_model=SalesListResponse)
+async def get_sales_list(
+    start_date: date,
+    end_date: date,
+    branch_id: Optional[int] = None,
+    sale_type: Optional[str] = None,
+    payment_method: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 25,
+    order_by: str = "created_at",
+    order_dir: str = "desc",
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get paginated list of individual sales with full details.
+    
+    - **start_date**: Start date
+    - **end_date**: End date
+    - **branch_id**: Optional branch filter
+    - **sale_type**: Optional sale type filter (POS/ECOMMERCE)
+    - **payment_method**: Optional payment method filter
+    - **page**: Page number (default: 1)
+    - **page_size**: Items per page (default: 25, max: 100)
+    - **order_by**: Sort column (created_at, total_amount, sale_number)
+    - **order_dir**: Sort direction (asc/desc)
+    
+    Returns paginated list of sales with metadata.
+    """
+    try:
+        # Validate page_size
+        if page_size > 100:
+            page_size = 100
+        if page_size < 1:
+            page_size = 25
+        
+        service = ReportsService(db)
+        return service.get_sales_list(
+            user=current_user,
+            start_date=start_date,
+            end_date=end_date,
+            branch_id=branch_id,
+            sale_type=sale_type,
+            payment_method=payment_method,
+            page=page,
+            page_size=page_size,
+            order_by=order_by,
+            order_dir=order_dir
+        )
+    except PermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching sales list: {str(e)}"
         )
