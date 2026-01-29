@@ -1,26 +1,68 @@
 """
 Aplicación principal del backend POS Cesariel.
 
-Esta es la aplicación FastAPI principal que configura el servidor,
-middleware, rutas y conexión a base de datos para el sistema POS.
+Este es el punto de entrada de la API FastAPI que configura y orquesta
+todos los componentes del sistema: middleware, routers, autenticación,
+base de datos y comunicación en tiempo real.
 
-El sistema POS Cesariel es una solución completa que incluye:
-- Backend API con FastAPI para operaciones CRUD y lógica de negocio
-- Frontend administrativo (Next.js) para gestión de inventario, ventas y usuarios
-- Frontend e-commerce (Next.js) para tienda online integrada
-- Base de datos PostgreSQL con SQLAlchemy ORM
-- Sistema de autenticación JWT con roles diferenciados
-- Comunicación en tiempo real via WebSockets
-- Integración con servicios de terceros (Cloudinary, WhatsApp)
+Arquitectura del sistema:
+    ┌─────────────────────────────────────────────┐
+    │  Clientes (POS Admin + E-commerce)          │
+    └─────────────────┬───────────────────────────┘
+                      │ HTTP/WebSocket
+    ┌─────────────────▼───────────────────────────┐
+    │  FastAPI App (main.py)                      │
+    │  ├─ CORS Middleware                         │
+    │  ├─ Rate Limiting                           │
+    │  ├─ Authentication (JWT)                    │
+    │  └─ Routers (endpoints modulares)           │
+    └─────────────────┬───────────────────────────┘
+                      │
+    ┌─────────────────▼───────────────────────────┐
+    │  Capa de Negocio (Services + Repositories)  │
+    └─────────────────┬───────────────────────────┘
+                      │
+    ┌─────────────────▼───────────────────────────┐
+    │  PostgreSQL Database                        │
+    └─────────────────────────────────────────────┘
 
-Arquitectura:
-- API REST: Endpoints organizados por módulos funcionales
-- Multi-tenant: Soporte para múltiples sucursales
-- Role-based access: Admin, Manager, Seller, E-commerce
-- Real-time sync: Inventario sincronizado entre POS y e-commerce
+Módulos del sistema:
+    - Auth: Autenticación JWT y gestión de sesiones
+    - Users & Branches: Administración multi-tenant
+    - Products & Categories: Inventario y catálogo
+    - Sales & Reports: POS y analytics
+    - E-commerce: API pública para tienda online
+    - WebSockets: Sincronización en tiempo real
+    - Config: Configuración global del sistema
+
+Características clave:
+    - Multi-tenant por sucursal (branch-based isolation)
+    - Role-based access control (ADMIN, MANAGER, SELLER, ECOMMERCE)
+    - Real-time updates via WebSockets
+    - Rate limiting para prevenir abuso
+    - CORS configurado para dual frontend
+    - Migraciones de BD con Alembic
+
+Deployments:
+    - Desarrollo: localhost:8000 con auto-reload
+    - Docker: Orquestado con docker-compose (backend + db + frontend)
+    - Producción: Railway/Render con PostgreSQL managed
+
+Example:
+    # Ejecutar servidor de desarrollo
+    python main.py
+    
+    # Con uvicorn directamente
+    uvicorn main:app --reload --host 0.0.0.0 --port 8000
+    
+    # En Docker
+    docker compose up backend
+
+Note:
+    Este archivo debe ser liviano y solo orquestar componentes.
+    La lógica de negocio va en services/, los endpoints en routers/.
 """
 
-# Importaciones principales de FastAPI
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -33,49 +75,78 @@ from config.rate_limit import limiter, rate_limit_exceeded_handler, RateLimits
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-# Importación de todos los routers modulares del sistema
+# Routers modulares del sistema organizados por dominio
 from routers import (
-    auth,                  # Autenticación JWT y gestión de sesiones
-    branches,              # Gestión de sucursales multisede
-    users,                 # Administración de usuarios y permisos
-    categories,            # Categorización de productos
-    brands,                # Gestión de marcas de productos
-    products,              # CRUD de productos, inventario y stock
-    sales,                 # Ventas, reportes y analytics
-    reports,               # Reportes y analytics (Clean Architecture)
-    websockets,            # Comunicación en tiempo real
-    config,                # Configuración general del sistema
-    ecommerce_advanced,    # Funcionalidades avanzadas de e-commerce
-    ecommerce_public,      # API pública para la tienda online
-    content_management,    # Gestión de contenido y banners
-    notifications,         # Sistema de notificaciones
-    init_db_endpoint       # Inicialización de base de datos
+    auth,                  # /auth/* - Login, logout, validación de tokens
+    branches,              # /branches/* - Gestión de sucursales
+    users,                 # /users/* - CRUD usuarios, roles, permisos
+    categories,            # /categories/* - Categorización de productos
+    brands,                # /brands/* - Gestión de marcas
+    products,              # /products/* - CRUD productos, stock, talles
+    sales,                 # /sales/* - Ventas POS (legacy endpoints)
+    reports,               # /reports/* - Reportes y analytics (Clean Architecture)
+    websockets,            # /ws/* - WebSockets para sincronización real-time
+    config,                # /config/* - Configuración del sistema
+    ecommerce_advanced,    # /ecommerce-advanced/* - Admin e-commerce (protegido)
+    ecommerce_public,      # /ecommerce/* - API pública tienda online (sin auth)
+    content_management,    # /content/* - Gestión de banners y contenido CMS
+    notifications,         # /notifications/* - Sistema de notificaciones
+    init_db_endpoint       # /api/init/* - Inicialización de base de datos
 )
 
-# ===== IMPORTANTE: MIGRACIONES DE BASE DE DATOS =====
-# NOTA: Ya NO usamos Base.metadata.create_all() en producción
-# Ahora usamos Alembic para gestionar migraciones de esquema de forma controlada
+
+# ===== MIGRACIONES DE BASE DE DATOS =====
+
+# IMPORTANTE: Estrategia de migraciones según entorno
 #
-# Para aplicar migraciones:
-#   docker compose exec backend alembic upgrade head
+# Desarrollo (ENV=development):
+#   - Auto-crear tablas con Base.metadata.create_all()
+#   - Rápido para prototipar, pero no maneja cambios de esquema
 #
-# Para crear nuevas migraciones después de modificar modelos:
-#   docker compose exec backend alembic revision --autogenerate -m "descripción"
+# Producción (ENV=production):
+#   - NUNCA usar create_all() - no maneja migraciones
+#   - Usar Alembic para migraciones controladas:
+#       docker compose exec backend alembic upgrade head
 #
-# Solo para desarrollo local (comentar en producción):
+# Ver: backend/alembic/ y MIGRATIONS.md para más información
+
 if os.getenv("ENV", "development") == "development":
-    # Auto-crear tablas SOLO en desarrollo
+    # Modo desarrollo: Auto-crear tablas si no existen
     Base.metadata.create_all(bind=engine)
 else:
-    # En producción, usar Alembic migrations
-    print("⚠️  PRODUCCIÓN: Asegurate de ejecutar 'alembic upgrade head' para aplicar migraciones")
+    # Modo producción: Advertir que se debe usar Alembic
+    print("⚠️  PRODUCCIÓN: Ejecutar 'alembic upgrade head' para aplicar migraciones")
 
-# Middleware personalizado para manejar peticiones OPTIONS (CORS preflight)
+
+# ===== MIDDLEWARE PERSONALIZADO =====
+
 class OptionsMiddleware(BaseHTTPMiddleware):
-    """Middleware que maneja todas las peticiones OPTIONS para CORS preflight"""
+    """
+    Middleware que maneja peticiones OPTIONS para CORS preflight.
+    
+    CORS preflight:
+        Antes de una petición HTTP "no simple" (PUT, DELETE, custom headers),
+        el navegador envía una petición OPTIONS para verificar que el servidor
+        permite esa operación desde ese origen.
+    
+    Este middleware:
+        - Intercepta TODAS las peticiones OPTIONS
+        - Responde con headers CORS apropiados sin procesar la petición
+        - Previene errores de CORS en operaciones complejas
+    
+    Headers importantes:
+        - Access-Control-Allow-Origin: Origen que puede hacer la petición
+        - Access-Control-Allow-Methods: Métodos HTTP permitidos
+        - Access-Control-Allow-Headers: Headers personalizados permitidos
+        - Access-Control-Max-Age: Tiempo de cache de la respuesta (24h)
+    
+    Note:
+        Este middleware debe agregarse ANTES de CORSMiddleware para
+        interceptar OPTIONS antes de que llegue a los routers.
+    """
     async def dispatch(self, request: Request, call_next):
         if request.method == "OPTIONS":
-            # Responder directamente a OPTIONS con headers CORS apropiados
+            # Responder directamente a preflight sin procesar request
             return Response(
                 status_code=200,
                 headers={
@@ -83,126 +154,206 @@ class OptionsMiddleware(BaseHTTPMiddleware):
                     "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
                     "Access-Control-Allow-Headers": request.headers.get("access-control-request-headers", "*"),
                     "Access-Control-Allow-Credentials": "true",
-                    "Access-Control-Max-Age": "86400",  # 24 horas
+                    "Access-Control-Max-Age": "86400",  # Cache por 24 horas
                 }
             )
+        
+        # Para métodos no-OPTIONS, continuar con la request normal
         response = await call_next(request)
         return response
 
 
+# ===== APLICACIÓN FASTAPI =====
 
-# Crear la instancia principal de FastAPI con configuración centralizada
-# La configuración se obtiene desde config/settings.py basada en variables de entorno
+# Crear instancia principal de FastAPI con configuración centralizada
 app = FastAPI(
     title=settings.app_name,
     description=settings.app_description,
     version=settings.app_version,
-    docs_url="/docs" if settings.debug_mode else None,  # Swagger UI solo en desarrollo
-    redoc_url="/redoc" if settings.debug_mode else None,  # ReDoc solo en desarrollo
-    debug=settings.debug_mode  # Habilita logs detallados y recarga automática
+    
+    # Documentación interactiva (Swagger UI y ReDoc)
+    # Solo disponible en modo debug por seguridad
+    docs_url="/docs" if settings.debug_mode else None,
+    redoc_url="/redoc" if settings.debug_mode else None,
+    
+    # Modo debug: Habilita logs detallados y auto-reload
+    debug=settings.debug_mode
 )
 
-# ===== RATE LIMITING SETUP =====
-# Attach limiter to app state for access in endpoints
+
+# ===== RATE LIMITING =====
+
+# Configurar rate limiting para prevenir abuso de API
+# 
+# Límites definidos en config/rate_limit.py:
+#   - Login: 5 intentos por minuto (previene brute force)
+#   - API general: 100 requests por minuto por IP
+#   - Búsquedas: 30 por minuto (operaciones costosas)
+#
+# Ver: config/rate_limit.py para configuración detallada
+
+# Adjuntar limiter al estado de la app para acceso en endpoints
 app.state.limiter = limiter
 
-# Add rate limit exception handler
+# Registrar handler para errores de rate limit (429 Too Many Requests)
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
-# Add SlowAPI middleware for rate limiting
+# Agregar middleware de rate limiting
 app.add_middleware(SlowAPIMiddleware)
 
-# IMPORTANTE: Agregar middleware personalizado de OPTIONS PRIMERO para interceptar preflight requests
+
+# ===== MIDDLEWARE STACK =====
+
+# IMPORTANTE: El orden de middleware importa (se ejecutan de arriba hacia abajo)
+#
+# Orden actual:
+#   1. SlowAPIMiddleware (rate limiting) - Primero para prevenir abuso
+#   2. OptionsMiddleware (CORS preflight) - Antes de CORS principal
+#   3. CORSMiddleware (CORS completo) - Headers para todos los requests
+
+# 1. Middleware de OPTIONS para CORS preflight
 app.add_middleware(OptionsMiddleware)
 
-# Configuración de middleware CORS para comunicación entre frontend y backend
-# Permite las solicitudes desde los dos frontends del sistema (POS admin y E-commerce)
-# NOTA: No se puede usar "*" con allow_credentials=True, por eso listamos orígenes específicos
+# 2. Middleware de CORS para comunicación frontend-backend
+#
+# Configuración multi-frontend:
+#   - POS Admin: localhost:3000 (dev) + frontend:3000 (Docker) + Railway URL
+#   - E-commerce: localhost:3001 (dev) + ecommerce:3001 (Docker) + Railway URL
+#
+# Seguridad:
+#   - allow_credentials=True: Permite enviar cookies y Authorization header
+#   - allow_origins: DEBE ser lista específica (no "*") cuando credentials=True
+#   - En producción: Agregar dominios reales, eliminar localhost
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # POS Frontend administrativo en desarrollo local
-        "http://frontend:3000",   # POS Frontend administrativo en contenedor Docker
-        "http://localhost:3001",  # E-commerce frontend en desarrollo local
-        "http://ecommerce:3001",  # E-commerce frontend en contenedor Docker
-        "https://frontend-pos-production.up.railway.app",  # POS Frontend en Railway PRODUCCIÓN
-        "https://e-commerce-production-3634.up.railway.app",  # E-commerce en Railway PRODUCCIÓN
+        # Desarrollo local
+        "http://localhost:3000",       # POS Admin frontend
+        "http://localhost:3001",       # E-commerce frontend
+        
+        # Docker containers
+        "http://frontend:3000",        # POS Admin container
+        "http://ecommerce:3001",       # E-commerce container
+        
+        # Producción Railway (actualizar con tus URLs reales)
+        "https://frontend-pos-production.up.railway.app",
+        "https://e-commerce-production-3634.up.railway.app",
     ],
-    allow_credentials=True,  # Permitir cookies y headers de autenticación (REQUIERE orígenes específicos)
-    allow_methods=["*"],  # Permitir todos los métodos HTTP (incluye OPTIONS para CORS preflight)
-    allow_headers=["*"],  # Headers permitidos (Authorization, Content-Type, etc.)
-    expose_headers=["*"],  # Exponer todos los headers en la respuesta
+    allow_credentials=True,   # Permite cookies y auth headers (requiere orígenes específicos)
+    allow_methods=["*"],      # Todos los métodos HTTP (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],      # Todos los headers (Authorization, Content-Type, etc.)
+    expose_headers=["*"],     # Exponer todos los headers en la respuesta
 )
 
-# Registro de routers modulares - Cada router maneja un conjunto específico de endpoints
-# Los routers están organizados por funcionalidad para mantener el código modular y escalable
 
-# ===== ROUTERS CORE DEL SISTEMA =====
-app.include_router(auth.router)           # /auth/* - Login, logout, verificación de tokens
-app.include_router(branches.router)       # /branches/* - Gestión de sucursales multisede
-app.include_router(users.router)          # /users/* - CRUD usuarios, permisos, roles
-app.include_router(categories.router)     # /categories/* - Categorización de productos
-app.include_router(brands.router)         # /brands/* - Gestión de marcas de productos
+# ===== REGISTRO DE ROUTERS =====
 
-# ===== ROUTERS DE INVENTARIO Y VENTAS =====
-app.include_router(products.router)       # /products/* - CRUD productos, stock, talles, importación
-app.include_router(sales.router)          # /sales/* - Ventas POS, reportes, dashboard (legacy)
-app.include_router(reports.router)        # /reports/* - Reportes y analytics (Clean Architecture)
+# Routers organizados por dominio funcional
+# Cada router maneja un conjunto específico de endpoints
+# Ver: routers/ para implementación de cada módulo
 
-# ===== COMUNICACIÓN EN TIEMPO REAL =====
-app.include_router(websockets.router)     # WebSockets para sincronización en tiempo real
+# === CORE: Autenticación y Usuarios ===
+app.include_router(auth.router)           # /auth/*
+app.include_router(branches.router)       # /branches/*
+app.include_router(users.router)          # /users/*
 
-# ===== CONFIGURACIÓN Y ADMINISTRACIÓN =====
-app.include_router(config.router)         # /config/* - Configuración general del sistema
-app.include_router(notifications.router)  # /notifications/* - Sistema de notificaciones
-app.include_router(init_db_endpoint.router)  # /api/init/* - Inicialización de base de datos
+# === CATÁLOGO: Productos y Clasificación ===
+app.include_router(categories.router)     # /categories/*
+app.include_router(brands.router)         # /brands/*
+app.include_router(products.router)       # /products/*
 
-# ===== E-COMMERCE INTEGRADO =====
-app.include_router(ecommerce_advanced.router)  # /ecommerce-advanced/* - Admin e-commerce con autenticación
-app.include_router(ecommerce_public.router)    # /ecommerce/* - API pública para tienda online
-app.include_router(content_management.router)  # /content/* - Gestión de banners y contenido CMS
+# === OPERACIONES: Ventas y Reportes ===
+app.include_router(sales.router)          # /sales/* (legacy)
+app.include_router(reports.router)        # /reports/* (Clean Architecture)
 
-# Rutas principales del sistema
+# === TIEMPO REAL: WebSockets ===
+app.include_router(websockets.router)     # /ws/{branch_id}
+
+# === CONFIGURACIÓN: Sistema y Notificaciones ===
+app.include_router(config.router)         # /config/*
+app.include_router(notifications.router)  # /notifications/*
+app.include_router(init_db_endpoint.router)  # /api/init/*
+
+# === E-COMMERCE: API Pública y Admin ===
+app.include_router(ecommerce_advanced.router)  # /ecommerce-advanced/* (protegido)
+app.include_router(ecommerce_public.router)    # /ecommerce/* (público, sin auth)
+app.include_router(content_management.router)  # /content/*
+
+
+# ===== ENDPOINTS PRINCIPALES DEL SISTEMA =====
+
 @app.get("/", tags=["Sistema"])
 async def root():
     """
-    Endpoint raíz que proporciona información general del sistema.
+    Endpoint raíz - Información general del sistema.
+    
+    Proporciona un overview rápido de las características del sistema
+    y enlaces a la documentación de la API.
     
     Returns:
-        dict: Información sobre el sistema y sus características principales
+        dict: Información del sistema, versión, features y enlaces útiles
+    
+    Example:
+        GET http://localhost:8000/
+        
+        Response:
+        {
+            "message": "Backend POS Cesariel funcionando correctamente",
+            "version": "1.0.0",
+            "features": [...],
+            "api_docs": "/docs"
+        }
     """
     return {
         "message": "Backend POS Cesariel funcionando correctamente",
         "version": settings.app_version,
         "environment": settings.environment,
         "features": [
-            "🔐 Autenticación JWT con roles",
-            "🏢 Gestión multisucursal",
-            "👥 Administración de usuarios",
-            "📦 Inventario centralizado",
-            "💰 Ventas POS y E-commerce",
-            "📊 Reportes y dashboard",
-            "⚡ WebSockets en tiempo real",
-            "📏 Sistema de talles multisucursal",
-            "🛒 E-commerce avanzado con imágenes",
-            "🎨 Gestión de banners y contenido",
-            "📱 Integración WhatsApp",
+            "🔐 Autenticación JWT con roles (ADMIN, MANAGER, SELLER, ECOMMERCE)",
+            "🏢 Gestión multisucursal con aislamiento de datos",
+            "👥 Administración de usuarios y permisos granulares",
+            "📦 Inventario centralizado con stock por sucursal",
+            "💰 Ventas POS y E-commerce con sincronización",
+            "📊 Reportes avanzados y dashboard en tiempo real",
+            "⚡ WebSockets para actualizaciones instantáneas",
+            "📏 Sistema de talles flexible por producto",
+            "🛒 E-commerce completo con carrito y checkout",
+            "🎨 CMS para banners y contenido visual",
+            "📱 Integración WhatsApp para ventas directas",
             "🌐 Configuración de redes sociales"
         ],
-        "api_docs": "/docs" if settings.debug_mode else "No disponible en producción"
+        "api_docs": "/docs" if settings.debug_mode else "Documentación deshabilitada en producción"
     }
 
 
 @app.get("/health", tags=["Sistema"])
 async def health_check():
     """
-    Endpoint de verificación de salud del sistema.
+    Health check endpoint - Verificación de salud del sistema.
+    
+    Usado por:
+        - Docker health checks (docker-compose.yml)
+        - Kubernetes liveness/readiness probes
+        - Monitoreo externo (Pingdom, UptimeRobot, etc.)
+        - Load balancers para verificar instancia sana
     
     Returns:
-        dict: Estado de salud del sistema incluyendo conectividad de BD
+        dict: Estado del sistema (healthy/unhealthy), configuración básica
+    
+    Example:
+        GET http://localhost:8000/health
+        
+        Response:
+        {
+            "status": "healthy",
+            "service": "Backend POS Cesariel",
+            "version": "1.0.0",
+            "environment": "production",
+            "database_configured": true
+        }
     """
     return {
-        "status": "healthy", 
+        "status": "healthy",
         "service": settings.app_name,
         "version": settings.app_version,
         "environment": settings.environment,
@@ -214,17 +365,45 @@ async def health_check():
 @app.get("/db-test", tags=["Sistema"])
 async def test_database():
     """
-    Endpoint para probar la conectividad con la base de datos.
+    Database connectivity test - Prueba de conexión a PostgreSQL.
+    
+    Ejecuta una query simple (SELECT 1) para verificar que:
+        - PostgreSQL está corriendo y accesible
+        - Las credenciales son correctas
+        - El pool de conexiones funciona
+        - No hay problemas de red o firewall
+    
+    Útil para:
+        - Debugging de problemas de conexión
+        - Verificación post-deployment
+        - CI/CD health checks
     
     Returns:
-        dict: Resultado de la prueba de conexión a la BD
+        dict: Estado de conexión (ok/error), información de BD
+    
+    Example:
+        GET http://localhost:8000/db-test
+        
+        Response OK:
+        {
+            "status": "ok",
+            "message": "Conexión a base de datos exitosa",
+            "database_host": "db",
+            "database_name": "pos_cesariel"
+        }
+        
+        Response Error:
+        {
+            "status": "error",
+            "message": "Error de conexión: connection refused"
+        }
     """
     try:
         from database import get_db
         from sqlalchemy import text
         
+        # Obtener sesión y ejecutar query simple
         db = next(get_db())
-        # Probar conexión ejecutando una consulta simple
         result = db.execute(text("SELECT 1"))
         db.close()
         
@@ -235,6 +414,7 @@ async def test_database():
             "database_name": settings.db_name,
             "timestamp": settings.get_current_timestamp() if hasattr(settings, 'get_current_timestamp') else None
         }
+        
     except Exception as e:
         return {
             "status": "error",
@@ -243,18 +423,28 @@ async def test_database():
         }
 
 
-# Punto de entrada para ejecutar el servidor
+# ===== PUNTO DE ENTRADA =====
+
+# Entry point para ejecutar el servidor directamente
+# En producción se usa Gunicorn/Uvicorn workers desde CLI
+
 if __name__ == "__main__":
     import uvicorn
     
+    # Logs de inicio
     print(f"🚀 Iniciando {settings.app_name} v{settings.app_version}")
     print(f"🌐 Entorno: {settings.environment}")
-    print(f"🗄️  Base de datos: {settings.db_host}:{settings.db_port}")
+    print(f"🗄️  Base de datos: {settings.db_host}:{settings.db_port}/{settings.db_name}")
+    print(f"📡 Servidor: http://{settings.host}:{settings.port}")
     
+    if settings.debug_mode:
+        print(f"📚 Docs: http://{settings.host}:{settings.port}/docs")
+    
+    # Ejecutar servidor Uvicorn con configuración desde settings
     uvicorn.run(
-        "main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.debug_mode,
-        log_level="debug" if settings.debug_mode else "info"
+        "main:app",                      # Aplicación FastAPI a correr
+        host=settings.host,              # IP donde escuchar (0.0.0.0 = todas)
+        port=settings.port,              # Puerto HTTP (default: 8000)
+        reload=settings.debug_mode,      # Auto-reload en cambios de código (solo dev)
+        log_level="debug" if settings.debug_mode else "info"  # Nivel de logging
     )
