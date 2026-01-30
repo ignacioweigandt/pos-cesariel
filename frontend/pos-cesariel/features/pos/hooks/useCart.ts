@@ -25,20 +25,10 @@ interface UseCartReturn {
   itemCount: number;
 }
 
-/**
- * Hook for managing shopping cart state and operations
- *
- * Provides cart management functionality including adding/removing items,
- * updating quantities, and calculating totals with tax.
- *
- * @returns Cart state and operations
- */
+/** Hook de gestión del carrito: agregar/quitar items, actualizar cantidades, calcular totales */
 export function useCart(): UseCartReturn {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  /**
-   * Add product to cart (for products without sizes)
-   */
   const addToCart = useCallback(
     (product: Product, size?: string, quantity: number = 1) => {
       if (product.stock_quantity <= 0) {
@@ -85,9 +75,6 @@ export function useCart(): UseCartReturn {
     [cartItems]
   );
 
-  /**
-   * Add product with size to cart (with size stock validation)
-   */
   const addToCartWithSize = useCallback(
     (product: Product, size: string, availableSizes: ProductSize[]) => {
       const existingItem = cartItems.find(
@@ -131,9 +118,6 @@ export function useCart(): UseCartReturn {
     [cartItems]
   );
 
-  /**
-   * Remove item from cart
-   */
   const removeFromCart = useCallback(
     (cartItemId: number) => {
       setCartItems(cartItems.filter((item) => item.id !== cartItemId));
@@ -141,9 +125,6 @@ export function useCart(): UseCartReturn {
     [cartItems]
   );
 
-  /**
-   * Update item quantity in cart with stock validation
-   */
   const updateQuantity = useCallback(
     async (
       cartItemId: number,
@@ -158,7 +139,6 @@ export function useCart(): UseCartReturn {
       const cartItem = cartItems.find((item) => item.id === cartItemId);
       if (!cartItem) return;
 
-      // For products with sizes, check size-specific stock
       if (cartItem.product.has_sizes && cartItem.size && availableSizes) {
         const sizeStock = availableSizes.find((s) => s.size === cartItem.size);
 
@@ -167,7 +147,6 @@ export function useCart(): UseCartReturn {
           return;
         }
       } else {
-        // For products without sizes, check general stock
         if (newQuantity > cartItem.product.stock_quantity) {
           toast.error("No hay suficiente stock");
           return;
@@ -183,20 +162,16 @@ export function useCart(): UseCartReturn {
     [cartItems, removeFromCart]
   );
 
-  /**
-   * Clear entire cart
-   */
   const clearCart = useCallback(() => {
     setCartItems([]);
     toast.success("Carrito vaciado");
   }, []);
 
-  // Calculate totals
   const subtotal = cartItems.reduce(
     (sum, item) => sum + Number(item.price) * item.quantity,
     0
   );
-  const tax = 0; // Tax calculation can be added here if needed
+  const tax = 0;
   const total = subtotal + tax;
   const itemCount = cartItems.length;
 

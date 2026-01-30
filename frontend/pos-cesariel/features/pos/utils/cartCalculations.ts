@@ -1,12 +1,6 @@
 import type { CartItem, CartTotals } from "../types/pos.types";
 
-/**
- * Calculate cart totals including subtotal, tax, and total
- *
- * @param cartItems - Array of cart items
- * @param taxRate - Tax rate as decimal (e.g., 0.1 for 10%)
- * @returns Cart totals object
- */
+/** Calcular totales del carrito (subtotal, impuestos, total) */
 export function calculateCartTotals(
   cartItems: CartItem[],
   taxRate: number = 0
@@ -28,34 +22,17 @@ export function calculateCartTotals(
   };
 }
 
-/**
- * Calculate total for a single cart item
- *
- * @param item - Cart item
- * @returns Total price for the item
- */
+/** Calcular total de un item individual */
 export function calculateItemTotal(item: CartItem): number {
   return Number(item.price) * item.quantity;
 }
 
-/**
- * Format currency value for display
- *
- * @param value - Numeric value to format
- * @param currency - Currency symbol (default: $)
- * @returns Formatted currency string
- */
+/** Formatear valor como moneda */
 export function formatCurrency(value: number, currency: string = "$"): string {
   return `${currency}${value.toFixed(2)}`;
 }
 
-/**
- * Calculate change when paying with cash
- *
- * @param total - Total amount to pay
- * @param amountReceived - Amount received from customer
- * @returns Change to return to customer
- */
+/** Calcular vuelto al pagar con efectivo */
 export function calculateChange(
   total: number,
   amountReceived: number
@@ -64,12 +41,7 @@ export function calculateChange(
   return change > 0 ? change : 0;
 }
 
-/**
- * Validate cart before checkout
- *
- * @param cartItems - Array of cart items
- * @returns Object with validation result and error message if invalid
- */
+/** Validar carrito antes de checkout */
 export function validateCart(cartItems: CartItem[]): {
   isValid: boolean;
   error?: string;
@@ -81,7 +53,6 @@ export function validateCart(cartItems: CartItem[]): {
     };
   }
 
-  // Check if all items have valid quantities
   for (const item of cartItems) {
     if (item.quantity <= 0) {
       return {

@@ -56,9 +56,7 @@ interface UseCartKeyboardProps {
   paymentConfigs: PaymentConfig[];
 }
 
-/**
- * Hook para manejar navegación por teclado del carrito
- */
+/** Hook de navegación por teclado en el carrito (flechas, Enter, Tab, Delete) */
 export function useCartKeyboard({
   isOpen,
   cart,
@@ -89,7 +87,6 @@ export function useCartKeyboard({
   paymentConfigs,
 }: UseCartKeyboardProps) {
 
-  // Memoize available installments for the selected card type
   const availableInstallments = useMemo(() => {
     return paymentConfigs
       .filter(
@@ -99,7 +96,7 @@ export function useCartKeyboard({
           c.is_active !== false
       )
       .map((c) => c.installments)
-      .sort((a, b) => a - b); // Sort ascending
+      .sort((a, b) => a - b);
   }, [paymentConfigs, selectedCardType]);
   useEffect(() => {
     if (!isOpen) return;
@@ -196,7 +193,6 @@ export function useCartKeyboard({
             const newCardType = CARD_TYPES[newIndex];
             setCardTypeIndex(newIndex);
             setSelectedCardType(newCardType);
-            // Set to first available installment for this card type
             const configs = paymentConfigs
               .filter(
                 (c) =>
@@ -209,7 +205,6 @@ export function useCartKeyboard({
           } else if (cardDetailStep === 'installments' &&
                      (selectedCardType === 'bancarizadas' || selectedCardType === 'no_bancarizadas')) {
             const currentIndex = availableInstallments.indexOf(selectedInstallments);
-            // Navigate left (previous installment), stops at first
             if (currentIndex > 0) {
               setSelectedInstallments(availableInstallments[currentIndex - 1]);
             }
@@ -241,7 +236,6 @@ export function useCartKeyboard({
             const newCardType = CARD_TYPES[newIndex];
             setCardTypeIndex(newIndex);
             setSelectedCardType(newCardType);
-            // Set to first available installment for this card type
             const configs = paymentConfigs
               .filter(
                 (c) =>
@@ -254,7 +248,6 @@ export function useCartKeyboard({
           } else if (cardDetailStep === 'installments' &&
                      (selectedCardType === 'bancarizadas' || selectedCardType === 'no_bancarizadas')) {
             const currentIndex = availableInstallments.indexOf(selectedInstallments);
-            // Navigate right (next installment), continues to next row automatically
             if (currentIndex < availableInstallments.length - 1) {
               setSelectedInstallments(availableInstallments[currentIndex + 1]);
             }
@@ -280,7 +273,6 @@ export function useCartKeyboard({
           }
         } else if (paymentStep === 'card_details') {
           if (cardDetailStep === 'type') {
-            // Check if selected card type has installments configured
             const hasInstallments = availableInstallments.length > 0;
             if (hasInstallments && (selectedCardType === 'bancarizadas' || selectedCardType === 'no_bancarizadas')) {
               setCardDetailStep('installments');

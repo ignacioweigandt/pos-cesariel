@@ -30,21 +30,13 @@ import type {
 } from "../types/pos.types";
 
 /**
- * Main POS Container Component
- *
- * Orchestrates the entire Point of Sale interface including:
- * - Product search and selection
- * - Shopping cart management
- * - Barcode scanning
- * - Size selection for products with variants
- * - Sale processing and payment
- * - Real-time inventory updates via WebSocket
+ * Contenedor principal del POS: búsqueda de productos, carrito, scanner de códigos,
+ * selección de talles, procesamiento de ventas y actualizaciones en tiempo real.
  */
 export function POSContainer() {
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
 
-  // Component state
   const [mounted, setMounted] = useState(false);
   const [showFloatingCart, setShowFloatingCart] = useState(false);
   const [showSaleConfirmation, setShowSaleConfirmation] = useState(false);
@@ -55,7 +47,6 @@ export function POSContainer() {
   const [lastSaleData, setLastSaleData] = useState<any>(null);
   const [paymentConfigs, setPaymentConfigs] = useState<PaymentConfig[]>([]);
 
-  // Custom hooks
   const {
     cartItems,
     addToCart,
@@ -77,16 +68,14 @@ export function POSContainer() {
 
   const { processing, processSale: processSaleHook } = useSaleProcessing();
 
-  // WebSocket for real-time inventory updates
   const branchId = user?.branch_id || 1;
-  const shouldConnectWebSocket = false; // Temporarily disabled
+  const shouldConnectWebSocket = false;
   const { lastMessage } = usePOSWebSocket(
     branchId,
     token || "",
     shouldConnectWebSocket
   );
 
-  // Barcode scanner handler
   const handleBarcodeDetected = useCallback(
     async (barcode: string) => {
       try {
@@ -109,25 +98,21 @@ export function POSContainer() {
     [token]
   );
 
-  // Activate barcode scanner
   const { isScanning, currentBuffer } = useBarcodeScanner({
     onBarcodeDetected: handleBarcodeDetected,
     enabled: true,
   });
 
-  // Keyboard shortcuts
   usePOSKeyboard({
     onOpenCart: () => setShowFloatingCart(true),
     showFloatingCart,
     hasCartItems: cartItems.length > 0,
   });
 
-  // Initial mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Authentication and permission check
   useEffect(() => {
     if (!mounted) return;
 
@@ -145,16 +130,13 @@ export function POSContainer() {
     fetchPaymentConfigs();
   }, [router, isAuthenticated, token, mounted, user]);
 
-  // Handle real-time inventory updates via WebSocket
   useEffect(() => {
     if (!lastMessage) return;
 
     const message = lastMessage as InventoryChangeMessage;
     if (message.type === "inventory_change") {
-      // Update products list with new stock
       refetchProducts();
 
-      // Update cart items if affected
       const affectedCartItem = cartItems.find(
         (item) => item.product.id === message.product_id
       );
@@ -166,13 +148,8 @@ export function POSContainer() {
     }
   }, [lastMessage, cartItems, refetchProducts]);
 
-  /**
-   * Fetch payment configurations from backend
-   * Combines standard payment configs with custom installments
-   */
   const fetchPaymentConfigs = async () => {
     try {
-      // Fetch both standard configs and custom installments in parallel
       const [standardResponse, customInstallmentsResponse] = await Promise.all([
         configApi.getPaymentConfigs(),
         configApi.getCustomInstallments()
@@ -181,11 +158,10 @@ export function POSContainer() {
       const standardConfigs = standardResponse.data || [];
       const customInstallments = customInstallmentsResponse.data || [];
 
-      // Convert custom installments to payment config format
       const customConfigs = customInstallments
-        .filter((ci: any) => ci.is_active) // Only include active installments
+        .filter((ci: any) => ci.is_active)
         .map((ci: any) => ({
-          id: `custom_${ci.id}`, // Prefix to avoid ID conflicts
+          id: `custom_${ci.id}`,
           payment_type: 'tarjeta',
           card_type: ci.card_type,
           installments: ci.installments,
@@ -194,55 +170,42 @@ export function POSContainer() {
           description: ci.description
         }));
 
-      // Combine and deduplicate: custom installments override standard ones with same card_type + installments
       const configMap = new Map();
 
-      // Add standard configs first
       standardConfigs.forEach((config: any) => {
         const key = `${config.card_type}_${config.installments}`;
         configMap.set(key, config);
       });
 
-      // Override with custom configs (they have priority)
       customConfigs.forEach((config: any) => {
         const key = `${config.card_type}_${config.installments}`;
         configMap.set(key, config);
       });
 
-      // Convert map back to array
       const allConfigs = Array.from(configMap.values());
 
       setPaymentConfigs(allConfigs);
     } catch (error) {
       console.error("Error fetching payment configs:", error);
       toast.error("Error cargando configuración de pagos");
-      // Set empty array on error to prevent crashes
       setPaymentConfigs([]);
     }
   };
 
-  /**
-   * Handle product selection (add to cart or show size selector)
-   */
   const handleProductSelect = async (product: Product) => {
     if (product.stock_quantity <= 0) {
       toast.error("Producto sin stock");
       return;
     }
 
-    // If product has sizes, show size selection modal
     if (product.has_sizes) {
       await openSizeModal(product);
       return;
     }
 
-    // Otherwise, add directly to cart
     addToCart(product);
   };
 
-  /**
-   * Open size selection modal and fetch available sizes
-   */
   const openSizeModal = async (product: Product) => {
     setSelectedProduct(product);
     setLoadingSizes(true);
@@ -264,9 +227,6 @@ export function POSContainer() {
     }
   };
 
-  /**
-   * Handle size selection and add to cart
-   */
   const handleSizeSelect = (size: string) => {
     if (selectedProduct) {
       addToCartWithSize(selectedProduct, size, availableSizes);
@@ -275,9 +235,6 @@ export function POSContainer() {
     }
   };
 
-  /**
-   * Handle sale processing
-   */
   const handleProcessSale = async (paymentData: any) => {
     const result = await processSaleHook(
       paymentData,
@@ -291,11 +248,10 @@ export function POSContainer() {
       setShowSaleConfirmation(true);
       setShowFloatingCart(false);
       clearCart();
-      await refetchProducts(); // Refresh to update stock
+      await refetchProducts();
     }
   };
 
-  // Loading state
   if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -306,7 +262,6 @@ export function POSContainer() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Top Navigation */}
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
@@ -331,11 +286,9 @@ export function POSContainer() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="h-full flex flex-col lg:flex-row gap-6">
-            {/* Left Panel - Product Search */}
             <div className="lg:w-3/5 space-y-4">
               <div className="bg-white p-6 rounded-lg shadow">
                 <h2 className="text-lg font-medium text-black mb-4">
@@ -357,7 +310,6 @@ export function POSContainer() {
               </div>
             </div>
 
-            {/* Right Panel - Cart Summary */}
             <div className="lg:w-2/5 space-y-4">
               <CartSummary
                 cartItems={cartItems}
@@ -369,7 +321,6 @@ export function POSContainer() {
         </div>
       </div>
 
-      {/* Floating Cart Modal */}
       <FloatingCart
         isOpen={showFloatingCart}
         onClose={() => setShowFloatingCart(false)}
@@ -382,14 +333,12 @@ export function POSContainer() {
         processing={processing}
       />
 
-      {/* Sale Confirmation Modal */}
       <SaleConfirmation
         isOpen={showSaleConfirmation}
         onClose={() => setShowSaleConfirmation(false)}
         saleData={lastSaleData}
       />
 
-      {/* Size Selection Modal */}
       {showSizeModal && selectedProduct && (
         <SizeSelectorModal
           isOpen={showSizeModal}

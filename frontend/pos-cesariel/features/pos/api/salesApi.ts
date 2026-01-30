@@ -1,8 +1,4 @@
-/**
- * Sales API
- *
- * Handles sales transactions, reports, and dashboard statistics
- */
+/** API de ventas: transacciones, reportes y estadísticas */
 
 import { apiClient } from '@/shared/api/client';
 
@@ -12,12 +8,7 @@ export interface SalesParams {
   branch_id?: number;
   status?: string;
   sale_type?: 'POS' | 'ECOMMERCE';
-  /**
-   * Filter by WhatsApp sale association:
-   * - true: Only sales WITH WhatsApp record (from public e-commerce)
-   * - false: Only sales WITHOUT WhatsApp record (from admin sales tab)
-   * - undefined: All sales
-   */
+  /** Filtro por asociación WhatsApp: true (con), false (sin), undefined (todas) */
   has_whatsapp_sale?: boolean;
 }
 
@@ -25,64 +16,32 @@ export interface UpdateStatusData {
   new_status: string;
 }
 
-/**
- * Sales API methods
- */
 export const salesApi = {
-  /**
-   * Get all sales with optional filters
-   * @param params - Filter parameters (dates, branch, status)
-   * @returns List of sales
-   */
+  /** Obtener ventas con filtros opcionales */
   getSales: (params?: SalesParams) =>
     apiClient.get('/sales/', { params }),
 
-  /**
-   * Get single sale by ID
-   * @param id - Sale ID
-   * @returns Sale details with items
-   */
+  /** Obtener venta por ID con items */
   getSale: (id: number) =>
     apiClient.get(`/sales/${id}`),
 
-  /**
-   * Create new sale
-   * @param data - Sale data including items
-   * @returns Created sale
-   */
+  /** Crear nueva venta */
   createSale: (data: any) =>
     apiClient.post('/sales/', data),
 
-  /**
-   * Update sale status
-   * @param id - Sale ID
-   * @param status - New status (completed, cancelled, pending)
-   * @returns Updated sale
-   */
+  /** Actualizar estado de venta (completed, cancelled, pending) */
   updateSaleStatus: (id: number, status: string) =>
     apiClient.put(`/sales/${id}/status`, { new_status: status }),
 
-  /**
-   * Cancel/delete sale
-   * @param id - Sale ID
-   * @returns Success response
-   */
+  /** Cancelar/eliminar venta */
   cancelSale: (id: number) =>
     apiClient.delete(`/sales/${id}`),
 
-  /**
-   * Get dashboard statistics
-   * @returns Dashboard stats (today's sales, revenue, etc.)
-   */
+  /** Obtener estadísticas del dashboard */
   getDashboardStats: () =>
     apiClient.get('/sales/reports/dashboard'),
 
-  /**
-   * Get sales report for date range
-   * @param startDate - Start date (YYYY-MM-DD)
-   * @param endDate - End date (YYYY-MM-DD)
-   * @returns Sales report data
-   */
+  /** Obtener reporte de ventas por rango de fechas */
   getSalesReport: (startDate: string, endDate: string) =>
     apiClient.get('/sales/reports/sales-report', {
       params: { start_date: startDate, end_date: endDate }

@@ -20,19 +20,10 @@ interface UseSaleProcessingReturn {
   ) => Promise<SaleConfirmationData | null>;
 }
 
-/**
- * Hook for processing sales and submitting to backend
- *
- * Handles sale submission, payment processing, and error handling
- *
- * @returns Sale processing state and function
- */
+/** Hook de procesamiento de ventas: envío al backend y manejo de errores */
 export function useSaleProcessing(): UseSaleProcessingReturn {
   const [processing, setProcessing] = useState(false);
 
-  /**
-   * Process sale and submit to backend
-   */
   const processSale = async (
     paymentData: PaymentData,
     cartItems: CartItem[],
@@ -52,7 +43,6 @@ export function useSaleProcessing(): UseSaleProcessingReturn {
     setProcessing(true);
 
     try {
-      // Construct sale data
       const saleData: SaleData = {
         sale_type: "POS",
         payment_method: paymentData.payment_method,
@@ -68,11 +58,9 @@ export function useSaleProcessing(): UseSaleProcessingReturn {
 
       console.log("Submitting sale data:", saleData);
 
-      // Send sale to backend using apiClient
       const response = await apiClient.post("/sales/", saleData);
       const saleResult = response.data;
 
-      // Prepare confirmation data
       const confirmationData: SaleConfirmationData = {
         id: saleResult.id,
         paymentMethod: paymentData.payment_method,

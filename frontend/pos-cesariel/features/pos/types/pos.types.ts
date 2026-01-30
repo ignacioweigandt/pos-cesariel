@@ -1,19 +1,10 @@
-/**
- * POS Module Types
- * Type definitions for the Point of Sale system
- */
+/** Tipos del módulo POS (Punto de Venta) */
 
-/**
- * Product category information
- */
 export interface ProductCategory {
   id: number;
   name: string;
 }
 
-/**
- * Product information for POS
- */
 export interface Product {
   id: number;
   name: string;
@@ -26,17 +17,11 @@ export interface Product {
   category?: ProductCategory;
 }
 
-/**
- * Product size information with stock
- */
 export interface ProductSize {
   size: string;
   stock_quantity: number;
 }
 
-/**
- * Item in the shopping cart
- */
 export interface CartItem {
   id: number;
   product: Product;
@@ -45,9 +30,6 @@ export interface CartItem {
   size?: string;
 }
 
-/**
- * Payment configuration options
- */
 export interface PaymentConfig {
   id: number;
   payment_type: string;
@@ -58,14 +40,8 @@ export interface PaymentConfig {
   description?: string;
 }
 
-/**
- * Payment method types
- */
 export type PaymentMethod = "CASH" | "CARD" | "TRANSFER";
 
-/**
- * Payment data for sale processing
- */
 export interface PaymentData {
   payment_method: PaymentMethod;
   card_type?: string;
@@ -73,9 +49,6 @@ export interface PaymentData {
   total: number;
 }
 
-/**
- * Sale item for backend submission
- */
 export interface SaleItem {
   product_id: number;
   quantity: number;
@@ -83,9 +56,6 @@ export interface SaleItem {
   size?: string;
 }
 
-/**
- * Sale data for backend submission
- */
 export interface SaleData {
   sale_type: "POS" | "ECOMMERCE";
   payment_method: PaymentMethod;
@@ -94,9 +64,6 @@ export interface SaleData {
   items: SaleItem[];
 }
 
-/**
- * Sale result from backend
- */
 export interface SaleResult {
   id: number;
   sale_type: string;
@@ -111,9 +78,6 @@ export interface SaleResult {
   }>;
 }
 
-/**
- * Sale confirmation data for display
- */
 export interface SaleConfirmationData {
   id: number;
   paymentMethod: string;
@@ -127,18 +91,12 @@ export interface SaleConfirmationData {
   }>;
 }
 
-/**
- * WebSocket inventory change message
- */
 export interface InventoryChangeMessage {
   type: "inventory_change";
   product_id: number;
   new_stock: number;
 }
 
-/**
- * Cart totals calculation result
- */
 export interface CartTotals {
   subtotal: number;
   tax: number;

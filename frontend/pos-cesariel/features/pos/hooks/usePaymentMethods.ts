@@ -1,8 +1,6 @@
 /**
- * usePaymentMethods Hook
- *
- * Fetches available payment methods from the API and filters only active ones.
- * Ensures the POS only shows enabled payment methods from Settings.
+ * Hook que obtiene métodos de pago activos desde Settings.
+ * Filtra solo los habilitados para mostrar en el POS.
  */
 
 import { useState, useEffect } from 'react';
@@ -13,7 +11,7 @@ export type PaymentMethodCode = 'efectivo' | 'tarjeta' | 'transferencia';
 export interface PaymentMethodConfig {
   id: number;
   name: string;
-  code: string; // DB code: CASH, CARD, TRANSFER
+  code: string;
   icon: string;
   is_active: boolean;
   requires_change: boolean;
@@ -24,22 +22,16 @@ export interface POSPaymentMethod {
   code: PaymentMethodCode;
   name: string;
   icon: string;
-  color: string; // For UI styling
+  color: string;
   requires_change: boolean;
 }
 
-/**
- * Map DB codes to POS codes
- */
 const DB_TO_POS_CODE: Record<string, PaymentMethodCode> = {
   'CASH': 'efectivo',
   'CARD': 'tarjeta',
   'TRANSFER': 'transferencia',
 };
 
-/**
- * Color scheme for each payment method
- */
 const PAYMENT_COLORS: Record<PaymentMethodCode, string> = {
   'efectivo': 'green',
   'tarjeta': 'blue',
@@ -63,7 +55,6 @@ export function usePaymentMethods() {
       const response = await configurationApi.getPaymentMethods();
       const dbMethods: PaymentMethodConfig[] = response.data;
 
-      // Filter only active methods and map to POS format
       const activeMethods = dbMethods
         .filter(method => method.is_active)
         .map(method => {
@@ -87,7 +78,6 @@ export function usePaymentMethods() {
     } catch (err) {
       console.error('Error loading payment methods:', err);
       setError(err as Error);
-      // Fallback to default methods if API fails
       setMethods([
         {
           code: 'efectivo',
@@ -116,16 +106,10 @@ export function usePaymentMethods() {
     }
   };
 
-  /**
-   * Check if a specific payment method is available
-   */
   const isMethodAvailable = (code: PaymentMethodCode): boolean => {
     return methods.some(method => method.code === code);
   };
 
-  /**
-   * Get method by code
-   */
   const getMethod = (code: PaymentMethodCode): POSPaymentMethod | undefined => {
     return methods.find(method => method.code === code);
   };

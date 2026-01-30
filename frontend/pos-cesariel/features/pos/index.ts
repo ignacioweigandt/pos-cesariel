@@ -1,14 +1,7 @@
-/**
- * POS Module - Public API
- *
- * Point of Sale functionality including product selection,
- * cart management, barcode scanning, and checkout processing.
- */
+/** Módulo POS: selección de productos, carrito, scanner, checkout */
 
-// Main container - Primary export
 export { POSContainer } from "./components/POSContainer";
 
-// Types
 export type {
   Product,
   ProductCategory,
@@ -25,14 +18,12 @@ export type {
   CartTotals,
 } from "./types/pos.types";
 
-// Hooks - For external use if needed
 export { useCart } from "./hooks/useCart";
 export { useProductSearch } from "./hooks/useProductSearch";
 export { useSaleProcessing } from "./hooks/useSaleProcessing";
 export { useBarcodeScanner } from "./hooks/useBarcodeScanner";
 export { usePOSKeyboard } from "./hooks/usePOSKeyboard";
 
-// Utilities
 export {
   calculateCartTotals,
   calculateItemTotal,
@@ -41,8 +32,6 @@ export {
   validateCart,
 } from "./utils/cartCalculations";
 
-// Print utilities
 export { printThermalTicket, isPrintSupported, printTicketWithLoading } from "./utils/printTicket";
 
-// Components
 export { default as ThermalTicket } from "./components/ThermalTicket";

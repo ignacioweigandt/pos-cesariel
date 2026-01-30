@@ -1,28 +1,14 @@
-/**
- * Print Ticket Utility
- *
- * Handles thermal ticket printing using browser's print API
- */
+/** Utilidades de impresión de tickets térmicos usando browser print API */
 
-/**
- * Print the thermal ticket
- *
- * This function triggers the browser's print dialog.
- * The thermal-ticket.css styles ensure only the ticket is printed.
- *
- * @param onBeforePrint - Optional callback before printing starts
- * @param onAfterPrint - Optional callback after printing completes/cancels
- */
+/** Imprimir ticket térmico (usa thermal-ticket.css para estilos de impresión) */
 export const printThermalTicket = (
   onBeforePrint?: () => void,
   onAfterPrint?: () => void
 ): void => {
-  // Call before print callback
   if (onBeforePrint) {
     onBeforePrint();
   }
 
-  // Set up after print callback
   if (onAfterPrint) {
     const handleAfterPrint = () => {
       onAfterPrint();
@@ -31,25 +17,17 @@ export const printThermalTicket = (
     window.addEventListener('afterprint', handleAfterPrint);
   }
 
-  // Small delay to ensure DOM is updated
   setTimeout(() => {
     window.print();
   }, 100);
 };
 
-/**
- * Check if printing is supported
- */
+/** Verificar si la impresión está soportada */
 export const isPrintSupported = (): boolean => {
   return typeof window !== 'undefined' && 'print' in window;
 };
 
-/**
- * Print ticket with loading state
- *
- * @param setLoading - State setter for loading indicator
- * @param onComplete - Callback when print completes
- */
+/** Imprimir ticket con estado de loading */
 export const printTicketWithLoading = (
   setLoading: (loading: boolean) => void,
   onComplete?: () => void

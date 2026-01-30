@@ -16,15 +16,7 @@ interface UseProductSearchReturn {
   refetchProducts: () => Promise<void>;
 }
 
-/**
- * Hook for managing product search and filtering
- *
- * Handles fetching products from the API, searching by name/SKU,
- * and filtering by category.
- *
- * @param token - Authentication token
- * @returns Product search state and operations
- */
+/** Hook de búsqueda y filtrado de productos: por nombre/SKU y categoría */
 export function useProductSearch(token: string | null): UseProductSearchReturn {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,9 +24,6 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
-  /**
-   * Fetch products from backend
-   */
   const fetchProducts = async () => {
     if (!token) {
       setLoading(false);
@@ -51,7 +40,6 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
       console.error("Error fetching products:", err);
       setError("Error al cargar productos");
 
-      // Set demo products for development
       setProducts([
         {
           id: 1,
@@ -77,18 +65,13 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchProducts();
   }, [token]);
 
-  /**
-   * Filter products based on search term and category
-   */
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
-    // Filter by search term (name or SKU)
     if (searchTerm) {
       const lowerSearch = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -98,7 +81,6 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
       );
     }
 
-    // Filter by category
     if (selectedCategory !== null) {
       filtered = filtered.filter(
         (product) => product.category?.id === selectedCategory
