@@ -1,8 +1,13 @@
 """
-WhatsApp and social media integration models for the POS Cesariel system.
+Modelos de integración WhatsApp y redes sociales para POS Cesariel.
 
-This module contains models for WhatsApp Business integration, WhatsApp sales,
-and social media configuration.
+Gestiona la configuración de WhatsApp Business para ventas directas
+y los enlaces a redes sociales mostrados en el e-commerce.
+
+Modelos:
+    - WhatsAppConfig: Configuración de WhatsApp Business
+    - WhatsAppSale: Ventas coordinadas por WhatsApp
+    - SocialMediaConfig: Enlaces a redes sociales (Instagram, Facebook, etc.)
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Numeric
@@ -13,117 +18,160 @@ from database import Base
 
 class WhatsAppConfig(Base):
     """
-    Modelo de Configuración de WhatsApp del sistema POS Cesariel.
+    Configuración de WhatsApp Business.
     
-    Gestiona la configuración de WhatsApp Business para la integración
-    con el e-commerce, permitiendo la comunicación directa con clientes
-    para coordinar pedidos, consultas y servicio al cliente.
+    Gestiona la integración con WhatsApp Business para comunicación
+    directa con clientes: pedidos, consultas y servicio al cliente.
     
     Attributes:
-        id (int): Identificador único de la configuración de WhatsApp
-        business_phone (str): Número de WhatsApp empresarial (con código de país)
-        business_name (str): Nombre del negocio mostrado en WhatsApp
-        welcome_message (str): Mensaje de bienvenida personalizado
-        business_hours (str): Horarios de atención del negocio
-        auto_response_enabled (bool): Activación de respuesta automática
-        is_active (bool): Estado activo/inactivo de la integración WhatsApp
-        created_at (datetime): Fecha y hora de creación del registro
-        updated_at (datetime): Fecha y hora de última modificación
+        id: ID único
+        business_phone: Número de WhatsApp con código país (ej: +5491112345678)
+        business_name: Nombre del negocio en WhatsApp
+        welcome_message: Mensaje de bienvenida para nuevos contactos
+        business_hours: Horarios de atención (ej: "Lun-Vie 9-18hs")
+        auto_response_enabled: Habilitar respuesta automática
+        is_active: Flag de habilitación de integración
+        created_at: Timestamp de creación
+        updated_at: Timestamp de última modificación
+    
+    Ejemplo:
+        WhatsAppConfig(
+            business_phone="+5491112345678",
+            business_name="POS Cesariel",
+            welcome_message="Hola! Gracias por contactarnos",
+            business_hours="Lun-Vie 9-18hs, Sáb 9-13hs",
+            auto_response_enabled=True
+        )
     """
     __tablename__ = "whatsapp_config"
     
-    # Campos principales
-    id = Column(Integer, primary_key=True, index=True,
-                doc="Identificador único de la configuración de WhatsApp")
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Datos del negocio
     business_phone = Column(String(20), nullable=False,
-                            doc="Número de WhatsApp empresarial (con código de país)")
+                           doc="Número con código país: +5491112345678")
     business_name = Column(String(100), nullable=False,
-                           doc="Nombre del negocio mostrado en WhatsApp")
+                          doc="Nombre mostrado en WhatsApp")
     
-    # Mensajería y comunicación
+    # Mensajería
     welcome_message = Column(Text,
-                            doc="Mensaje de bienvenida personalizado para nuevos contactos")
+                            doc="Mensaje de bienvenida automático")
     business_hours = Column(String(200),
-                           doc="Horarios de atención del negocio")
+                           doc="Horarios de atención (ej: 'Lun-Vie 9-18hs')")
     auto_response_enabled = Column(Boolean, default=False,
-                                   doc="Activación de respuesta automática")
+                                   doc="Habilitar respuesta automática")
     
-    # Estado y auditoría
-    is_active = Column(Boolean, default=True,
-                       doc="Estado activo/inactivo de la integración WhatsApp")
-    created_at = Column(DateTime, default=func.now(),
-                        doc="Timestamp de creación del registro")
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(),
-                        doc="Timestamp de última actualización")
+    # Estado
+    is_active = Column(Boolean, default=True)
+    
+    # Auditoría
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
 
 class WhatsAppSale(Base):
+    """
+    Ventas coordinadas por WhatsApp.
+    
+    Registra ventas iniciadas y coordinadas a través de WhatsApp,
+    incluyendo información de envío y chat URL para seguimiento.
+    
+    Attributes:
+        id: ID único
+        sale_id: ID de la venta (FK → sales.id)
+        customer_whatsapp: Número de WhatsApp del cliente
+        customer_name: Nombre del cliente
+        customer_address: Dirección de envío (si aplica)
+        shipping_method: Método (pickup, delivery, shipping)
+        shipping_cost: Costo de envío
+        notes: Notas adicionales
+        whatsapp_chat_url: URL del chat de WhatsApp generada
+        created_at: Timestamp de creación
+        updated_at: Timestamp de última modificación
+    
+    Ejemplo:
+        WhatsAppSale(
+            sale_id=123,
+            customer_whatsapp="+5491198765432",
+            customer_name="Juan Pérez",
+            customer_address="Av. Libertador 1234",
+            shipping_method="delivery",
+            shipping_cost=500.00
+        )
+    """
     __tablename__ = "whatsapp_sales"
     
     id = Column(Integer, primary_key=True, index=True)
     sale_id = Column(Integer, ForeignKey("sales.id"), nullable=False)
+    
+    # Información del cliente
     customer_whatsapp = Column(String(20), nullable=False)
     customer_name = Column(String(100), nullable=False)
     customer_address = Column(Text)
+    
+    # Envío
     shipping_method = Column(String(50))  # pickup, delivery, shipping
     shipping_cost = Column(Numeric(10, 2), default=0)
+    
+    # Detalles
     notes = Column(Text)
-    whatsapp_chat_url = Column(String(500))  # Generated WhatsApp chat URL
+    whatsapp_chat_url = Column(String(500))  # URL del chat generada
+    
+    # Auditoría
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # Relationships
+    # Relación
     sale = relationship("Sale")
     
-    # Constraints
-    __table_args__ = (
-        {"extend_existing": True},
-    )
+    __table_args__ = ({"extend_existing": True},)
 
 
 class SocialMediaConfig(Base):
     """
-    Modelo de Configuración de Redes Sociales del sistema POS Cesariel.
+    Configuración de redes sociales.
     
-    Almacena los enlaces y configuración de redes sociales de la tienda
-    que se mostrarán en el e-commerce para conectar con los clientes
-    a través de diferentes plataformas sociales.
+    Almacena enlaces a redes sociales mostrados en el footer del e-commerce
+    para que clientes puedan seguir y contactar a la tienda.
     
     Attributes:
-        id (int): Identificador único de la configuración de red social
-        platform (str): Nombre de la plataforma (facebook, instagram, twitter, etc.)
-        username (str): Nombre de usuario en la plataforma (opcional)
-        url (str): URL completa del perfil de la red social
-        is_active (bool): Estado activo/inactivo de la red social
-        display_order (int): Orden de visualización en el frontend
-        created_at (datetime): Fecha y hora de creación del registro
-        updated_at (datetime): Fecha y hora de última modificación
+        id: ID único
+        platform: Nombre de la red social (facebook, instagram, twitter, tiktok)
+        username: Usuario en la plataforma (opcional)
+        url: URL completa del perfil
+        is_active: Flag de habilitación
+        display_order: Orden de visualización (1, 2, 3, ...)
+        created_at: Timestamp de creación
+        updated_at: Timestamp de última modificación
+    
+    Ejemplo:
+        SocialMediaConfig(
+            platform="instagram",
+            username="@poscesariel",
+            url="https://instagram.com/poscesariel",
+            is_active=True,
+            display_order=1
+        )
     """
     __tablename__ = "social_media_config"
     
-    # Campos principales
-    id = Column(Integer, primary_key=True, index=True,
-                doc="Identificador único de la configuración de red social")
-    platform = Column(String(50), nullable=False,
-                      doc="Nombre de la plataforma (facebook, instagram, twitter, whatsapp, etc.)")
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Identificación
+    platform = Column(String(50), nullable=False, index=True,
+                     doc="Plataforma: facebook, instagram, twitter, tiktok, youtube")
     username = Column(String(100),
-                      doc="Nombre de usuario en la plataforma (opcional)")
+                     doc="Usuario en la plataforma (opcional)")
     url = Column(String(500),
-                 doc="URL completa del perfil de la red social")
+                doc="URL completa del perfil")
     
-    # Configuración de visualización
-    is_active = Column(Boolean, default=True,
-                       doc="Estado activo/inactivo de la red social")
+    # Visualización
+    is_active = Column(Boolean, default=True, index=True)
     display_order = Column(Integer, default=1,
-                           doc="Orden de visualización en el frontend")
+                          doc="Orden de aparición (menor = primero)")
     
-    # Campos de auditoría
-    created_at = Column(DateTime, default=func.now(),
-                        doc="Timestamp de creación del registro")
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(),
-                        doc="Timestamp de última actualización")
+    # Auditoría
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    # Restricciones de tabla
-    __table_args__ = (
-        {"extend_existing": True},
-    )
+    __table_args__ = ({"extend_existing": True},)

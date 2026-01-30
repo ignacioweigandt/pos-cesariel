@@ -1,12 +1,21 @@
 """
-Audit and logging models for POS Cesariel.
+Módulo de Auditoría y Trazabilidad.
 
-This module contains models for tracking configuration changes and
-maintaining an audit trail of system modifications. Essential for:
-- Compliance and regulatory requirements
-- Troubleshooting and debugging
-- Security audits
-- Change management
+Sistema completo de logs para rastreo de cambios de configuración y eventos
+de seguridad. Cumplimiento normativo y troubleshooting avanzado.
+
+Modelos:
+    - ConfigChangeLog: Registro inmutable de cambios en configuraciones
+    - SecurityAuditLog: Registro de eventos de seguridad (login, permisos)
+
+Enums:
+    - ChangeAction: Tipos de acciones (CREATE, UPDATE, DELETE, ACTIVATE, DEACTIVATE)
+
+Casos de Uso:
+    - Auditorías de cumplimiento normativo
+    - Troubleshooting de cambios en configuración
+    - Detección de intentos de acceso no autorizado
+    - Historial de quién cambió qué y cuándo
 """
 
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum as SQLEnum
@@ -17,42 +26,80 @@ import enum
 
 
 class ChangeAction(str, enum.Enum):
-    """Types of configuration change actions"""
-    CREATE = "CREATE"      # New record created
-    UPDATE = "UPDATE"      # Existing record modified
-    DELETE = "DELETE"      # Record deleted/deactivated
-    ACTIVATE = "ACTIVATE"  # Record activated
-    DEACTIVATE = "DEACTIVATE"  # Record deactivated
+    """
+    Tipos de acciones de cambio en configuraciones.
+    
+    Define las operaciones posibles sobre registros de configuración para
+    tracking detallado en ConfigChangeLog.
+    
+    Values:
+        CREATE: Registro nuevo creado
+        UPDATE: Registro existente modificado
+        DELETE: Registro eliminado/desactivado permanentemente
+        ACTIVATE: Registro reactivado (después de DEACTIVATE)
+        DEACTIVATE: Registro temporalmente desactivado (reversible)
+    
+    Ejemplo:
+        ConfigChangeLog(
+            action=ChangeAction.UPDATE,
+            table_name="system_config",
+            field_name="currency_code"
+        )
+    """
+    CREATE = "CREATE"
+    UPDATE = "UPDATE"
+    DELETE = "DELETE"
+    ACTIVATE = "ACTIVATE"
+    DEACTIVATE = "DEACTIVATE"
 
 
 class ConfigChangeLog(Base):
     """
-    Configuration change audit log.
-
-    Tracks all changes to configuration tables (system_config, tax_rates,
-    payment_methods, ecommerce_config, etc.) for compliance and troubleshooting.
-
+    Registro inmutable de cambios en configuraciones del sistema.
+    
+    Rastreo completo de modificaciones en tablas críticas (system_config, tax_rates,
+    payment_methods, ecommerce_config, branch_config) con contexto de quién, qué,
+    cuándo y desde dónde. Esencial para auditorías y troubleshooting.
+    
     Attributes:
-        id (int): Identificador único del log
-        table_name (str): Nombre de la tabla modificada
-        record_id (int): ID del registro modificado
-        action (ChangeAction): Tipo de acción realizada (CREATE/UPDATE/DELETE)
-        field_name (str): Campo específico modificado (opcional)
-        old_value (str): Valor anterior del campo
-        new_value (str): Valor nuevo del campo
-        changed_by_user_id (int): ID del usuario que realizó el cambio
-        changed_at (datetime): Timestamp del cambio
-        ip_address (str): IP desde donde se realizó el cambio (opcional)
-        user_agent (str): Navegador/cliente que realizó el cambio (opcional)
-        notes (str): Notas adicionales sobre el cambio
-
+        id: Identificador único del log
+        table_name: Nombre de tabla modificada (indexado)
+        record_id: ID del registro modificado (indexado)
+        action: Tipo de acción (CREATE/UPDATE/DELETE/ACTIVATE/DEACTIVATE)
+        field_name: Campo específico modificado (NULL si CREATE/DELETE completo)
+        old_value: Valor anterior (JSON para objetos complejos)
+        new_value: Valor nuevo (JSON para objetos complejos)
+        changed_by_user_id: ID del usuario que realizó cambio (FK users.id)
+        changed_at: Timestamp exacto del cambio (indexado, auto)
+        ip_address: IP origen del request (máx 50 chars)
+        user_agent: Cliente/navegador que realizó cambio (máx 500 chars)
+        notes: Justificación o contexto adicional del cambio
+    
     Relationships:
-        changed_by: Usuario que realizó el cambio
-
+        changed_by: Usuario que realizó el cambio (backref: config_changes)
+    
     Business Rules:
-        - Todos los cambios en tablas de configuración deben registrarse
-        - Los logs son inmutables (no se pueden editar después de crear)
-        - Retención: mantener logs por al menos 2 años para auditorías
+        - Logs son inmutables: nunca UPDATE/DELETE después de crear
+        - Registrar TODOS los cambios en tablas de configuración
+        - Retención mínima: 2 años para auditorías fiscales
+        - Valores complejos serializar como JSON en old_value/new_value
+        - IP y user_agent opcionales pero recomendados para seguridad
+    
+    Properties:
+        summary: Resumen en español legible del cambio realizado
+    
+    Ejemplo:
+        ConfigChangeLog(
+            table_name="system_config",
+            record_id=1,
+            action=ChangeAction.UPDATE,
+            field_name="currency_code",
+            old_value="USD",
+            new_value="ARS",
+            changed_by_user_id=5,
+            ip_address="192.168.1.100",
+            notes="Cambio de moneda para Argentina"
+        )
     """
     __tablename__ = "config_change_log"
 
@@ -96,11 +143,23 @@ class ConfigChangeLog(Base):
                              doc="Usuario que realizó el cambio")
 
     def __repr__(self):
+        """Representación técnica del log de cambio para debugging."""
         return f"<ConfigChangeLog(table={self.table_name}, record_id={self.record_id}, action={self.action}, by={self.changed_by_user_id})>"
 
     @property
     def summary(self) -> str:
-        """Generate a human-readable summary of the change"""
+        """
+        Genera resumen en español legible del cambio realizado.
+        
+        Convierte los datos técnicos del log en una frase descriptiva tipo:
+        "actualizó registro 5 en system_config, campo 'currency_code': 'USD' → 'ARS'"
+        
+        Returns:
+            str: Descripción en español del cambio con formato legible
+        
+        Ejemplo:
+            log.summary  # "creó registro 10 en tax_rates"
+        """
         action_text = {
             ChangeAction.CREATE: "creó",
             ChangeAction.UPDATE: "actualizó",
@@ -123,30 +182,49 @@ class ConfigChangeLog(Base):
 
 class SecurityAuditLog(Base):
     """
-    Security audit log for authentication and authorization events.
-
-    Tracks security-relevant events like login attempts, permission changes,
-    and suspicious activities for security monitoring.
-
+    Registro de eventos de seguridad y autenticación.
+    
+    Rastreo de eventos críticos de seguridad: intentos de login (exitosos/fallidos),
+    cambios de permisos, actividades sospechosas. Base para detección de intrusiones
+    y análisis forense.
+    
     Attributes:
-        id (int): Identificador único del log
-        event_type (str): Tipo de evento (LOGIN, LOGOUT, PERMISSION_CHANGE, etc.)
-        user_id (int): ID del usuario relacionado (opcional)
-        username (str): Username intentado (para intentos fallidos)
-        success (bool): Si el evento fue exitoso
-        ip_address (str): IP desde donde ocurrió el evento
-        user_agent (str): User agent del cliente
-        details (str): Detalles adicionales del evento (JSON)
-        created_at (datetime): Timestamp del evento
-
+        id: Identificador único del log
+        event_type: Tipo de evento (LOGIN, LOGOUT, PERMISSION_CHANGE, etc.) (indexado)
+        user_id: ID del usuario relacionado (FK users.id, indexado, opcional)
+        username: Username intentado en login (para fallidos, indexado)
+        success: Estado del evento ("SUCCESS" o "FAILED")
+        ip_address: IP origen del evento (indexado, máx 50 chars)
+        user_agent: User agent del cliente (máx 500 chars)
+        details: Detalles adicionales en JSON (motivo fallo, permisos cambiados, etc.)
+        created_at: Timestamp del evento (indexado, auto)
+    
     Relationships:
-        user: Usuario relacionado con el evento
-
+        user: Usuario relacionado con el evento (backref: security_events)
+    
     Business Rules:
-        - Registrar todos los intentos de login (exitosos y fallidos)
-        - Registrar cambios de permisos y roles
-        - Alertar sobre múltiples intentos fallidos
-        - Retención: mantener logs por al menos 1 año
+        - Registrar TODOS los intentos de login (exitosos y fallidos)
+        - Registrar cambios de roles y permisos de usuarios
+        - Detectar patrones: múltiples fallos consecutivos desde misma IP → alerta
+        - Retención mínima: 1 año (3 años para entornos regulados)
+        - IP indexada para análisis de ataques por origen
+    
+    Event Types Comunes:
+        LOGIN: Intento de autenticación
+        LOGOUT: Cierre de sesión
+        PERMISSION_CHANGE: Cambio de rol/permisos
+        ACCESS_DENIED: Intento de acceso denegado
+        SUSPICIOUS_ACTIVITY: Actividad sospechosa detectada
+    
+    Ejemplo:
+        SecurityAuditLog(
+            event_type="LOGIN",
+            user_id=10,
+            username="admin",
+            success="FAILED",
+            ip_address="203.0.113.45",
+            details='{"reason": "invalid_password", "attempts": 3}'
+        )
     """
     __tablename__ = "security_audit_log"
 
@@ -182,4 +260,5 @@ class SecurityAuditLog(Base):
                        doc="Usuario relacionado con el evento")
 
     def __repr__(self):
+        """Representación técnica del log de seguridad para debugging."""
         return f"<SecurityAuditLog(event={self.event_type}, user={self.username}, success={self.success}, ip={self.ip_address})>"
