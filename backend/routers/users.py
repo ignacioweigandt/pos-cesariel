@@ -1,3 +1,36 @@
+"""
+Router de Usuarios - Endpoints CRUD.
+
+Gestión completa de usuarios del sistema con roles y permisos.
+Generación de contraseñas temporales seguras.
+
+Endpoints:
+    GET /users: Lista usuarios (filtro por sucursal y rol)
+    GET /users/{id}: Detalle de usuario
+    POST /users: Crear usuario con password temporal (ADMIN)
+    PUT /users/{id}: Actualizar usuario (ADMIN)
+    DELETE /users/{id}: Eliminar usuario (ADMIN)
+    PUT /users/{id}/change-password: Cambiar contraseña propia
+    PUT /users/{id}/reset-password: Reset password (ADMIN)
+
+Permisos:
+    - GET: Usuario autenticado (ve según su rol)
+    - POST/PUT/DELETE: Solo ADMIN
+    - change-password: Usuario propio o ADMIN
+    - reset-password: Solo ADMIN
+
+Características:
+    - Generación de passwords temporales seguros (12 chars)
+    - Validación de unicidad (username, email)
+    - Filtrado por branch_id y role
+    - Hashing bcrypt automático
+    - Validación de roles (ADMIN, MANAGER, SELLER, ECOMMERCE)
+
+Seguridad:
+    - Passwords con mayúsculas, minúsculas, dígitos y caracteres especiales
+    - Hashing bcrypt con salt
+    - Validación de permisos por rol
+"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
