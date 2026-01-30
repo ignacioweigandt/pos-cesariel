@@ -1,4 +1,43 @@
-# Router para gestión de contenido (Banners, Logo, Redes Sociales)
+"""
+Router de Gestión de Contenido - Banners, Logo, Redes Sociales.
+
+Administración de contenido visual y configuración de ecommerce.
+CRUD completo para banners, redes sociales y config de tienda.
+
+Endpoints:
+    === BANNERS ===
+    GET /content/banners: Lista banners (filtro activos)
+    POST /content/banners: Crear banner
+    PUT /content/banners/{id}: Actualizar banner
+    DELETE /content/banners/{id}: Eliminar banner
+    PATCH /content/banners/{id}/reorder: Reordenar posición
+    
+    === REDES SOCIALES ===
+    GET /content/social-media: Lista configuraciones de RRSS
+    POST /content/social-media: Crear config RRSS
+    PUT /content/social-media/{id}: Actualizar config RRSS
+    DELETE /content/social-media/{id}: Eliminar config RRSS
+    
+    === ECOMMERCE CONFIG ===
+    GET /content/ecommerce-config: Obtener config de tienda
+    PUT /content/ecommerce-config: Actualizar config de tienda
+
+Permisos:
+    - Todos los endpoints requieren autenticación (get_current_user)
+    - Recomendado solo para ADMIN/MANAGER
+
+Características:
+    - Banners con ordenamiento (banner_order)
+    - Activación/desactivación de banners
+    - URLs de Cloudinary para imágenes
+    - Config singleton de ecommerce
+    - Redes sociales con nombre + URL + icono
+
+Modelos:
+    - StoreBanner: Carrusel de imágenes en home
+    - SocialMediaConfig: Links a RRSS (Instagram, Facebook, etc.)
+    - EcommerceConfig: Colores, textos, contacto de tienda
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
