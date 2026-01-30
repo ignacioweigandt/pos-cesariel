@@ -1,8 +1,21 @@
 """
-Configuration repositories for POS Cesariel.
+Repositories de Configuración y Auditoría.
 
-This module contains repositories for managing branch-specific configurations,
-audit logs, and security events.
+Acceso a datos para configuraciones por sucursal, logs de auditoría
+y eventos de seguridad.
+
+Repositories:
+    - BranchTaxRateRepository: Tasas impositivas por sucursal
+    - BranchPaymentMethodRepository: Medios de pago por sucursal
+    - ConfigChangeLogRepository: Trazabilidad de cambios en configuraciones
+    - SecurityAuditLogRepository: Eventos de seguridad y autenticación
+
+Características:
+    - Configuraciones multi-tenant (por sucursal)
+    - Tasas y métodos de pago con fechas de vigencia
+    - Auditoría completa con IP, user agent, timestamps
+    - Estadísticas de eventos de seguridad
+    - Detección de intentos de acceso fallidos
 """
 
 from typing import List, Optional, Dict, Any

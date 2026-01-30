@@ -1,8 +1,19 @@
 """
-Repository para gestión de notificaciones en POS Cesariel.
+Repositories de Notificaciones.
 
-Este módulo implementa el patrón Repository para acceso a datos
-de notificaciones y configuración de notificaciones.
+Acceso a datos para sistema de notificaciones en tiempo real y
+configuración de preferencias por usuario.
+
+Repositories:
+    - NotificationRepository: CRUD notificaciones + filtros + estadísticas
+    - NotificationSettingRepository: Configuración de notificaciones por usuario
+
+Características:
+    - Filtrado por usuario/sucursal/tipo/prioridad
+    - Marcado de leídas individual/bulk
+    - Soft delete de notificaciones antiguas
+    - Estadísticas agregadas por tipo y prioridad
+    - Config por defecto auto-creada por usuario
 """
 
 from typing import List, Optional, Dict

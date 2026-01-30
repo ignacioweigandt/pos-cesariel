@@ -1,9 +1,22 @@
 """
-Reports repository for POS Cesariel.
+Repository de Reportes y Analíticas.
 
-Provides specialized data access methods for reporting and analytics.
-This repository doesn't follow the standard CRUD pattern since reports
-are read-only aggregations from multiple tables.
+Acceso a datos especializado para reportes empresariales y dashboards.
+NO hereda de BaseRepository: son agregaciones read-only, no CRUD.
+
+Características:
+    - Agregaciones multi-tabla (ventas, productos, sucursales)
+    - Filtros avanzados por fecha, sucursal, usuario, tipo de venta
+    - Optimizado para reportes de gran volumen
+    - Métricas: totales, promedios, rankings, tendencias
+    - Soporte para gráficos y dashboards
+
+Tipos de Reportes:
+    - Ventas: totales, por período, por sucursal, por usuario, por tipo
+    - Productos: más vendidos, stock bajo, por categoría
+    - Clientes: frecuencia, ticket promedio
+    - Financieros: por método de pago, cuotas, recargos
+    - Tendencias: comparativas temporales, growth rates
 """
 
 from sqlalchemy.orm import Session
