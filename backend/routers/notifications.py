@@ -1,8 +1,46 @@
 """
-Router de notificaciones para POS Cesariel.
+Router de Notificaciones - Endpoints de Gestión.
 
-Este módulo define los endpoints para gestión de notificaciones
-y configuración de notificaciones por usuario.
+Sistema completo de notificaciones en tiempo real con configuración
+por usuario y operaciones bulk.
+
+Endpoints:
+    === NOTIFICACIONES ===
+    GET /notifications: Lista notificaciones (filtros: tipo, leídas, prioridad)
+    GET /notifications/{id}: Detalle de notificación
+    POST /notifications: Crear notificación manual
+    PATCH /notifications/{id}/read: Marcar como leída
+    PATCH /notifications/mark-all-read: Marcar todas como leídas
+    POST /notifications/bulk-mark-read: Marcar múltiples como leídas
+    DELETE /notifications/{id}: Eliminar notificación (soft delete)
+    POST /notifications/bulk-delete: Eliminar múltiples
+    GET /notifications/stats: Estadísticas (total, no leídas, por tipo/prioridad)
+    
+    === CONFIGURACIÓN ===
+    GET /notifications/settings: Obtener preferencias de usuario
+    PUT /notifications/settings: Actualizar preferencias
+
+Permisos:
+    - Todos los endpoints requieren autenticación
+    - Usuarios ven solo sus notificaciones (salvo ADMIN)
+    - ADMIN puede ver notificaciones de todos
+
+Filtros Disponibles:
+    - is_read: bool (true/false)
+    - type: NotificationType (LOW_STOCK, NEW_SALE, ORDER_STATUS, SYSTEM)
+    - priority: NotificationPriority (LOW, MEDIUM, HIGH, URGENT)
+    - skip/limit: Paginación
+
+Características:
+    - Soft delete (is_active flag)
+    - Operaciones bulk para eficiencia
+    - Estadísticas agregadas por tipo y prioridad
+    - Configuración granular de notificaciones
+    - Integración con WebSockets para real-time
+
+Service Layer:
+    - NotificationService maneja toda la lógica de negocio
+    - Validaciones, filtrado y generación automática
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
