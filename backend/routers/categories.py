@@ -1,3 +1,25 @@
+"""
+Router de Categorías - Endpoints CRUD.
+
+Gestión completa de categorías de productos.
+CRUD simple con Repository Pattern.
+
+Endpoints:
+    GET /categories: Lista categorías activas (paginado)
+    GET /categories/{id}: Detalle de categoría
+    POST /categories: Crear categoría (MANAGER/ADMIN)
+    PUT /categories/{id}: Actualizar categoría (MANAGER/ADMIN)
+    DELETE /categories/{id}: Soft delete categoría (MANAGER/ADMIN)
+
+Permisos:
+    - GET: Usuario autenticado
+    - POST/PUT/DELETE: MANAGER o ADMIN
+
+Características:
+    - Soft delete (marca is_active=False)
+    - Repository Pattern para acceso a datos
+    - Paginación en listado
+"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
