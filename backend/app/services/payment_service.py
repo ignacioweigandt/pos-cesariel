@@ -1,8 +1,20 @@
 """
-Payment Service for POS Cesariel.
+Servicio de Pagos - Lógica de Negocio.
 
-Handles all payment-related business logic including payment configuration
-and custom installment plan management.
+Gestiona configuración de medios de pago y planes de cuotas personalizados.
+Validaciones de duplicados y rangos válidos.
+
+Responsabilidades:
+    - Gestión de PaymentConfig (medios de pago habilitados)
+    - CRUD de CustomInstallment (planes de cuotas)
+    - Validación de duplicados (card_type + installments únicos)
+    - Validación de rangos (cuotas 1-60, recargo 0-100%)
+    - Activación/desactivación de planes
+
+Validaciones:
+    - No permitir planes duplicados (misma tarjeta + misma cantidad de cuotas)
+    - Cuotas entre 1 y 60
+    - Recargo entre 0% y 100%
 """
 
 from typing import List, Optional
@@ -13,14 +25,18 @@ from app.schemas.payment import CustomInstallmentCreate, CustomInstallmentUpdate
 
 
 class PaymentService:
-    """Service for payment configuration and custom installments management."""
+    """
+    Servicio de gestión de pagos y cuotas.
+    
+    Coordina configuración de medios de pago y planes personalizados.
+    """
 
     def __init__(self, db: Session):
         """
-        Initialize payment service with database session.
-
+        Inicializa servicio con sesión de BD.
+        
         Args:
-            db: SQLAlchemy database session
+            db: Sesión de SQLAlchemy
         """
         self.db = db
         self.payment_repo = PaymentConfigRepository(PaymentConfig, db)
@@ -29,11 +45,19 @@ class PaymentService:
     # =================== PAYMENT CONFIG METHODS ===================
 
     def get_active_payment_configs(self) -> List[PaymentConfig]:
-        """Get all active payment configurations."""
+        """Obtiene configuraciones de pago activas."""
         return self.payment_repo.get_active_configs()
 
     def get_payment_configs_by_type(self, payment_type: str) -> List[PaymentConfig]:
-        """Get payment configurations by type."""
+        """
+        Obtiene configuraciones por tipo de pago.
+        
+        Args:
+            payment_type: Tipo de pago (efectivo, tarjeta, etc.)
+        
+        Returns:
+            Lista de configuraciones de ese tipo
+        """
         return self.payment_repo.get_by_payment_type(payment_type)
 
     # =================== CUSTOM INSTALLMENT METHODS ===================
