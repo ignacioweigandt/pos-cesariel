@@ -1,3 +1,84 @@
+"""
+Router de Ecommerce Avanzado - Administración CON Autenticación.
+
+Backoffice para gestión completa de ecommerce: banners, imágenes,
+órdenes, WhatsApp, redes sociales. Requiere autenticación.
+
+Endpoints:
+    === PRODUCT IMAGES ===
+    GET /ecommerce-advanced/products/{id}/images: Lista imágenes
+    POST /ecommerce-advanced/products/{id}/images: Upload imagen (Cloudinary)
+    DELETE /ecommerce-advanced/product-images/{id}: Eliminar imagen
+    PATCH /ecommerce-advanced/product-images/{id}/reorder: Reordenar
+    
+    === STORE BANNERS ===
+    GET /ecommerce-advanced/banners: Lista banners
+    POST /ecommerce-advanced/banners: Upload banner (Cloudinary)
+    PUT /ecommerce-advanced/banners/{id}: Actualizar banner
+    DELETE /ecommerce-advanced/banners/{id}: Eliminar banner
+    PATCH /ecommerce-advanced/banners/{id}/toggle: Activar/desactivar
+    PATCH /ecommerce-advanced/banners/{id}/reorder: Reordenar posición
+    
+    === ECOMMERCE ORDERS ===
+    GET /ecommerce-advanced/sales: Lista órdenes ecommerce
+    PATCH /ecommerce-advanced/sales/{id}/status: Cambiar estado orden
+    GET /ecommerce-advanced/sales/report: Reporte de ventas ecommerce
+    
+    === WHATSAPP ===
+    GET /ecommerce-advanced/whatsapp-sales: Ventas de WhatsApp
+    GET /ecommerce-advanced/whatsapp-sales/{id}: Detalle con metadata
+    POST /ecommerce-advanced/whatsapp-sales: Asociar venta a WhatsApp
+    PUT /ecommerce-advanced/whatsapp-sales/{id}: Actualizar metadata
+    DELETE /ecommerce-advanced/whatsapp-sales/{id}: Eliminar asociación
+    
+    === WHATSAPP CONFIG ===
+    GET /ecommerce-advanced/whatsapp-config: Config de WhatsApp
+    PUT /ecommerce-advanced/whatsapp-config: Actualizar config
+    
+    === REDES SOCIALES ===
+    GET /ecommerce-advanced/social-media: Lista RRSS
+    POST /ecommerce-advanced/social-media: Crear link RRSS
+    PUT /ecommerce-advanced/social-media/{id}: Actualizar link
+    DELETE /ecommerce-advanced/social-media/{id}: Eliminar link
+    
+    === STORE DATA ===
+    GET /ecommerce-advanced/store-data: Datos completos de tienda
+
+Permisos:
+    - Todos los endpoints requieren autenticación (get_current_user)
+    - Recomendado solo para ADMIN/MANAGER
+
+Características:
+    - Upload de imágenes a Cloudinary
+    - Gestión de orden de imágenes/banners
+    - Cambio de estado de órdenes (PENDING → CONFIRMED → COMPLETED)
+    - Revalidación de cache de Next.js (ISR)
+    - Metadata de WhatsApp por venta
+    - Reportes de ventas ecommerce
+
+Integración Cloudinary:
+    - Upload directo desde backend
+    - URLs públicas optimizadas
+    - Eliminación automática al borrar
+    - Transformaciones de imagen
+
+Estados de Orden:
+    - PENDING: Nueva orden
+    - CONFIRMED: Confirmada por admin
+    - COMPLETED: Entregada/completada
+    - CANCELLED: Cancelada
+
+Revalidación Cache:
+    - Trigger automático a Next.js ISR
+    - Tags: banners, products, config
+    - URL: ECOMMERCE_URL/api/revalidate
+
+Schemas Especiales:
+    - ProductWithImages: Producto con galería
+    - EcommerceStoreData: Datos completos de tienda
+    - WhatsAppSaleWithDetails: Venta con metadata WhatsApp
+    - EcommerceSalesReport: Reporte agregado
+"""
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from typing import List, Optional
