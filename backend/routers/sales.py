@@ -1,3 +1,69 @@
+"""
+Router de Ventas - Endpoints de Transacciones.
+
+Gestión completa del ciclo de vida de ventas POS/Ecommerce/WhatsApp.
+Integración con inventario y notificaciones en tiempo real.
+
+Endpoints:
+    GET /sales: Lista ventas con filtros avanzados
+    POST /sales: Crear venta (valida stock, actualiza inventario)
+    GET /sales/{id}: Detalle de venta con ítems
+    PATCH /sales/{id}/status: Cambiar estado (e-commerce orders)
+    DELETE /sales/{id}: Cancelar venta (revierte stock)
+    
+    === REPORTES ===
+    GET /sales/report: Reporte agregado de ventas
+    GET /sales/dashboard: Métricas del dashboard
+    GET /sales/daily: Ventas diarias para gráficos
+
+Flujo de Creación de Venta:
+    1. Validar stock de TODOS los ítems
+    2. Generar sale_number único
+    3. Calcular totales (subtotal + tax - discount)
+    4. Crear Sale + SaleItems
+    5. Disminuir stock (BranchStock/ProductSize)
+    6. Crear InventoryMovement por cada ítem
+    7. Notificar vía WebSocket (nuevo_venta, cambio_stock, stock_bajo)
+    8. Actualizar dashboard en tiempo real
+
+Tipos de Venta:
+    - POS: Venta en tienda física
+    - ECOMMERCE: Orden online
+    - WHATSAPP: Venta por WhatsApp
+
+Estados de Orden (Ecommerce):
+    - PENDING: Esperando confirmación
+    - CONFIRMED: Confirmada por admin
+    - COMPLETED: Entregada/completada
+    - CANCELLED: Cancelada (revierte stock)
+
+Filtros Disponibles:
+    - sale_type: POS/ECOMMERCE/WHATSAPP
+    - branch_id: Sucursal
+    - start_date, end_date: Rango de fechas
+    - has_whatsapp_sale: Ventas con metadata de WhatsApp
+    - skip, limit: Paginación
+
+Validaciones:
+    - Stock suficiente antes de crear venta
+    - Stock por sucursal y talle (si aplica)
+    - Usuario autenticado y activo
+    - Sucursal válida y activa
+
+Notificaciones WebSocket:
+    - notify_new_sale(): Nueva venta registrada
+    - notify_inventory_change(): Stock actualizado
+    - notify_low_stock(): Alerta si stock ≤ min_stock
+    - notify_dashboard_update(): Actualiza métricas
+
+Características:
+    - Generación de sale_number: POS-YYYYMMDDHHMMSS-XXXXXXXX
+    - Transacciones atómicas (venta + stock)
+    - Reversión de stock en cancelación
+    - Tracking completo con InventoryMovement
+    - Cálculo automático de totales
+    - WebSocket real-time updates
+"""
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func, or_
