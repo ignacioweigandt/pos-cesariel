@@ -1,4 +1,71 @@
-# Rutas públicas para e-commerce (sin autenticación)
+"""
+Router de Ecommerce Público - Endpoints SIN Autenticación.
+
+API pública para frontend de tienda online (storefront).
+Todos los endpoints son de solo lectura excepto crear orden.
+
+Endpoints:
+    === CATÁLOGO ===
+    GET /ecommerce/products: Productos activos (show_in_ecommerce=True)
+    GET /ecommerce/products/{id}: Detalle de producto con stock
+    GET /ecommerce/products/category/{id}: Productos por categoría
+    GET /ecommerce/products/search: Búsqueda full-text
+    GET /ecommerce/categories: Categorías activas
+    GET /ecommerce/brands: Marcas activas
+    
+    === CONTENIDO ===
+    GET /ecommerce/config: Configuración de tienda (colores, textos)
+    GET /ecommerce/banners: Banners del carrusel home
+    GET /ecommerce/social-media: Links a redes sociales
+    GET /ecommerce/whatsapp-config: Config de WhatsApp Business
+    
+    === ÓRDENES ===
+    POST /ecommerce/orders: Crear orden (rate limited 10/min)
+    
+    === WHATSAPP ===
+    GET /ecommerce/whatsapp-link: Generar link de WhatsApp
+
+Características:
+    - NO requiere autenticación (público)
+    - Rate limiting en creación de órdenes (10/min por IP)
+    - Validación de stock antes de crear orden
+    - Generación automática de sale_number
+    - Notificaciones WebSocket a backoffice
+    - Stock calculado en tiempo real
+
+Flujo de Orden:
+    1. Cliente navega catálogo (productos visibles)
+    2. Agrega al carrito (validación client-side)
+    3. POST /orders con ítems y datos de contacto
+    4. Backend valida stock disponible
+    5. Crea Sale con status PENDING
+    6. Disminuye stock (BranchStock)
+    7. Crea InventoryMovement
+    8. Notifica backoffice vía WebSocket
+    9. Retorna orden creada
+
+Validaciones:
+    - Productos activos y show_in_ecommerce=True
+    - Stock suficiente por sucursal
+    - Stock por talle si producto has_sizes=True
+    - Rate limiting para prevenir spam
+
+Seguridad:
+    - Rate limiting: 10 órdenes/min por IP
+    - Validación de datos con Pydantic
+    - Sanitización de inputs
+    - Stock verificado antes de confirmar
+
+Integración:
+    - WebSocket: notify_new_sale()
+    - InventoryMovement: tracking de cambios
+    - WhatsApp: generación de links con mensaje pre-cargado
+
+Formatos de Respuesta:
+    - Productos con stock calculado
+    - URLs de imágenes (Cloudinary)
+    - Config serializada para frontend
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, exists, or_
