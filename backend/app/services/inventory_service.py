@@ -1,10 +1,23 @@
 """
-Inventory Service for POS Cesariel.
+Servicio de Inventario - Lógica de Negocio.
 
-Handles all inventory-related business logic including stock management,
-stock transfers, and size-based inventory.
+Gestiona stock multi-sucursal con soporte para productos con talles.
+Coordina BranchStock y ProductSize para cálculos precisos de inventario.
 
-This service replaces business logic that was in the Product model.
+Responsabilidades:
+    - Cálculo de stock por sucursal y total
+    - Validación de stock disponible (no reservado)
+    - Disminución de stock con tracking (InventoryMovement)
+    - Soporte para productos con/sin talles
+    - Identificación de sucursales con stock
+
+Notas Importantes:
+    - BranchStock es la fuente única de verdad para cantidades
+    - Productos con has_sizes=True usan ProductSize
+    - Productos sin talles usan BranchStock directo
+    - Cada cambio de stock crea InventoryMovement para auditoría
+
+Este servicio reemplaza métodos de negocio que antes estaban en Product model.
 """
 
 from typing import Optional, List
@@ -19,9 +32,19 @@ from app.models import Product, BranchStock, ProductSize, InventoryMovement
 
 
 class InventoryService:
-    """Service for inventory management operations."""
+    """
+    Servicio de gestión de inventario multi-sucursal.
+    
+    Coordina cálculos de stock considerando productos con/sin talles.
+    """
 
     def __init__(self, db: Session):
+        """
+        Inicializa servicio con sesión de BD.
+        
+        Args:
+            db: Sesión de SQLAlchemy
+        """
         self.db = db
         self.branch_stock_repo = BranchStockRepository(BranchStock, db)
         self.product_size_repo = ProductSizeRepository(ProductSize, db)
@@ -30,10 +53,20 @@ class InventoryService:
 
     def get_product_stock_for_branch(self, product_id: int, branch_id: int) -> int:
         """
-        Get stock for a specific product in a specific branch.
-        Handles both sized and non-sized products.
+        Obtiene stock de un producto en una sucursal.
         
-        Replaces: Product.get_stock_for_branch() method.
+        Maneja automáticamente productos con/sin talles:
+        - Con talles: suma stock de todos los ProductSize
+        - Sin talles: consulta BranchStock directo
+        
+        Args:
+            product_id: ID del producto
+            branch_id: ID de la sucursal
+        
+        Returns:
+            Cantidad de stock (0 si no existe)
+        
+        Reemplaza: Product.get_stock_for_branch()
         """
         product = self.product_repo.get(product_id)
         if not product:
@@ -50,9 +83,16 @@ class InventoryService:
 
     def get_available_stock_for_branch(self, product_id: int, branch_id: int) -> int:
         """
-        Get available (non-reserved) stock for a branch.
+        Obtiene stock disponible (no reservado) en una sucursal.
         
-        Replaces: Product.get_available_stock_for_branch() method.
+        Args:
+            product_id: ID del producto
+            branch_id: ID de la sucursal
+        
+        Returns:
+            Stock disponible (excluye reservas)
+        
+        Reemplaza: Product.get_available_stock_for_branch()
         """
         product = self.product_repo.get(product_id)
         if not product:
@@ -66,9 +106,15 @@ class InventoryService:
 
     def calculate_total_stock(self, product_id: int) -> int:
         """
-        Calculate total stock across all branches.
+        Calcula stock total en todas las sucursales.
         
-        Replaces: Product.calculate_total_stock() method.
+        Args:
+            product_id: ID del producto
+        
+        Returns:
+            Suma de stock en todas las sucursales
+        
+        Reemplaza: Product.calculate_total_stock()
         """
         product = self.product_repo.get(product_id)
         if not product:
@@ -83,9 +129,15 @@ class InventoryService:
 
     def calculate_total_available_stock(self, product_id: int) -> int:
         """
-        Calculate total available stock across all branches.
+        Calcula stock disponible total en todas las sucursales.
         
-        Replaces: Product.calculate_total_available_stock() method.
+        Args:
+            product_id: ID del producto
+        
+        Returns:
+            Suma de stock disponible en todas las sucursales
+        
+        Reemplaza: Product.calculate_total_available_stock()
         """
         product = self.product_repo.get(product_id)
         if not product:
@@ -105,9 +157,20 @@ class InventoryService:
         size: Optional[str] = None
     ) -> bool:
         """
-        Check if there's sufficient stock available.
+        Verifica si hay stock suficiente para vender.
         
-        Replaces: Product.has_stock_in_branch() method.
+        Validación crítica antes de confirmar ventas.
+        
+        Args:
+            product_id: ID del producto
+            branch_id: ID de la sucursal
+            quantity: Cantidad requerida
+            size: Talle requerido (si producto has_sizes=True)
+        
+        Returns:
+            True si hay stock suficiente, False si no
+        
+        Reemplaza: Product.has_stock_in_branch()
         """
         product = self.product_repo.get(product_id)
         if not product:
@@ -123,9 +186,15 @@ class InventoryService:
 
     def get_branches_with_stock(self, product_id: int) -> List[int]:
         """
-        Get list of branch IDs that have stock.
+        Obtiene IDs de sucursales que tienen stock del producto.
         
-        Replaces: Product.get_branches_with_stock() method.
+        Args:
+            product_id: ID del producto
+        
+        Returns:
+            Lista de branch_id con stock > 0
+        
+        Reemplaza: Product.get_branches_with_stock()
         """
         stocks = self.branch_stock_repo.get_many_by_field("product_id", product_id)
         return [stock.branch_id for stock in stocks if stock.stock_quantity > 0]
@@ -141,8 +210,28 @@ class InventoryService:
         notes: Optional[str] = None
     ) -> bool:
         """
-        Decrease stock for a product in a branch.
-        Creates inventory movement record.
+        Disminuye stock con tracking de movimiento.
+        
+        Operación crítica que:
+        1. Valida stock suficiente
+        2. Actualiza BranchStock o ProductSize
+        3. Crea InventoryMovement para auditoría
+        
+        Args:
+            product_id: ID del producto
+            branch_id: ID de la sucursal
+            quantity: Cantidad a disminuir
+            size: Talle (requerido si has_sizes=True)
+            reference_type: Tipo de referencia ("SALE", "ADJUSTMENT", etc.)
+            reference_id: ID de la venta/ajuste relacionado
+            notes: Notas adicionales
+        
+        Returns:
+            True si exitoso, False si stock insuficiente o producto no existe
+        
+        Efectos Secundarios:
+            - Modifica BranchStock.stock_quantity o ProductSize.stock_quantity
+            - Crea registro en InventoryMovement
         """
         product = self.product_repo.get(product_id)
         if not product:

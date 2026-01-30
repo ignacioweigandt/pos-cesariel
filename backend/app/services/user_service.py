@@ -1,8 +1,19 @@
 """
-User Service for POS Cesariel.
+Servicio de Usuarios - Lógica de Negocio.
 
-Handles all user-related business logic including user management,
-authentication support, and role-based operations.
+Gestiona operaciones de usuarios con validaciones y reglas de negocio.
+Capa intermedia entre routers y repositories.
+
+Responsabilidades:
+    - Validación de unicidad (username, email)
+    - Verificación de existencia de branch
+    - Coordinación con repositories
+    - Aplicación de reglas de negocio
+
+Validaciones:
+    - Username único en el sistema
+    - Email único en el sistema
+    - Branch válido y existente
 """
 
 from typing import List, Optional
@@ -13,15 +24,42 @@ from app.schemas.user import UserCreate, UserUpdate
 
 
 class UserService:
-    """Service for user management operations."""
+    """
+    Servicio de gestión de usuarios.
+    
+    Coordina repositories y aplica validaciones de negocio.
+    """
 
     def __init__(self, db: Session):
+        """
+        Inicializa servicio con sesión de BD.
+        
+        Args:
+            db: Sesión de SQLAlchemy
+        """
         self.db = db
         self.user_repo = UserRepository(User, db)
         self.branch_repo = BranchRepository(Branch, db)
 
     def create_user(self, user_data: UserCreate, hashed_password: str) -> User:
-        """Create a new user with validation."""
+        """
+        Crea usuario con validaciones de negocio.
+        
+        Valida:
+            - Username único
+            - Email único
+            - Branch existente
+        
+        Args:
+            user_data: Datos del usuario a crear
+            hashed_password: Contraseña ya hasheada (desde auth.py)
+        
+        Returns:
+            Usuario creado
+        
+        Raises:
+            ValueError: Si username/email duplicado o branch inválido
+        """
         # Check username uniqueness
         if self.user_repo.get_by_username(user_data.username):
             raise ValueError(f"Username {user_data.username} already exists")
@@ -42,7 +80,19 @@ class UserService:
         return self.user_repo.create(user_dict)
 
     def update_user(self, user_id: int, user_data: UserUpdate) -> Optional[User]:
-        """Update user with validation."""
+        """
+        Actualiza usuario con validaciones.
+        
+        Args:
+            user_id: ID del usuario a actualizar
+            user_data: Datos parciales a actualizar
+        
+        Returns:
+            Usuario actualizado o None si no existe
+        
+        Raises:
+            ValueError: Si username/email duplicado
+        """
         user = self.user_repo.get(user_id)
         if not user:
             return None
@@ -64,17 +114,17 @@ class UserService:
         return self.user_repo.update(user_id, update_data)
 
     def get_users_by_branch(self, branch_id: int) -> List[User]:
-        """Get all users in a specific branch."""
+        """Obtiene usuarios de una sucursal."""
         return self.user_repo.get_by_branch(branch_id)
 
     def get_active_users(self) -> List[User]:
-        """Get all active users."""
+        """Obtiene usuarios activos."""
         return self.user_repo.get_active_users()
     
     def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username."""
+        """Obtiene usuario por username."""
         return self.user_repo.get_by_username(username)
     
     def get_user_by_email(self, email: str) -> Optional[User]:
-        """Get user by email."""
+        """Obtiene usuario por email."""
         return self.user_repo.get_by_email(email)
