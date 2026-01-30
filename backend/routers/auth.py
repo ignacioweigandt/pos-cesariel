@@ -1,3 +1,26 @@
+"""
+Router de Autenticación - Endpoints de Auth.
+
+Gestiona login, logout y obtención de datos del usuario actual.
+Protección contra brute force con rate limiting.
+
+Endpoints:
+    POST /auth/login: Login con OAuth2PasswordRequestForm (form-data)
+    POST /auth/login-json: Login con JSON body
+    GET /auth/me: Obtiene datos del usuario autenticado
+    POST /auth/logout: Logout (client-side, invalida token)
+
+Seguridad:
+    - Rate limit: 5 intentos/minuto por IP
+    - JWT tokens con expiración de 8 horas
+    - Autenticación vía bcrypt
+    - Validación de usuario activo
+
+Dependencias:
+    - authenticate_user(): Valida username/password
+    - create_access_token(): Genera JWT
+    - get_current_active_user(): Extrae user desde token
+"""
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
