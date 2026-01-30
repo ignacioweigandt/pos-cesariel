@@ -1,8 +1,41 @@
 """
-Router para inicialización de base de datos.
+Router de Inicialización de Base de Datos - Endpoint de Setup.
 
-Este endpoint permite inicializar la base de datos con datos de prueba
-directamente desde una llamada HTTP, útil para deployments en Railway.
+Endpoint HTTP para inicializar BD con datos de prueba.
+Útil para deployments automatizados (Railway, Docker, etc.).
+
+Endpoints:
+    POST /api/init/database: Inicializa BD con datos completos
+
+Proceso de Inicialización:
+    1. init_data.py: Usuarios, sucursales, categorías, productos base
+    2. init_content_data.py: Contenido de ecommerce (banners, config)
+    3. init_sportswear_data.py: Catálogo deportivo completo
+
+Datos Creados:
+    - 3 sucursales: Central, Oeste, Norte
+    - 4 usuarios: admin, manager_central, seller_central, ecommerce_user
+    - Categorías: Ropa Deportiva, Calzado, Accesorios
+    - 20+ productos con stock y talles
+    - Marcas: Nike, Adidas, Puma, Under Armour, Reebok
+    - Configuración de ecommerce
+    - Banners de tienda
+    - Métodos de pago
+    - Tax rates
+
+Seguridad:
+    - ⚠️ Solo ejecutar en bases de datos VACÍAS
+    - ⚠️ No usar en producción con datos reales
+    - Endpoint público (sin autenticación)
+    - Pensado para desarrollo y staging
+
+Respuesta:
+    - JSON con status de cada paso
+    - Lista detallada de operaciones realizadas
+    - Manejo de errores por paso
+
+Uso:
+    curl -X POST https://tu-app.railway.app/api/init/database
 """
 
 from fastapi import APIRouter, HTTPException, Depends
