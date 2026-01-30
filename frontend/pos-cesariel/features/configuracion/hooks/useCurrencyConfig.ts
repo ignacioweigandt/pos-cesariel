@@ -1,16 +1,10 @@
-/**
- * useCurrencyConfig Hook
- *
- * Custom hook for managing currency configuration
- * RESTRICTED to ARS and USD only as per requirements
- */
+/** Hook para gestión de moneda (SOLO ARS y USD permitidos) con formateo de precios */
 
 import { useState, useEffect, useMemo } from 'react';
 import { configurationApi } from '../api';
 import type { Currency, CurrencyConfig, CurrencyCode } from '../types';
 import toast from 'react-hot-toast';
 
-// ONLY ARS and USD are allowed
 const ALLOWED_CURRENCIES: Currency[] = [
   { code: 'ARS', name: 'Peso Argentino', symbol: '$', country: 'Argentina' },
   { code: 'USD', name: 'Dólar Estadounidense', symbol: '$', country: 'Estados Unidos' },
@@ -27,10 +21,8 @@ export function useCurrencyConfig() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Available currencies (only ARS and USD)
   const availableCurrencies = useMemo(() => ALLOWED_CURRENCIES, []);
 
-  // Format price helper
   const formatPrice = (amount: number, customConfig?: Partial<CurrencyConfig>) => {
     const activeConfig = customConfig ? { ...config, ...customConfig } : config;
     const formattedAmount = amount.toFixed(activeConfig.decimal_places);
@@ -46,7 +38,6 @@ export function useCurrencyConfig() {
       setError(null);
       const response = await configurationApi.getCurrencyConfig();
 
-      // Validate that currency is ARS or USD
       if (response.data.default_currency !== 'ARS' && response.data.default_currency !== 'USD') {
         console.warn('Invalid currency detected, defaulting to ARS');
         response.data.default_currency = 'ARS';
@@ -65,13 +56,11 @@ export function useCurrencyConfig() {
   };
 
   const updateConfig = async (data: Partial<CurrencyConfig>) => {
-    // Validate currency code
     if (data.default_currency && data.default_currency !== 'ARS' && data.default_currency !== 'USD') {
       toast.error('Solo se permite Peso Argentino (ARS) o Dólar Estadounidense (USD)');
       throw new Error('Invalid currency code');
     }
 
-    // Validate decimal places
     if (data.decimal_places !== undefined) {
       if (data.decimal_places < 0 || data.decimal_places > 2) {
         toast.error('Los decimales deben estar entre 0 y 2');

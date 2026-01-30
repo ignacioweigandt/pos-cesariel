@@ -1,8 +1,4 @@
-/**
- * useTaxRates Hook
- *
- * Custom hook for managing tax rates configuration
- */
+/** Hook para gestión de impuestos con validación (0-100%) y tasa por defecto */
 
 import { useState, useEffect } from 'react';
 import { configurationApi } from '../api';
@@ -31,7 +27,6 @@ export function useTaxRates() {
   };
 
   const createTaxRate = async (data: TaxRateCreate) => {
-    // Validations
     if (data.rate < 0 || data.rate > 100) {
       toast.error('La tasa debe estar entre 0% y 100%');
       throw new Error('Invalid tax rate');
@@ -92,7 +87,6 @@ export function useTaxRates() {
     try {
       const response = await configurationApi.setDefaultTaxRate(id);
 
-      // Update all tax rates to reflect the new default
       setTaxRates(prev =>
         prev.map(t => ({
           ...t,

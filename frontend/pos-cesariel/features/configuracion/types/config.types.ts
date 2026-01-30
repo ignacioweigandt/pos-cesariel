@@ -1,10 +1,4 @@
-/**
- * Configuration Types
- *
- * TypeScript types for configuration module
- */
-
-// ========== Payment Configuration Types ==========
+/** Tipos para configuración del sistema (pagos, moneda, impuestos, notificaciones, backups) */
 
 export interface PaymentMethod {
   id: number;
@@ -47,8 +41,6 @@ export interface PaymentConfigUpdate {
   description?: string;
 }
 
-// ========== Custom Installment Types ==========
-
 export interface CustomInstallment {
   id: number;
   card_type: CardType;
@@ -66,8 +58,6 @@ export interface CustomInstallmentCreate {
   description: string;
 }
 
-// ========== Currency Configuration Types ==========
-
 export type CurrencyCode = 'ARS' | 'USD';
 
 export interface Currency {
@@ -83,8 +73,6 @@ export interface CurrencyConfig {
   currency_position: 'before' | 'after';
   decimal_places: number;
 }
-
-// ========== Tax Rate Types ==========
 
 export interface TaxRate {
   id: number;
@@ -111,8 +99,6 @@ export interface TaxRateUpdate {
   is_default?: boolean;
 }
 
-// ========== Notification Configuration Types ==========
-
 export interface LowStockAlert {
   enabled: boolean;
   threshold: number;
@@ -134,8 +120,6 @@ export interface NotificationConfig {
   backup_reminder: BackupReminder;
 }
 
-// ========== Security & Backup Types ==========
-
 export interface AutoBackupConfig {
   enabled: boolean;
   frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
@@ -151,8 +135,6 @@ export interface SecurityBackupConfig {
   last_backup?: string;
   backup_size?: string;
 }
-
-// ========== System Configuration Types ==========
 
 export interface SystemFeatures {
   pos: boolean;
@@ -177,14 +159,10 @@ export interface SystemConfig {
   session_timeout: number;
 }
 
-// ========== API Response Types ==========
-
 export interface ConfigApiResponse<T> {
   data: T;
   message?: string;
 }
-
-// ========== Form State Types ==========
 
 export interface PaymentConfigFormState {
   payment_type: string;

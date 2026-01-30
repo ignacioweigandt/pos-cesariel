@@ -1,9 +1,4 @@
-/**
- * useCustomInstallments Hook
- *
- * Custom hook for managing custom installments (NEW FUNCTIONALITY)
- * Allows adding custom installment plans for bancarizadas and no_bancarizadas cards
- */
+/** Hook para planes de cuotas personalizadas (bancarizadas/no_bancarizadas, 1-60 cuotas, 0-100% recargo) */
 
 import { useState, useEffect, useCallback } from 'react';
 import { configurationApi } from '../api';
@@ -40,13 +35,11 @@ export function useCustomInstallments(options: UseCustomInstallmentsOptions = {}
 
   const createInstallment = async (data: CustomInstallmentCreate) => {
     try {
-      // Validate installments number
       if (data.installments < 1 || data.installments > 60) {
         toast.error('Las cuotas deben estar entre 1 y 60');
         throw new Error('Invalid installments number');
       }
 
-      // Validate surcharge
       if (data.surcharge_percentage < 0 || data.surcharge_percentage > 100) {
         toast.error('El recargo debe estar entre 0% y 100%');
         throw new Error('Invalid surcharge percentage');
@@ -110,12 +103,10 @@ export function useCustomInstallments(options: UseCustomInstallmentsOptions = {}
     }
   };
 
-  // Group installments by card type
   const getInstallmentsByCardType = useCallback((type: CardType) => {
     return installments.filter(i => i.card_type === type);
   }, [installments]);
 
-  // Get active installments only
   const getActiveInstallments = useCallback((type?: CardType) => {
     const filtered = type ? getInstallmentsByCardType(type) : installments;
     return filtered.filter(i => i.is_active);

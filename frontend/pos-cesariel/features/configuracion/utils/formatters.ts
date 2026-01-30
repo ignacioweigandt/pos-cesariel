@@ -1,14 +1,7 @@
-/**
- * Configuration Formatters
- *
- * Utility functions for formatting configuration values
- */
+/** Formateadores para valores de configuración (precios, recargos, cuotas, backups) */
 
 import type { CurrencyConfig } from '../types';
 
-/**
- * Format price with currency config
- */
 export function formatPrice(
   amount: number,
   config: CurrencyConfig
@@ -20,25 +13,16 @@ export function formatPrice(
     : `${formattedAmount}${config.currency_symbol}`;
 }
 
-/**
- * Format surcharge percentage
- */
 export function formatSurcharge(percentage: number): string {
   if (percentage === 0) return 'Sin recargo';
   return `+${percentage}%`;
 }
 
-/**
- * Format installments text
- */
 export function formatInstallments(installments: number): string {
   if (installments === 1) return '1 cuota';
   return `${installments} cuotas`;
 }
 
-/**
- * Calculate price with surcharge
- */
 export function calculatePriceWithSurcharge(
   basePrice: number,
   surchargePercentage: number
@@ -46,9 +30,6 @@ export function calculatePriceWithSurcharge(
   return basePrice * (1 + surchargePercentage / 100);
 }
 
-/**
- * Format card type display name
- */
 export function formatCardType(cardType?: string): string {
   const types: Record<string, string> = {
     bancarizadas: 'Tarjetas Bancarizadas',
@@ -59,9 +40,6 @@ export function formatCardType(cardType?: string): string {
   return cardType ? types[cardType] || cardType : 'General';
 }
 
-/**
- * Format payment type display name
- */
 export function formatPaymentType(paymentType: string): string {
   const types: Record<string, string> = {
     efectivo: 'Efectivo',
@@ -72,9 +50,6 @@ export function formatPaymentType(paymentType: string): string {
   return types[paymentType] || paymentType;
 }
 
-/**
- * Format backup frequency
- */
 export function formatBackupFrequency(frequency: string): string {
   const frequencies: Record<string, string> = {
     DAILY: 'Diariamente',
@@ -85,9 +60,6 @@ export function formatBackupFrequency(frequency: string): string {
   return frequencies[frequency] || frequency;
 }
 
-/**
- * Format date for backup display
- */
 export function formatBackupDate(dateStr?: string): string {
   if (!dateStr) return 'Nunca';
 

@@ -1,8 +1,4 @@
-/**
- * usePaymentConfig Hook
- *
- * Custom hook for managing payment configurations
- */
+/** Hook para CRUD de configuraciones de pago (cuotas, recargos) */
 
 import { useState, useEffect } from 'react';
 import { configurationApi } from '../api';
