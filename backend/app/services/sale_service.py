@@ -1,8 +1,27 @@
 """
-Sale Service for POS Cesariel.
+Servicio de Ventas - Lógica de Negocio.
 
-Handles all sale-related business logic including sale creation,
-validation, stock updates, and reporting.
+Gestiona creación de ventas con validaciones complejas y actualización de stock.
+Coordina múltiples servicios para transacciones atómicas.
+
+Responsabilidades:
+    - Validación de stock antes de confirmar venta
+    - Cálculo de totales (subtotal, impuestos, descuentos)
+    - Snapshot de configuración (payment method, tax rate)
+    - Creación atómica de Sale + SaleItems
+    - Actualización automática de inventario
+    - Trazabilidad de configuraciones usadas
+
+Flujo de Creación de Venta:
+    1. Validar stock de todos los ítems
+    2. Validar método de pago contra config de sucursal
+    3. Obtener tax rate configurado para sucursal
+    4. Calcular totales (subtotal + tax - discount)
+    5. Crear registro de venta con snapshots de config
+    6. Crear ítems de venta
+    7. Disminuir stock con tracking (InventoryMovement)
+
+Evita circular dependency con import interno de ConfigService.
 """
 
 from typing import List, Optional
@@ -17,9 +36,19 @@ from app.schemas.sale import SaleCreate
 
 
 class SaleService:
-    """Service for sale management operations."""
+    """
+    Servicio de gestión de ventas.
+    
+    Coordina creación de ventas con validaciones de stock y config.
+    """
 
     def __init__(self, db: Session):
+        """
+        Inicializa servicio con sesión de BD.
+        
+        Args:
+            db: Sesión de SQLAlchemy
+        """
         self.db = db
         self.sale_repo = SaleRepository(Sale, db)
         self.sale_item_repo = SaleItemRepository(SaleItem, db)
@@ -37,13 +66,32 @@ class SaleService:
         branch_id: int
     ) -> Sale:
         """
-        Create a new sale with stock validation, configuration references, and inventory updates.
-
-        Now includes:
-        - Payment method validation against branch configuration
-        - Tax rate lookup and snapshot
-        - Payment method reference snapshot
-        - Full traceability of configurations used
+        Crea venta completa con validaciones y actualización de stock.
+        
+        Transacción atómica que realiza:
+        1. Validación de stock de TODOS los ítems (falla si uno no tiene)
+        2. Validación de payment method contra config de sucursal
+        3. Snapshot de tax rate configurado
+        4. Cálculo de totales (subtotal + tax - discount)
+        5. Creación de Sale con referencias a config
+        6. Creación de SaleItems
+        7. Disminución de stock con InventoryMovement
+        
+        Args:
+            sale_data: Datos de la venta con ítems
+            user_id: ID del vendedor
+            branch_id: ID de la sucursal
+        
+        Returns:
+            Venta creada con ítems y stock actualizado
+        
+        Raises:
+            ValueError: Si producto no existe o stock insuficiente
+        
+        Trazabilidad:
+            - payment_method_id: FK a PaymentMethod usado
+            - tax_rate_id: FK a TaxRate usado
+            - Snapshots de nombres y % para historial inmutable
         """
         # Validate stock availability for all items
         for item in sale_data.items:
@@ -146,19 +194,36 @@ class SaleService:
         return sale
 
     def _calculate_subtotal(self, items) -> Decimal:
-        """Calculate sale subtotal from items."""
+        """
+        Calcula subtotal sumando precio*cantidad de todos los ítems.
+        
+        Args:
+            items: Lista de SaleItemCreate
+        
+        Returns:
+            Subtotal antes de impuestos y descuentos
+        """
         return sum(
             Decimal(str(item.unit_price)) * item.quantity 
             for item in items
         )
 
     def _calculate_tax(self, subtotal: Decimal, provided_tax: Optional[Decimal] = None) -> Decimal:
-        """Calculate tax amount."""
+        """
+        Calcula impuesto sobre subtotal.
+        
+        Args:
+            subtotal: Subtotal de la venta
+            provided_tax: Impuesto ya calculado (opcional)
+        
+        Returns:
+            Monto de impuesto
+        """
         if provided_tax is not None:
             return Decimal(str(provided_tax))
         
-        # Default tax rate (could be from configuration)
-        tax_rate = Decimal("0.00")  # Adjust as needed
+        # Default tax rate (podría venir de configuración)
+        tax_rate = Decimal("0.00")
         return subtotal * tax_rate
 
     def get_sales_by_date_range(
@@ -167,7 +232,17 @@ class SaleService:
         end_date: datetime,
         branch_id: Optional[int] = None
     ) -> List[Sale]:
-        """Get sales within date range."""
+        """
+        Obtiene ventas en rango de fechas.
+        
+        Args:
+            start_date: Fecha inicio
+            end_date: Fecha fin
+            branch_id: Filtro opcional por sucursal
+        
+        Returns:
+            Lista de ventas en el rango
+        """
         sales = self.sale_repo.get_by_date_range(start_date, end_date)
         
         if branch_id:
