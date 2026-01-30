@@ -1,3 +1,81 @@
+"""
+Router de Configuración - Sistema Multi-Tenant y Configuraciones Globales.
+
+Gestión centralizada de configuraciones de sistema, ecommerce, pagos y moneda.
+Incluye tax rates, payment methods y custom installments.
+
+Endpoints:
+    === SYSTEM CONFIG ===
+    GET /config/system: Config global de sistema (moneda, posición)
+    PUT /config/system: Actualizar config de sistema
+    GET /config/currency: Config de moneda actual
+    
+    === ECOMMERCE CONFIG ===
+    GET /config/ecommerce: Config de tienda online (colores, textos, logo)
+    PUT /config/ecommerce: Actualizar config de ecommerce
+    POST /config/ecommerce/upload-logo: Upload logo a Cloudinary
+    
+    === PAYMENT CONFIG ===
+    GET /config/payment: Configuraciones de medios de pago
+    POST /config/payment: Crear config de pago
+    PUT /config/payment/{id}: Actualizar config de pago
+    DELETE /config/payment/{id}: Eliminar config de pago
+    POST /config/payment/init-defaults: Inicializar configs por defecto
+    
+    === PAYMENT METHODS ===
+    GET /config/payment-methods: Lista métodos de pago disponibles
+    POST /config/payment-methods: Crear método de pago
+    PUT /config/payment-methods/{id}: Actualizar método
+    DELETE /config/payment-methods/{id}: Eliminar método
+    PATCH /config/payment-methods/{id}/toggle: Activar/desactivar
+    
+    === CUSTOM INSTALLMENTS ===
+    GET /config/installments: Planes de cuotas personalizados
+    POST /config/installments: Crear plan de cuotas
+    PUT /config/installments/{id}: Actualizar plan
+    DELETE /config/installments/{id}: Eliminar plan
+    PATCH /config/installments/{id}/toggle: Activar/desactivar
+    GET /config/installments/{id}: Detalle de plan
+    GET /config/installments/by-card-type: Filtrar por tipo de tarjeta
+
+Permisos:
+    - Todos requieren autenticación
+    - Mayoría solo ADMIN/MANAGER
+    - SystemConfig: Solo ADMIN
+
+Modelos de Configuración:
+    - SystemConfig: Singleton (moneda, posición, tax global)
+    - EcommerceConfig: Singleton (colores, textos, logo, contacto)
+    - PaymentConfig: Múltiples (efectivo, tarjeta, transferencia, etc.)
+    - PaymentMethod: Métodos de pago disponibles
+    - CustomInstallment: Planes de cuotas por tarjeta
+    - TaxRate: Tasas impositivas (via ConfigService)
+    - BranchTaxRate: Tax rates por sucursal
+    - BranchPaymentMethod: Payment methods por sucursal
+
+Características:
+    - Configuraciones singleton (una instancia global)
+    - Multi-tenant config (por sucursal via ConfigService)
+    - Upload de logo a Cloudinary
+    - Validaciones de rangos y duplicados
+    - Inicialización de configs por defecto
+    - Monedas soportadas: ARS, USD, EUR, BRL
+
+Custom Installments:
+    - Tipos de tarjeta: bancarizadas, no_bancarizadas
+    - Cuotas: 1-60
+    - Recargo: 0-100%
+    - Validación de duplicados (tarjeta + cuotas únicos)
+
+Service Integration:
+    - PaymentService: Lógica de cuotas y validaciones
+    - ConfigService: Tax rates y payment methods por sucursal
+    - Cloudinary: Upload de logo
+
+Snapshots:
+    - Ventas guardan payment_method_id, tax_rate_id
+    - Nombres y porcentajes guardados para historial inmutable
+"""
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
