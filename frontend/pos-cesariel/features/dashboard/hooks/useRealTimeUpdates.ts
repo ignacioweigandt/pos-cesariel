@@ -1,3 +1,5 @@
+/** Hook para actualizaciones en tiempo real vía WebSocket (new_sale, inventory_change, etc.) */
+
 import { useEffect } from "react";
 import { usePOSWebSocket } from "@/lib/websocket";
 
@@ -19,7 +21,6 @@ export function useRealTimeUpdates({
   useEffect(() => {
     if (!lastMessage || !enabled) return;
 
-    // Trigger refresh when relevant events occur
     const relevantEvents = [
       "new_sale",
       "inventory_change",

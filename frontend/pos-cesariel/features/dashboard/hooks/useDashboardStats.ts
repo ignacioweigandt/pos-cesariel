@@ -1,3 +1,5 @@
+/** Hook para stats de dashboard con auto-refresh cada 30s y fallback a datos por defecto */
+
 import { useState, useEffect } from "react";
 import { salesApi } from "@/lib/api";
 import type { DashboardStats } from "../types/dashboard.types";
@@ -10,7 +12,6 @@ export function useDashboardStats() {
   useEffect(() => {
     fetchStats();
 
-    // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
       fetchStats();
     }, 30000);
@@ -29,7 +30,6 @@ export function useDashboardStats() {
       console.error("Error fetching stats:", err);
       setError("Error al cargar las estadísticas");
 
-      // Set default stats if API fails
       setStats({
         total_sales_today: 0,
         total_sales_month: 0,
