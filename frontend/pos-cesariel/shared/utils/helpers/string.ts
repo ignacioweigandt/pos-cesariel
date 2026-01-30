@@ -1,35 +1,18 @@
-/**
- * String utilities
- *
- * Provides string manipulation and formatting functions
- */
+/** Utilidades de manipulación y formateo de strings */
 
-/**
- * Truncate text to maximum length with ellipsis
- * @param text - Text to truncate
- * @param maxLength - Maximum length
- * @returns Truncated text
- */
+/** Truncar texto con ellipsis */
 export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.substring(0, maxLength) + '...';
 }
 
-/**
- * Capitalize first letter of string
- * @param text - Text to capitalize
- * @returns Capitalized text
- */
+/** Capitalizar primera letra */
 export function capitalize(text: string): string {
   if (!text) return text;
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 }
 
-/**
- * Convert text to title case (first letter of each word capitalized)
- * @param text - Text to convert
- * @returns Title case text
- */
+/** Convertir a Title Case (primera letra de cada palabra) */
 export function toTitleCase(text: string): string {
   return text
     .toLowerCase()
@@ -38,24 +21,16 @@ export function toTitleCase(text: string): string {
     .join(' ');
 }
 
-/**
- * Generate URL-friendly slug from text
- * @param text - Text to convert to slug
- * @returns URL-friendly slug
- */
+/** Generar slug amigable para URLs */
 export function generateSlug(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '') // Remove special characters
-    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
-    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
-/**
- * Get initials from name for avatars
- * @param name - Full name
- * @returns Initials (up to 2 characters)
- */
+/** Obtener iniciales de nombre para avatares (máx 2 caracteres) */
 export function getInitials(name: string): string {
   const words = name.trim().split(' ');
   if (words.length === 1) {
@@ -64,11 +39,7 @@ export function getInitials(name: string): string {
   return (words[0].charAt(0) + words[1].charAt(0)).toUpperCase();
 }
 
-/**
- * Parse API error to user-friendly message
- * @param error - Error object from API
- * @returns User-friendly error message
- */
+/** Parsear error de API a mensaje amigable */
 export function parseApiError(error: any): string {
   if (error?.response?.data?.message) {
     return error.response.data.message;
@@ -82,19 +53,12 @@ export function parseApiError(error: any): string {
   return 'Ha ocurrido un error inesperado';
 }
 
-/**
- * Generate unique temporary ID
- * @returns Unique temporary ID string
- */
+/** Generar ID temporal único */
 export function generateTempId(): string {
   return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
-/**
- * Convert file to base64 string
- * @param file - File to convert
- * @returns Promise with base64 string
- */
+/** Convertir archivo a string base64 */
 export function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -104,11 +68,7 @@ export function fileToBase64(file: File): Promise<string> {
   });
 }
 
-/**
- * Copy text to clipboard
- * @param text - Text to copy
- * @returns Promise<boolean> - Success status
- */
+/** Copiar texto al portapapeles */
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
@@ -119,12 +79,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-/**
- * Debounce function to limit call frequency
- * @param func - Function to debounce
- * @param wait - Wait time in milliseconds
- * @returns Debounced function
- */
+/** Debounce de función para limitar frecuencia de llamadas */
 export function debounce<T extends (...args: any[]) => void>(
   func: T,
   wait: number

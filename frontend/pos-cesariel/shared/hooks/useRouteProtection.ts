@@ -6,9 +6,8 @@ import toast from 'react-hot-toast';
 import { useAuth, canAccessModule } from './useAuth';
 
 /**
- * Hook para proteger rutas basado en permisos del usuario
- * Muestra un toast cuando el usuario intenta acceder a un módulo sin permisos
- * y lo redirige al dashboard
+ * Protección de rutas según permisos del usuario.
+ * Muestra toast y redirige al dashboard si no tiene acceso.
  */
 export function useRouteProtection() {
   const router = useRouter();
@@ -16,12 +15,10 @@ export function useRouteProtection() {
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // No ejecutar protección en la página de login
     if (pathname === '/' || !isAuthenticated) {
       return;
     }
 
-    // Mapear rutas a módulos
     const routeToModule: Record<string, string> = {
       '/dashboard': 'pos',
       '/pos': 'pos',
@@ -32,18 +29,16 @@ export function useRouteProtection() {
       '/settings': 'settings',
     };
 
-    // Obtener el módulo actual basado en la ruta
     const currentRoute = Object.keys(routeToModule).find(route =>
       pathname.startsWith(route)
     );
 
     if (!currentRoute) {
-      return; // Ruta no mapeada, no proteger
+      return;
     }
 
     const module = routeToModule[currentRoute];
 
-    // Verificar si el usuario puede acceder al módulo
     if (!canAccessModule(user, module)) {
       const moduleNames: Record<string, string> = {
         dashboard: 'Dashboard',
@@ -57,14 +52,9 @@ export function useRouteProtection() {
 
       toast.error(
         `No tienes permisos para acceder al módulo de ${moduleNames[module] || module}`,
-        {
-          duration: 4000,
-          position: 'top-center',
-          icon: '🚫',
-        }
+        { duration: 4000, position: 'top-center', icon: '🚫' }
       );
 
-      // Redirigir al dashboard o a la página de POS según el rol
       const defaultRoute = user?.role === 'SELLER' ? '/pos' : '/dashboard';
       router.push(defaultRoute);
     }

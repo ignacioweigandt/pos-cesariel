@@ -1,6 +1,4 @@
-/**
- * UI Components Barrel Export
- */
+/** Componentes UI base (shadcn/ui) */
 
 export * from './button';
 export * from './card';

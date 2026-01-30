@@ -1,14 +1,6 @@
-/**
- * Date formatting utilities
- *
- * Provides functions for formatting dates and times
- */
+/** Utilidades de formateo de fechas y horas */
 
-/**
- * Format date and time treating server time as local time
- * @param date - Date to format (string or Date object)
- * @returns Formatted date string (DD/MM/YYYY HH:mm)
- */
+/** Formatear fecha y hora tratando el tiempo del servidor como local (DD/MM/YYYY HH:mm) */
 export function formatDate(date: string | Date): string {
   let dateStr: string;
 
@@ -18,8 +10,7 @@ export function formatDate(date: string | Date): string {
     dateStr = date.toISOString();
   }
 
-  // Parse date manually to avoid timezone conversions
-  // Expected format: "2025-11-13T14:57:00" or "2025-11-13T14:57:00.123456"
+  // Parseo manual para evitar conversiones de timezone
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
 
   if (match) {
@@ -27,7 +18,6 @@ export function formatDate(date: string | Date): string {
     return `${day}/${month}/${year}, ${hours}:${minutes}`;
   }
 
-  // Fallback to Date parsing if format doesn't match
   const dateObj = new Date(dateStr);
   const dayNum = dateObj.getDate().toString().padStart(2, '0');
   const monthNum = (dateObj.getMonth() + 1).toString().padStart(2, '0');
@@ -38,11 +28,7 @@ export function formatDate(date: string | Date): string {
   return `${dayNum}/${monthNum}/${yearNum}, ${hoursNum}:${minutesNum}`;
 }
 
-/**
- * Format date only (no time)
- * @param date - Date to format
- * @returns Formatted date string (DD/MM/YYYY)
- */
+/** Formatear solo fecha sin hora (DD/MM/YYYY) */
 export function formatDateOnly(date: string | Date): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat('es-AR', {
@@ -52,11 +38,7 @@ export function formatDateOnly(date: string | Date): string {
   }).format(dateObj);
 }
 
-/**
- * Format time only (no date)
- * @param date - Date to extract time from
- * @returns Formatted time string (HH:mm)
- */
+/** Formatear solo hora sin fecha (HH:mm) */
 export function formatTimeOnly(date: string | Date): string {
   let dateStr: string;
 
@@ -66,7 +48,6 @@ export function formatTimeOnly(date: string | Date): string {
     dateStr = date.toISOString();
   }
 
-  // Parse time manually to avoid timezone conversions
   const match = dateStr.match(/T(\d{2}):(\d{2})/);
 
   if (match) {
@@ -74,18 +55,13 @@ export function formatTimeOnly(date: string | Date): string {
     return `${hours}:${minutes}`;
   }
 
-  // Fallback
   const dateObj = new Date(dateStr);
   const hours = dateObj.getHours().toString().padStart(2, '0');
   const minutes = dateObj.getMinutes().toString().padStart(2, '0');
   return `${hours}:${minutes}`;
 }
 
-/**
- * Format date and time with seconds
- * @param date - Date to format
- * @returns Formatted date string (DD/MM/YYYY HH:mm:ss)
- */
+/** Formatear fecha y hora con segundos (DD/MM/YYYY HH:mm:ss) */
 export function formatDateTime(date: string | Date): string {
   let dateStr: string;
 
@@ -95,7 +71,6 @@ export function formatDateTime(date: string | Date): string {
     dateStr = date.toISOString();
   }
 
-  // Parse date manually to avoid timezone conversions
   const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
 
   if (match) {
@@ -103,7 +78,6 @@ export function formatDateTime(date: string | Date): string {
     return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
   }
 
-  // Fallback
   const dateObj = new Date(dateStr);
   const day = dateObj.getDate().toString().padStart(2, '0');
   const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
@@ -115,11 +89,7 @@ export function formatDateTime(date: string | Date): string {
   return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
 }
 
-/**
- * Format relative time (e.g., "2 hours ago", "in 3 days")
- * @param date - Date to format
- * @returns Relative time string
- */
+/** Formatear tiempo relativo (ej: "hace 2 horas", "en 3 días") */
 export function formatRelativeTime(date: string | Date): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
@@ -142,11 +112,7 @@ export function formatRelativeTime(date: string | Date): string {
   }
 }
 
-/**
- * Parse date string to Date object
- * @param dateString - Date string to parse
- * @returns Date object or null if invalid
- */
+/** Parsear string a objeto Date (retorna null si es inválido) */
 export function parseDate(dateString: string): Date | null {
   const date = new Date(dateString);
   return isNaN(date.getTime()) ? null : date;

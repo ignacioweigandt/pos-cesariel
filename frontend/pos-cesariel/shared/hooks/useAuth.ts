@@ -21,10 +21,10 @@ export interface User {
 }
 
 export type LogoutReason =
-  | 'manual'        // Usuario cerró sesión manualmente
-  | 'inactivity'    // Cierre automático por inactividad (4 horas)
-  | 'expired'       // Token expirado
-  | null;           // Sin razón específica
+  | 'manual'       // Logout manual
+  | 'inactivity'   // Inactividad (4 horas)
+  | 'expired'      // Token expirado (401/403)
+  | null;
 
 interface AuthState {
   user: User | null;
@@ -46,7 +46,6 @@ export const useAuth = create<AuthState>()(
       logoutReason: null,
       login: (token: string, user: User) => {
         localStorage.setItem('token', token);
-        // Limpiar razón de logout anterior al iniciar sesión
         set({ token, user, isAuthenticated: true, logoutReason: null });
       },
       logout: (reason: LogoutReason = 'manual') => {
@@ -86,12 +85,13 @@ export const hasPermission = (user: User | null, requiredRole: string[]): boolea
   return userLevel >= requiredLevel;
 };
 
+/** Verifica si el usuario puede acceder a un módulo específico según su rol */
 export const canAccessModule = (user: User | null, module: string): boolean => {
   if (!user) return false;
   
   const modulePermissions = {
     pos: ['admin', 'manager', 'seller', 'ADMIN', 'MANAGER', 'SELLER'],
-    inventory: ['admin', 'manager', 'seller', 'ADMIN', 'MANAGER', 'SELLER'], // SELLER tiene acceso limitado a Inventario
+    inventory: ['admin', 'manager', 'seller', 'ADMIN', 'MANAGER', 'SELLER'],
     reports: ['admin', 'manager', 'ADMIN', 'MANAGER'],
     ecommerce: ['admin', 'manager', 'ecommerce', 'ADMIN', 'MANAGER', 'ECOMMERCE'],
     users: ['admin', 'manager', 'ADMIN', 'MANAGER'],

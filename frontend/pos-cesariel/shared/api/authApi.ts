@@ -1,8 +1,4 @@
-/**
- * Authentication API
- *
- * Handles user authentication and session management
- */
+/** API de autenticación y gestión de sesión */
 
 import { apiClient } from './client';
 
@@ -14,24 +10,14 @@ export interface LoginCredentials {
 export interface LoginResponse {
   access_token: string;
   token_type: string;
-  user: any; // Use proper User type from shared/types
+  user: any;
 }
 
-/**
- * Authentication API methods
- */
 export const authApi = {
-  /**
-   * Login with username and password
-   * @param credentials - Username and password
-   * @returns Access token and user data
-   */
+  /** Autenticar usuario con credenciales */
   login: (credentials: LoginCredentials) =>
     apiClient.post<LoginResponse>('/auth/login-json', credentials),
 
-  /**
-   * Get current authenticated user
-   * @returns Current user data
-   */
+  /** Obtener datos del usuario autenticado actual */
   getCurrentUser: () => apiClient.get('/users/me'),
 };

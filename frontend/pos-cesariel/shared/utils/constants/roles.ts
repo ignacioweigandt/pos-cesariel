@@ -1,8 +1,4 @@
-/**
- * User role constants
- *
- * Defines user roles and their permissions
- */
+/** Roles de usuario y permisos por módulo */
 
 export const USER_ROLES = {
   ADMIN: 'ADMIN',
@@ -13,9 +9,6 @@ export const USER_ROLES = {
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
 
-/**
- * Role labels in Spanish
- */
 export const ROLE_LABELS: Record<UserRole, string> = {
   ADMIN: 'Administrador',
   MANAGER: 'Gerente',
@@ -23,9 +16,7 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   ECOMMERCE: 'E-commerce',
 };
 
-/**
- * Role hierarchy levels (higher = more permissions)
- */
+/** Jerarquía de roles (mayor número = más permisos) */
 export const ROLE_HIERARCHY: Record<string, number> = {
   ADMIN: 4,
   admin: 4,
@@ -37,9 +28,7 @@ export const ROLE_HIERARCHY: Record<string, number> = {
   ecommerce: 1,
 };
 
-/**
- * Module permissions by role
- */
+/** Permisos de módulos por rol */
 export const MODULE_PERMISSIONS: Record<string, string[]> = {
   pos: ['ADMIN', 'MANAGER', 'SELLER', 'admin', 'manager', 'seller'],
   inventory: ['ADMIN', 'MANAGER', 'admin', 'manager'],

@@ -1,7 +1,4 @@
-/**
- * Order Status Utilities
- * Funciones para manejar estados de pedidos de forma consistente
- */
+/** Utilidades de estados de pedidos y badges visuales */
 
 export const ORDER_STATUS_MAP = {
   PENDING: {
@@ -32,25 +29,16 @@ export const ORDER_STATUS_MAP = {
 
 export type OrderStatus = keyof typeof ORDER_STATUS_MAP;
 
-/**
- * Obtiene el texto legible de un estado
- */
 export function getOrderStatusText(status: string): string {
   const normalizedStatus = status?.toUpperCase() as OrderStatus;
   return ORDER_STATUS_MAP[normalizedStatus]?.text || status || 'Pendiente';
 }
 
-/**
- * Obtiene las clases CSS para el color de un estado
- */
 export function getOrderStatusColor(status: string): string {
   const normalizedStatus = status?.toUpperCase() as OrderStatus;
   return ORDER_STATUS_MAP[normalizedStatus]?.color || 'bg-gray-100 text-gray-800';
 }
 
-/**
- * Componente Badge para mostrar estados de pedidos
- */
 interface OrderStatusBadgeProps {
   status: string;
   className?: string;

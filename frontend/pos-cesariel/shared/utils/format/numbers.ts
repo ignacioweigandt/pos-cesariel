@@ -1,24 +1,11 @@
-/**
- * Number formatting utilities
- *
- * Provides functions for formatting numbers
- */
+/** Utilidades de formateo de números */
 
-/**
- * Format number with thousand separators
- * @param value - Number to format
- * @returns Formatted number string (e.g., "1.234.567")
- */
+/** Formatear número con separadores de miles (ej: "1.234.567") */
 export function formatNumber(value: number): string {
   return new Intl.NumberFormat('es-AR').format(value);
 }
 
-/**
- * Format number as percentage
- * @param value - Number to format (0-1 range)
- * @param decimals - Number of decimal places (default: 2)
- * @returns Formatted percentage string (e.g., "45,67%")
- */
+/** Formatear número como porcentaje (value en rango 0-1, ej: 0.4567 -> "45,67%") */
 export function formatPercentage(value: number, decimals: number = 2): string {
   return new Intl.NumberFormat('es-AR', {
     style: 'percent',
@@ -27,53 +14,29 @@ export function formatPercentage(value: number, decimals: number = 2): string {
   }).format(value);
 }
 
-/**
- * Round number to specified decimal places
- * @param num - Number to round
- * @param decimals - Number of decimal places (default: 2)
- * @returns Rounded number
- */
+/** Redondear número a cantidad específica de decimales */
 export function roundToDecimals(num: number, decimals: number = 2): number {
   const factor = Math.pow(10, decimals);
   return Math.round(num * factor) / factor;
 }
 
-/**
- * Calculate percentage of value relative to total
- * @param value - Value to calculate percentage for
- * @param total - Total value
- * @returns Percentage (0-100)
- */
+/** Calcular porcentaje de un valor relativo al total (retorna 0-100) */
 export function calculatePercentage(value: number, total: number): number {
   if (total === 0) return 0;
   return (value / total) * 100;
 }
 
-/**
- * Apply discount percentage to amount
- * @param amount - Original amount
- * @param discountPercentage - Discount percentage (0-100)
- * @returns Discounted amount
- */
+/** Aplicar descuento porcentual a un monto */
 export function applyDiscount(amount: number, discountPercentage: number): number {
   return amount * (1 - discountPercentage / 100);
 }
 
-/**
- * Calculate tax amount for given base amount
- * @param amount - Base amount
- * @param taxRate - Tax rate percentage (e.g., 21 for 21%)
- * @returns Tax amount
- */
+/** Calcular monto de impuesto para un monto base (ej: taxRate=21 para IVA 21%) */
 export function calculateTax(amount: number, taxRate: number): number {
   return amount * (taxRate / 100);
 }
 
-/**
- * Format number with compact notation (e.g., 1.5K, 2.3M)
- * @param value - Number to format
- * @returns Compact notation string
- */
+/** Formatear número con notación compacta (ej: 1.5K, 2.3M) */
 export function formatCompact(value: number): string {
   return new Intl.NumberFormat('es-AR', {
     notation: 'compact',
@@ -81,11 +44,7 @@ export function formatCompact(value: number): string {
   }).format(value);
 }
 
-/**
- * Validate if string is a valid number
- * @param value - String to validate
- * @returns True if valid number
- */
+/** Validar si un string es un número válido */
 export function isValidNumber(value: string): boolean {
   return !isNaN(Number(value)) && isFinite(Number(value));
 }

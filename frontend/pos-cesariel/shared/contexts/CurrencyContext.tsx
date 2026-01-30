@@ -1,10 +1,8 @@
 'use client';
 
 /**
- * Currency Context
- *
- * Provides global access to currency configuration across the application.
- * Loads currency config from API and provides formatting functions.
+ * Contexto global de configuración de moneda.
+ * Carga config del API y proporciona funciones de formateo.
  */
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -39,7 +37,6 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const updateConfig = (newConfig: CurrencyConfig) => {
     setConfig(newConfig);
 
-    // Update global currency utilities
     updateGlobalCurrencyConfig({
       symbol: newConfig.currency_symbol,
       position: newConfig.currency_position,
@@ -49,7 +46,6 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   };
 
   const loadConfig = async () => {
-    // Solo cargar si el usuario está autenticado
     if (!isAuthenticated) {
       updateConfig(defaultConfig);
       return;
@@ -63,7 +59,6 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error('Error loading currency config:', err);
       setError(err as Error);
-      // Use default config on error
       updateConfig(defaultConfig);
     } finally {
       setLoading(false);
@@ -72,7 +67,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadConfig();
-  }, [isAuthenticated]); // Recargar cuando cambia el estado de autenticación
+  }, [isAuthenticated]);
 
   const formatPrice = (amount: number): string => {
     const formattedAmount = amount.toFixed(config.decimal_places);

@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 
-// Production backend URL for Railway deployment
 const PRODUCTION_BACKEND_URL = 'https://backend-production-c20a.up.railway.app';
 
 /**
- * Get WebSocket base URL dynamically
- * Uses the same logic as the API client for consistency
+ * Determina URL base de WebSocket (usa misma lógica que API client).
+ * Prioridad: NEXT_PUBLIC_API_URL > detección hostname > localhost.
  */
 function getWebSocketBaseUrl(): string {
-  // If environment variable is set, use it (highest priority)
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL.replace(/^http/, 'ws');
   }
 
-  // Client-side: detect production by hostname
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const isProduction = hostname !== 'localhost' && hostname !== '127.0.0.1';
@@ -22,7 +19,6 @@ function getWebSocketBaseUrl(): string {
     }
   }
 
-  // Default: localhost for development
   return 'ws://localhost:8000';
 }
 
@@ -63,13 +59,11 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
   const isConnecting = useRef(false);
   const urlRef = useRef(url);
 
-  // Store callbacks in refs to avoid dependency issues
   const onConnectRef = useRef(onConnect);
   const onDisconnectRef = useRef(onDisconnect);
   const onMessageRef = useRef(onMessage);
   const onErrorRef = useRef(onError);
 
-  // Update refs when callbacks change
   useEffect(() => {
     onConnectRef.current = onConnect;
     onDisconnectRef.current = onDisconnect;
@@ -77,13 +71,11 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
     onErrorRef.current = onError;
   }, [onConnect, onDisconnect, onMessage, onError]);
 
-  // Update URL ref
   useEffect(() => {
     urlRef.current = url;
   }, [url]);
 
   const connect = useCallback(() => {
-    // Prevent multiple simultaneous connection attempts
     if (isConnecting.current) {
       console.log('WebSocket: Already connecting, skipping');
       return;
@@ -96,27 +88,23 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       return;
     }
 
-    // Check if already connected
     if (ws.current?.readyState === WebSocket.OPEN) {
       console.log('WebSocket: Already connected, skipping');
       return;
     }
 
-    // Check if connecting
     if (ws.current?.readyState === WebSocket.CONNECTING) {
       console.log('WebSocket: Connection in progress, skipping');
       return;
     }
 
-    // Set connecting flag BEFORE any async operation to prevent race conditions
     isConnecting.current = true;
 
-    // Clean up any existing connection before creating new one
     if (ws.current) {
       try {
         ws.current.close();
       } catch (e) {
-        // Ignore close errors
+        // Ignore
       }
       ws.current = null;
     }
@@ -140,9 +128,8 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
         setIsConnected(false);
         onDisconnectRef.current?.();
 
-        // Only reconnect if we should and haven't exceeded max attempts
         if (shouldReconnect.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
-          // Exponential backoff: 5s, 10s, 20s, 40s... capped at 60s
+          // Backoff exponencial: 5s, 10s, 20s, 40s... máx 60s
           const backoff = Math.min(reconnectInterval * Math.pow(2, reconnectAttemptsRef.current), 60000);
           console.log(`WebSocket: Reconnecting in ${backoff/1000}s (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`);
 
@@ -159,7 +146,7 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
           setLastMessage(message);
-          setMessages(prev => [...prev.slice(-49), message]); // Keep last 50 messages
+          setMessages(prev => [...prev.slice(-49), message]);
           onMessageRef.current?.(message);
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -179,7 +166,7 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       console.error('Error connecting to WebSocket:', error);
       isConnecting.current = false;
     }
-  }, [maxReconnectAttempts, reconnectInterval]); // Minimal dependencies
+  }, [maxReconnectAttempts, reconnectInterval]);
 
   const disconnect = useCallback(() => {
     shouldReconnect.current = false;
@@ -208,7 +195,6 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
     setLastMessage(null);
   }, []);
 
-  // Connect on mount and when URL changes
   useEffect(() => {
     if (!url) return;
 
@@ -241,31 +227,26 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
   };
 };
 
-// Hook para notificaciones específicas del POS
+/** Hook de WebSocket para POS: notificaciones, inventario, ventas por branch */
 export const usePOSWebSocket = (branchId: number, token: string, enabled: boolean = true) => {
   const [notifications, setNotifications] = useState<WebSocketMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Store values in refs to use in callbacks without causing re-renders
   const branchIdRef = useRef(branchId);
   const tokenRef = useRef(token);
   const enabledRef = useRef(enabled);
   const sendMessageRef = useRef<((message: any) => boolean) | null>(null);
   const subscriptionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Update refs when values change
   useEffect(() => {
     branchIdRef.current = branchId;
     tokenRef.current = token;
     enabledRef.current = enabled;
   }, [branchId, token, enabled]);
 
-  // Only create URL when we have all required data
-  // Use dynamic WebSocket URL detection (same logic as API client)
   const wsBaseUrl = getWebSocketBaseUrl();
   const url = enabled && token && branchId ? `${wsBaseUrl}/ws/${branchId}?token=${token}` : '';
 
-  // Only log WebSocket connection attempts if there are issues
   useEffect(() => {
     if (enabled && (!token || !branchId)) {
       console.log('WebSocket: Not connecting - missing required data:', {
@@ -275,29 +256,24 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     }
   }, [enabled, token, branchId]);
 
-  // Memoized callbacks that use refs instead of values
   const handleMessage = useCallback((message: WebSocketMessage) => {
-    // Skip heartbeat and pong messages from logging (keep-alive messages)
     if (message.type === 'pong' || message.type === 'server_heartbeat') {
       return;
     }
 
-    // Skip subscription confirmation from user-facing logging
     if (message.type === 'subscription_confirmed') {
       console.log('WebSocket: Subscription confirmed', message.subscription_types);
       return;
     }
 
-    // Skip connection established (already logged in handleConnect)
     if (message.type === 'connection_established') {
       return;
     }
 
     console.log('POS WebSocket message:', message);
 
-    // Add to notifications if it's a relevant message type
     if (['inventory_change', 'new_sale', 'low_stock_alert', 'user_action', 'system_message', 'product_update', 'sale_status_change', 'dashboard_update'].includes(message.type)) {
-      setNotifications(prev => [...prev.slice(-19), message]); // Keep last 20 notifications
+      setNotifications(prev => [...prev.slice(-19), message]);
       setUnreadCount(prev => prev + 1);
     }
   }, []);
@@ -306,13 +282,11 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     if (enabledRef.current && tokenRef.current) {
       console.log(`Connected to POS WebSocket for branch ${branchIdRef.current}`);
 
-      // Clear any pending subscription timeout
       if (subscriptionTimeoutRef.current) {
         clearTimeout(subscriptionTimeoutRef.current);
       }
 
-      // Send subscription message after delay to ensure connection is fully stable
-      // 500ms gives time for the server to process the connection
+      // Delay de 500ms para asegurar conexión estable antes de suscribirse
       subscriptionTimeoutRef.current = setTimeout(() => {
         subscriptionTimeoutRef.current = null;
         if (sendMessageRef.current) {
@@ -347,7 +321,6 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     maxReconnectAttempts: 10
   });
 
-  // Update sendMessage ref when it changes
   useEffect(() => {
     sendMessageRef.current = sendMessage;
   }, [sendMessage]);
@@ -361,7 +334,7 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     setUnreadCount(0);
   }, []);
 
-  // Ping para mantener conexión activa (every 25 seconds to stay under typical 30s timeout)
+  // Ping cada 25s para mantener conexión activa (timeout típico: 30s)
   useEffect(() => {
     if (!isConnected || !enabled) return;
 
@@ -375,7 +348,6 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     return () => clearInterval(pingInterval);
   }, [isConnected, enabled, sendMessage]);
 
-  // Cleanup subscription timeout on unmount
   useEffect(() => {
     return () => {
       if (subscriptionTimeoutRef.current) {

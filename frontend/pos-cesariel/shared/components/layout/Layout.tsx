@@ -37,11 +37,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  // WebSocket para notificaciones en tiempo real
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const branchId = user?.branch_id || 1;
   
-  // Conectar WebSocket para notificaciones en tiempo real
   const {
     isConnected,
     notifications,
@@ -50,10 +48,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     clearNotifications
   } = usePOSWebSocket(branchId, token || '', false);
 
-  // Activar sistema de cierre automático de sesión por inactividad (4 horas)
   useSessionTimeout();
-
-  // Proteger rutas y mostrar toast cuando el usuario no tiene acceso
   useRouteProtection();
 
   useEffect(() => {
@@ -71,7 +66,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* Mobile sidebar */}
       <div className={`fixed inset-0 flex z-40 md:hidden ${sidebarOpen ? '' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
         <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white">
@@ -88,16 +82,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64">
           <Sidebar navigation={filteredNavigation} pathname={pathname} />
         </div>
       </div>
 
-      {/* Main content */}
       <div className="flex flex-col w-0 flex-1 overflow-hidden">
-        {/* Top bar */}
         <div className="relative z-10 flex-shrink-0 flex h-16 bg-white shadow">
           <button
             type="button"
@@ -114,7 +105,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="ml-4 flex items-center md:ml-6">
               <div className="flex items-center space-x-4">
-                {/* WebSocket Connection Indicator */}
                 {mounted && (
                   <div className="flex items-center space-x-2">
                     <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -124,7 +114,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   </div>
                 )}
                 
-                {/* Notification Center */}
                 {mounted && (
                   <NotificationCenter
                     notifications={notifications}
@@ -148,7 +137,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Main content area */}
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">

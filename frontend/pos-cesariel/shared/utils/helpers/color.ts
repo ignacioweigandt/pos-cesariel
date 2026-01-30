@@ -1,13 +1,6 @@
-/**
- * Color utilities
- *
- * Provides color manipulation and generation functions
- */
+/** Utilidades de manipulación y generación de colores */
 
-/**
- * Generate random color from predefined palette
- * @returns Hex color string
- */
+/** Generar color aleatorio de paleta predefinida */
 export function generateRandomColor(): string {
   const colors = [
     '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
@@ -16,31 +9,20 @@ export function generateRandomColor(): string {
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
-/**
- * Determine if a color is light or dark
- * @param hex - Hex color string
- * @returns True if color is light
- */
+/** Determinar si un color es claro u oscuro (basado en luminancia) */
 export function isLightColor(hex: string): boolean {
-  // Remove # if present
   const cleanHex = hex.replace('#', '');
 
-  // Convert hex to RGB
   const r = parseInt(cleanHex.slice(0, 2), 16);
   const g = parseInt(cleanHex.slice(2, 4), 16);
   const b = parseInt(cleanHex.slice(4, 6), 16);
 
-  // Calculate luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
   return luminance > 0.5;
 }
 
-/**
- * Convert hex color to RGB
- * @param hex - Hex color string
- * @returns RGB object {r, g, b}
- */
+/** Convertir color hex a RGB */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   const cleanHex = hex.replace('#', '');
 
@@ -53,13 +35,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
   return { r, g, b };
 }
 
-/**
- * Convert RGB to hex color
- * @param r - Red value (0-255)
- * @param g - Green value (0-255)
- * @param b - Blue value (0-255)
- * @returns Hex color string
- */
+/** Convertir RGB a color hex */
 export function rgbToHex(r: number, g: number, b: number): string {
   const toHex = (n: number) => {
     const hex = Math.round(n).toString(16);
@@ -69,12 +45,7 @@ export function rgbToHex(r: number, g: number, b: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-/**
- * Lighten a hex color by percentage
- * @param hex - Hex color string
- * @param percent - Percentage to lighten (0-100)
- * @returns Lightened hex color
- */
+/** Aclarar color hex por porcentaje (0-100) */
 export function lightenColor(hex: string, percent: number): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;
@@ -87,12 +58,7 @@ export function lightenColor(hex: string, percent: number): string {
   return rgbToHex(r, g, b);
 }
 
-/**
- * Darken a hex color by percentage
- * @param hex - Hex color string
- * @param percent - Percentage to darken (0-100)
- * @returns Darkened hex color
- */
+/** Oscurecer color hex por porcentaje (0-100) */
 export function darkenColor(hex: string, percent: number): string {
   const rgb = hexToRgb(hex);
   if (!rgb) return hex;

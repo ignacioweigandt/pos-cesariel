@@ -1,21 +1,11 @@
-/**
- * Application route constants
- *
- * Defines all application routes and navigation paths
- */
+/** Rutas de la aplicación y paths de navegación */
 
-/**
- * Public routes (no authentication required)
- */
 export const PUBLIC_ROUTES = {
   LOGIN: '/',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
 } as const;
 
-/**
- * Protected routes (authentication required)
- */
 export const PROTECTED_ROUTES = {
   DASHBOARD: '/dashboard',
   POS: '/pos',
@@ -37,17 +27,11 @@ export const PROTECTED_ROUTES = {
   SYSTEM_CONFIG: '/settings/system',
 } as const;
 
-/**
- * All application routes
- */
 export const APP_ROUTES = {
   ...PUBLIC_ROUTES,
   ...PROTECTED_ROUTES,
 } as const;
 
-/**
- * API routes
- */
 export const API_ROUTES = {
   AUTH: '/auth',
   USERS: '/users',
@@ -60,9 +44,6 @@ export const API_ROUTES = {
   CONFIG: '/config',
 } as const;
 
-/**
- * Navigation menu items
- */
 export const NAVIGATION_ITEMS = [
   {
     name: 'Dashboard',

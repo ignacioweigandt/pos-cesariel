@@ -1,46 +1,22 @@
-/**
- * Validation utilities
- *
- * Provides common validation functions for forms and data
- */
+/** Validadores comunes para formularios y datos */
 
-/**
- * Validate email format
- * @param email - Email address to validate
- * @returns True if valid email format
- */
+/** Validar formato de email */
 export function validateEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 }
 
-/**
- * Alternative name for validateEmail for backward compatibility
- */
 export const isValidEmail = validateEmail;
 
-/**
- * Validate Argentine phone number format
- * Accepts formats: +54 11 1234-5678, 011 1234-5678, 11 1234-5678
- * @param phone - Phone number to validate
- * @returns True if valid phone format
- */
+/** Validar teléfono argentino (formatos: +54 11 1234-5678, 011 1234-5678, 11 1234-5678) */
 export function validatePhone(phone: string): boolean {
   const phoneRegex = /^(\+54\s?)?(\d{2,4})\s?\d{4}-?\d{4}$/;
   return phoneRegex.test(phone.replace(/\s+/g, ' ').trim());
 }
 
-/**
- * Alternative name for validatePhone for backward compatibility
- */
 export const isValidPhone = validatePhone;
 
-/**
- * Validate password strength
- * Requires: minimum 8 characters, at least one letter and one number
- * @param password - Password to validate
- * @returns True if password meets requirements
- */
+/** Validar fortaleza de contraseña (mínimo 8 caracteres, al menos 1 letra y 1 número) */
 export function validatePassword(password: string): boolean {
   if (password.length < 8) return false;
   const hasLetter = /[a-zA-Z]/.test(password);
@@ -48,11 +24,7 @@ export function validatePassword(password: string): boolean {
   return hasLetter && hasNumber;
 }
 
-/**
- * Validate required field (not empty)
- * @param value - Value to validate
- * @returns True if value is not empty
- */
+/** Validar campo requerido (no vacío) */
 export function validateRequired(value: any): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === 'string') return value.trim() !== '';
@@ -61,42 +33,22 @@ export function validateRequired(value: any): boolean {
   return true;
 }
 
-/**
- * Validate minimum length for strings
- * @param value - String to validate
- * @param minLength - Minimum length required
- * @returns True if string meets minimum length
- */
+/** Validar longitud mínima de string */
 export function validateMinLength(value: string, minLength: number): boolean {
   return value.length >= minLength;
 }
 
-/**
- * Validate maximum length for strings
- * @param value - String to validate
- * @param maxLength - Maximum length allowed
- * @returns True if string is within maximum length
- */
+/** Validar longitud máxima de string */
 export function validateMaxLength(value: string, maxLength: number): boolean {
   return value.length <= maxLength;
 }
 
-/**
- * Validate number is within range
- * @param value - Number to validate
- * @param min - Minimum value (inclusive)
- * @param max - Maximum value (inclusive)
- * @returns True if number is within range
- */
+/** Validar número dentro de rango (inclusivo) */
 export function validateRange(value: number, min: number, max: number): boolean {
   return value >= min && value <= max;
 }
 
-/**
- * Validate URL format
- * @param url - URL to validate
- * @returns True if valid URL format
- */
+/** Validar formato de URL */
 export function validateURL(url: string): boolean {
   try {
     new URL(url);
@@ -106,21 +58,13 @@ export function validateURL(url: string): boolean {
   }
 }
 
-/**
- * Validate Argentine CUIT/CUIL format
- * @param cuit - CUIT/CUIL to validate
- * @returns True if valid format (XX-XXXXXXXX-X)
- */
+/** Validar CUIT/CUIL argentino (formato: XX-XXXXXXXX-X) */
 export function validateCUIT(cuit: string): boolean {
   const cuitRegex = /^\d{2}-?\d{8}-?\d{1}$/;
   return cuitRegex.test(cuit);
 }
 
-/**
- * Validate credit card number using Luhn algorithm
- * @param cardNumber - Credit card number to validate
- * @returns True if valid card number
- */
+/** Validar número de tarjeta de crédito (algoritmo de Luhn) */
 export function validateCreditCard(cardNumber: string): boolean {
   const cleaned = cardNumber.replace(/\s/g, '');
   if (!/^\d+$/.test(cleaned)) return false;
@@ -143,11 +87,7 @@ export function validateCreditCard(cardNumber: string): boolean {
   return sum % 10 === 0;
 }
 
-/**
- * Validate postal code (Argentine format)
- * @param postalCode - Postal code to validate
- * @returns True if valid format (XXXX or AXXXX)
- */
+/** Validar código postal argentino (formato: XXXX o AXXXX) */
 export function validatePostalCode(postalCode: string): boolean {
   const postalRegex = /^[A-Z]?\d{4}$/;
   return postalRegex.test(postalCode.toUpperCase());

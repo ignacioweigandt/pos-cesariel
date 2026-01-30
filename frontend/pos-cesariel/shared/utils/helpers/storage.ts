@@ -1,14 +1,6 @@
-/**
- * Storage utilities
- *
- * Provides safe wrappers for localStorage and sessionStorage
- */
+/** Wrappers seguros para localStorage y sessionStorage con parseo JSON automático */
 
-/**
- * Get item from localStorage with JSON parsing
- * @param key - Storage key
- * @returns Parsed value or null
- */
+/** Obtener y parsear item de localStorage */
 export function getLocalStorage<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
 
@@ -21,11 +13,7 @@ export function getLocalStorage<T>(key: string): T | null {
   }
 }
 
-/**
- * Set item in localStorage with JSON stringification
- * @param key - Storage key
- * @param value - Value to store
- */
+/** Guardar item en localStorage con stringify automático */
 export function setLocalStorage<T>(key: string, value: T): void {
   if (typeof window === 'undefined') return;
 
@@ -36,10 +24,7 @@ export function setLocalStorage<T>(key: string, value: T): void {
   }
 }
 
-/**
- * Remove item from localStorage
- * @param key - Storage key
- */
+/** Eliminar item de localStorage */
 export function removeLocalStorage(key: string): void {
   if (typeof window === 'undefined') return;
 
@@ -50,9 +35,7 @@ export function removeLocalStorage(key: string): void {
   }
 }
 
-/**
- * Clear all items from localStorage
- */
+/** Limpiar todo el localStorage */
 export function clearLocalStorage(): void {
   if (typeof window === 'undefined') return;
 
@@ -63,11 +46,7 @@ export function clearLocalStorage(): void {
   }
 }
 
-/**
- * Get item from sessionStorage with JSON parsing
- * @param key - Storage key
- * @returns Parsed value or null
- */
+/** Obtener y parsear item de sessionStorage */
 export function getSessionStorage<T>(key: string): T | null {
   if (typeof window === 'undefined') return null;
 
@@ -80,11 +59,7 @@ export function getSessionStorage<T>(key: string): T | null {
   }
 }
 
-/**
- * Set item in sessionStorage with JSON stringification
- * @param key - Storage key
- * @param value - Value to store
- */
+/** Guardar item en sessionStorage con stringify automático */
 export function setSessionStorage<T>(key: string, value: T): void {
   if (typeof window === 'undefined') return;
 
@@ -95,11 +70,8 @@ export function setSessionStorage<T>(key: string, value: T): void {
   }
 }
 
-/**
- * Remove item from sessionStorage
- * @param key - Storage key
- */
-export function removeSessionStorage(key: string): void {
+/** Eliminar item de sessionStorage */
+export function removeSessionStorage(key: string): void{
   if (typeof window === 'undefined') return;
 
   try {
@@ -109,9 +81,7 @@ export function removeSessionStorage(key: string): void {
   }
 }
 
-/**
- * Clear all items from sessionStorage
- */
+/** Limpiar todo el sessionStorage */
 export function clearSessionStorage(): void {
   if (typeof window === 'undefined') return;
 
