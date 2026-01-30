@@ -1,8 +1,4 @@
-/**
- * useBranches Hook
- *
- * Custom hook for managing branch data and operations
- */
+/** Hook para CRUD de sucursales con soporte de soft delete */
 
 import { useState, useCallback } from "react";
 import { branchesApi } from "@/lib/api";
@@ -56,7 +52,6 @@ export function useBranches() {
     try {
       const response = await branchesApi.deleteBranch(id);
 
-      // Handle both soft delete and hard delete
       if (response.data?.soft_delete) {
         toast.success("Sucursal desactivada exitosamente (tiene registros asociados)");
       } else {

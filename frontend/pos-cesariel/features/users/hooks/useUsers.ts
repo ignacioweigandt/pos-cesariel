@@ -1,8 +1,4 @@
-/**
- * useUsers Hook
- *
- * Custom hook for managing user data and operations
- */
+/** Hook para CRUD de usuarios con soft delete y reset de contraseña */
 
 import { useState, useCallback } from "react";
 import { usersApi } from "@/lib/api";
@@ -57,7 +53,6 @@ export function useUsers() {
     try {
       const response = await usersApi.deleteUser(id);
 
-      // Handle both soft delete and hard delete
       if (response.data?.soft_delete) {
         toast.success("Usuario desactivado exitosamente (tiene registros asociados)");
       } else {

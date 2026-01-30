@@ -1,17 +1,7 @@
-/**
- * User and Branch Type Definitions
- *
- * Type definitions for user management, branch management, and role-based access control
- */
+/** Definiciones de tipos para gestión de usuarios, sucursales y control de acceso basado en roles */
 
-/**
- * User role types in the system
- */
 export type UserRole = "admin" | "manager" | "seller" | "ecommerce";
 
-/**
- * User entity with authentication and authorization details
- */
 export interface User {
   id: number;
   username: string;
@@ -25,9 +15,6 @@ export interface User {
   branch?: Branch;
 }
 
-/**
- * Branch entity representing physical store locations
- */
 export interface Branch {
   id: number;
   name: string;
@@ -37,9 +24,6 @@ export interface Branch {
   is_active: boolean;
 }
 
-/**
- * Form data for creating/updating users
- */
 export interface UserFormData {
   username: string;
   email: string;
@@ -50,9 +34,6 @@ export interface UserFormData {
   is_active: boolean;
 }
 
-/**
- * Form data for creating/updating branches
- */
 export interface BranchFormData {
   name: string;
   address: string;
@@ -61,9 +42,6 @@ export interface BranchFormData {
   is_active: boolean;
 }
 
-/**
- * Role information with permissions
- */
 export interface RoleInfo {
   name: string;
   key: UserRole;
@@ -72,9 +50,6 @@ export interface RoleInfo {
   color: string;
 }
 
-/**
- * Form validation errors
- */
 export interface FormErrors {
   [key: string]: string;
 }
