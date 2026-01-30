@@ -1,3 +1,100 @@
+"""
+Router de Productos - Gestión Completa de Catálogo e Inventario.
+
+CRUD de productos con gestión avanzada de stock multi-sucursal, talles,
+importación masiva Excel, ajustes de precios y auditoría completa.
+
+Endpoints:
+    === PRODUCTOS ===
+    GET /products: Lista productos con filtros avanzados
+    GET /products/{id}: Detalle con stock por sucursal y talles
+    POST /products: Crear producto (MANAGER/ADMIN)
+    PUT /products/{id}: Actualizar producto (MANAGER/ADMIN)
+    DELETE /products/{id}: Soft delete (MANAGER/ADMIN)
+    PATCH /products/{id}/toggle: Activar/desactivar
+    GET /products/search: Búsqueda full-text (nombre, SKU, barcode)
+    GET /products/brands: Marcas únicas de productos
+    
+    === STOCK MANAGEMENT ===
+    POST /products/{id}/adjust-stock: Ajustar stock (entrada/salida/ajuste)
+    POST /products/adjust-stock-bulk: Ajuste masivo de stock
+    GET /products/{id}/stock: Stock por sucursal y talles
+    POST /products/{id}/sizes: Agregar talle con stock
+    PUT /products/sizes/{id}: Actualizar stock de talle
+    DELETE /products/sizes/{id}: Eliminar talle
+    POST /products/{id}/sizes/update-stocks: Actualizar stocks múltiples
+    GET /products/{id}/multi-branch-stock: Stock en todas las sucursales
+    
+    === BULK OPERATIONS ===
+    POST /products/import: Importar productos desde Excel (rate limited)
+    GET /products/import/template: Descargar template Excel
+    GET /products/import/history: Historial de importaciones
+    POST /products/bulk-update-prices: Actualizar precios masivamente
+    POST /products/bulk-update-visibility: Toggle show_in_ecommerce masivo
+    
+    === INVENTORY ===
+    GET /products/{id}/inventory-movements: Historial de movimientos
+    GET /products/low-stock: Productos con stock bajo (≤ min_stock)
+
+Permisos:
+    - GET: Usuario autenticado
+    - POST/PUT/DELETE: MANAGER o ADMIN
+    - Stock management: require_stock_management_permission()
+    - Bulk operations: MANAGER o ADMIN
+
+Stock Multi-Sucursal:
+    - BranchStock: Stock por sucursal + producto (+ talle opcional)
+    - ProductSize: Variantes de talle con stock independiente
+    - InventoryMovement: Auditoría de cada cambio
+    - Cálculos en tiempo real por sucursal
+
+Tipos de Ajuste de Stock:
+    - ENTRY: Entrada de mercadería (aumenta stock)
+    - EXIT: Salida de mercadería (disminuye stock)
+    - ADJUSTMENT: Ajuste manual (corrección)
+    - SALE: Venta (disminuye stock, se crea automático)
+
+Importación Excel:
+    - Template con campos requeridos: SKU, Nombre, Precio, Stock, etc.
+    - Validación completa de datos
+    - Creación/actualización de productos
+    - Manejo de errores por fila
+    - ImportLog con tracking
+    - Rate limited: 5 imports/hora por usuario
+
+Bulk Price Update:
+    - Actualizar precio por porcentaje o valor fijo
+    - Por categoría, marca o IDs específicos
+    - Preview de cambios antes de aplicar
+    - Validación de nuevos precios > 0
+
+Características:
+    - Búsqueda full-text optimizada (nombre, SKU, barcode)
+    - Filtros: categoría, marca, sucursal, talles, ecommerce
+    - Stock calculado en tiempo real
+    - Notificaciones WebSocket (stock_change, low_stock)
+    - Validación de SKU/barcode únicos
+    - Soft delete con is_active
+    - Auditoría completa con InventoryMovement
+
+Validaciones:
+    - SKU único en el sistema
+    - Barcode único (si se proporciona)
+    - Stock ≥ 0 siempre
+    - Precio > 0
+    - min_stock ≥ 0
+    - Talles únicos por producto + sucursal
+
+WebSocket Notifications:
+    - notify_inventory_change(): Stock actualizado
+    - notify_low_stock(): Stock ≤ min_stock
+
+Schemas Especiales:
+    - ProductWithMultiBranchStock: Producto con stock de todas las sucursales
+    - BulkImportResponse: Resultado de importación masiva
+    - BulkPriceUpdateResponse: Resultado de update de precios
+    - StockAdjustment: Ajuste de stock con tipo y notas
+"""
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func, distinct
