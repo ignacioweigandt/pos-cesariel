@@ -1,8 +1,58 @@
 """
-Reports Router for POS Cesariel.
+Router de Reportes - Endpoints de Analíticas Empresariales.
 
-Thin HTTP layer that delegates all business logic to ReportsService.
-Each endpoint should be < 30 lines and only handle HTTP concerns.
+Capa HTTP delgada que delega lógica a ReportsService.
+Endpoints < 30 líneas, solo manejo de HTTP.
+
+Endpoints:
+    === DASHBOARD ===
+    GET /reports/dashboard: Métricas en tiempo real
+    
+    === VENTAS ===
+    GET /reports/sales: Reporte de ventas agregado
+    GET /reports/sales/detailed: Reporte detallado con ítems
+    GET /reports/sales/daily: Ventas diarias (gráficos)
+    GET /reports/sales/by-branch: Comparativa por sucursal
+    GET /reports/sales/by-payment-method: Análisis por forma de pago
+    GET /reports/sales/by-type: Análisis por canal (POS/Ecommerce/WhatsApp)
+    GET /reports/sales/list: Listado de ventas con filtros avanzados
+    
+    === PRODUCTOS ===
+    GET /reports/products/top-selling: Productos más vendidos
+    GET /reports/products/top-brands: Marcas más vendidas
+    GET /reports/products/low-stock: Productos con stock bajo
+
+Permisos por Rol:
+    - ADMIN: Acceso a todas las sucursales
+    - MANAGER/SELLER: Solo su sucursal asignada
+    - Validación automática en ReportsService
+
+Filtros Disponibles:
+    - start_date, end_date: Rango de fechas
+    - branch_id: Sucursal específica (ADMIN)
+    - sale_type: POS/ECOMMERCE/WHATSAPP
+    - payment_method: Filtro por medio de pago
+    - skip, limit: Paginación
+
+Características:
+    - Agregaciones optimizadas (totales, promedios)
+    - Gráficos (datos para Chart.js)
+    - Rankings (top productos, marcas)
+    - Comparativas temporales
+    - Validación de permisos automática
+    - Manejo de errores HTTP
+
+Service Layer:
+    - ReportsService: Toda la lógica de negocio
+    - Validación de branch_access por rol
+    - Transformación de datos para gráficos
+
+Schemas:
+    - DashboardStats: Métricas del dashboard
+    - SalesReport: Agregado de ventas
+    - DetailedSalesReport: Ventas con ítems
+    - DailySales: Series temporales
+    - ChartData: Datos para gráficos
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
