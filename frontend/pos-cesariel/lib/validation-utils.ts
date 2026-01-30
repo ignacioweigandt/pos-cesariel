@@ -1,15 +1,10 @@
-/**
- * Utilidades de validación compartidas
- */
+/** Utilidades de validación compartidas (required, email, phone, CUIT, etc.) */
 
 export interface ValidationResult {
   valid: boolean;
   error?: string;
 }
 
-/**
- * Valida que un string no esté vacío
- */
 export function validateRequired(value: string, fieldName: string = 'Campo'): ValidationResult {
   if (!value || value.trim().length === 0) {
     return {
@@ -20,9 +15,6 @@ export function validateRequired(value: string, fieldName: string = 'Campo'): Va
   return { valid: true };
 }
 
-/**
- * Valida longitud mínima de un string
- */
 export function validateMinLength(
   value: string,
   minLength: number,
@@ -37,9 +29,6 @@ export function validateMinLength(
   return { valid: true };
 }
 
-/**
- * Valida longitud máxima de un string
- */
 export function validateMaxLength(
   value: string,
   maxLength: number,
@@ -54,9 +43,6 @@ export function validateMaxLength(
   return { valid: true };
 }
 
-/**
- * Valida que un número esté dentro de un rango
- */
 export function validateRange(
   value: number,
   min: number,
@@ -72,9 +58,6 @@ export function validateRange(
   return { valid: true };
 }
 
-/**
- * Valida formato de URL
- */
 export function validateUrl(url: string): ValidationResult {
   try {
     new URL(url);
@@ -87,9 +70,6 @@ export function validateUrl(url: string): ValidationResult {
   }
 }
 
-/**
- * Valida formato de email
- */
 export function validateEmail(email: string): ValidationResult {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
@@ -101,11 +81,7 @@ export function validateEmail(email: string): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Valida número de teléfono (formato argentino)
- */
 export function validatePhone(phone: string): ValidationResult {
-  // Acepta formatos: +54..., 54..., 11..., etc.
   const phoneRegex = /^(\+?54)?[\s-]?(\d{2,4})[\s-]?(\d{6,8})$/;
   if (!phoneRegex.test(phone)) {
     return {
@@ -116,9 +92,6 @@ export function validatePhone(phone: string): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Valida que un número sea positivo
- */
 export function validatePositive(value: number, fieldName: string = 'Valor'): ValidationResult {
   if (value < 0) {
     return {
@@ -129,9 +102,6 @@ export function validatePositive(value: number, fieldName: string = 'Valor'): Va
   return { valid: true };
 }
 
-/**
- * Valida porcentaje (0-100)
- */
 export function validatePercentage(value: number): ValidationResult {
   if (value < 0 || value > 100) {
     return {
@@ -142,9 +112,6 @@ export function validatePercentage(value: number): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Valida múltiples campos y retorna todos los errores
- */
 export function validateMultiple(
   validations: Array<() => ValidationResult>
 ): { valid: boolean; errors: string[] } {
@@ -163,22 +130,15 @@ export function validateMultiple(
   };
 }
 
-/**
- * Sanitiza un string eliminando caracteres peligrosos
- */
 export function sanitizeString(value: string): string {
   return value
     .trim()
-    .replace(/[<>]/g, '') // Elimina < y >
-    .replace(/javascript:/gi, '') // Elimina javascript:
-    .replace(/on\w+=/gi, ''); // Elimina atributos on*=
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '');
 }
 
-/**
- * Valida código postal argentino
- */
 export function validatePostalCode(code: string): ValidationResult {
-  // Formato argentino: 4 dígitos o letra + 4 dígitos
   const postalRegex = /^[A-Z]?\d{4}$/i;
   if (!postalRegex.test(code)) {
     return {
@@ -189,11 +149,7 @@ export function validatePostalCode(code: string): ValidationResult {
   return { valid: true };
 }
 
-/**
- * Valida CUIT/CUIL argentino
- */
 export function validateCuit(cuit: string): ValidationResult {
-  // Elimina guiones y espacios
   const cleanCuit = cuit.replace(/[-\s]/g, '');
 
   if (cleanCuit.length !== 11) {

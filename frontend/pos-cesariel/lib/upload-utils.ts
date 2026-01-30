@@ -1,6 +1,4 @@
-/**
- * Utilidades para manejo de subida de archivos e imágenes
- */
+/** Utilidades para validación y manejo de subida de archivos e imágenes (Cloudinary) */
 
 export interface FileValidationOptions {
   allowedTypes?: string[];
@@ -16,9 +14,6 @@ export interface FileValidationResult {
   error?: string;
 }
 
-/**
- * Tipos de imagen permitidos por defecto
- */
 export const DEFAULT_IMAGE_TYPES = [
   'image/jpeg',
   'image/jpg',
@@ -27,9 +22,6 @@ export const DEFAULT_IMAGE_TYPES = [
   'image/webp'
 ];
 
-/**
- * Valida un archivo según las opciones proporcionadas
- */
 export function validateFile(
   file: File,
   options: FileValidationOptions = {}
@@ -39,7 +31,6 @@ export function validateFile(
     maxSizeMB = 5
   } = options;
 
-  // Validar tipo de archivo
   if (!allowedTypes.includes(file.type)) {
     const typeNames = allowedTypes.map(type => type.split('/')[1].toUpperCase()).join(', ');
     return {
@@ -48,7 +39,6 @@ export function validateFile(
     };
   }
 
-  // Validar tamaño
   const maxSizeBytes = maxSizeMB * 1024 * 1024;
   if (file.size > maxSizeBytes) {
     return {
@@ -60,9 +50,6 @@ export function validateFile(
   return { valid: true };
 }
 
-/**
- * Valida las dimensiones de una imagen
- */
 export async function validateImageDimensions(
   file: File,
   options: FileValidationOptions = {}
@@ -128,9 +115,6 @@ export async function validateImageDimensions(
   });
 }
 
-/**
- * Crea una URL de preview para un archivo
- */
 export function createFilePreview(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -151,9 +135,6 @@ export function createFilePreview(file: File): Promise<string> {
   });
 }
 
-/**
- * Formatea el tamaño de un archivo en formato legible
- */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
 
@@ -164,16 +145,10 @@ export function formatFileSize(bytes: number): string {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 }
 
-/**
- * Obtiene la extensión de un archivo
- */
 export function getFileExtension(filename: string): string {
   return filename.slice(((filename.lastIndexOf('.') - 1) >>> 0) + 2).toLowerCase();
 }
 
-/**
- * Valida que una URL sea válida
- */
 export function isValidUrl(url: string): boolean {
   try {
     new URL(url);
@@ -183,9 +158,6 @@ export function isValidUrl(url: string): boolean {
   }
 }
 
-/**
- * Valida que una URL sea una imagen de Cloudinary
- */
 export function isCloudinaryUrl(url: string): boolean {
   return url.includes('cloudinary.com') || url.includes('res.cloudinary.com');
 }
