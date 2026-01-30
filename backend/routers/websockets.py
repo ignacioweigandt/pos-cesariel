@@ -1,3 +1,43 @@
+"""
+Router de WebSockets - Comunicación en Tiempo Real.
+
+Sistema de WebSockets para notificaciones y actualizaciones en tiempo real
+entre frontends y backend. Conexiones por sucursal con autenticación JWT.
+
+Endpoints:
+    WS /ws/{branch_id}: Conexión WebSocket por sucursal
+
+Autenticación:
+    - Query param: ?token=<jwt_token>
+    - Validación JWT antes de aceptar conexión
+    - Extracción de username desde token
+
+Características:
+    - Conexiones separadas por sucursal (multi-tenant)
+    - Server heartbeat cada 20s (mantiene conexión activa)
+    - Receive timeout de 60s
+    - Manejo de desconexiones automáticas
+    - Broadcast de eventos a todos los clientes de una sucursal
+
+Mensajes Soportados:
+    - inventory_change: Cambios de stock
+    - new_sale: Nueva venta registrada
+    - low_stock_alert: Alerta de stock bajo
+    - product_update: Actualización de producto
+    - sale_status_change: Cambio de estado de orden
+    - dashboard_update: Actualización de métricas
+    - server_heartbeat: Keepalive del servidor
+
+Compatibilidad:
+    - Optimizado para proxies (Railway, etc.)
+    - Manejo de reconexiones automáticas
+    - Logging detallado de eventos
+
+Arquitectura:
+    - ConnectionManager global (websocket_manager.py)
+    - Conexiones agrupadas por branch_id
+    - Broadcast selectivo por sucursal
+"""
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from websocket_manager import manager
 import json
