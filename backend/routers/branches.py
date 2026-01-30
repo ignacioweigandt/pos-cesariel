@@ -1,3 +1,26 @@
+"""
+Router de Sucursales - Endpoints CRUD.
+
+Gestión de sucursales del sistema multi-tenant.
+Operaciones críticas solo para ADMIN.
+
+Endpoints:
+    GET /branches: Lista sucursales (paginado, filtro activas/todas)
+    GET /branches/{id}: Detalle de sucursal
+    POST /branches: Crear sucursal (ADMIN)
+    PUT /branches/{id}: Actualizar sucursal (ADMIN)
+    DELETE /branches/{id}: Eliminar sucursal (ADMIN)
+
+Permisos:
+    - GET: Usuario autenticado
+    - POST/PUT/DELETE: Solo ADMIN
+
+Características:
+    - Filtro include_inactive para ver todas o solo activas
+    - HARD DELETE (no soft delete)
+    - Paginación en listado
+    - Base del sistema multi-tenant
+"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List

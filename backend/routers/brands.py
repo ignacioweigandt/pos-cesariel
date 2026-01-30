@@ -1,3 +1,26 @@
+"""
+Router de Marcas - Endpoints CRUD.
+
+Gestión completa de marcas de productos (Nike, Adidas, etc.).
+Incluye serialización manual de timestamps.
+
+Endpoints:
+    GET /brands: Lista marcas activas (paginado, ordenado por nombre)
+    GET /brands/{id}: Detalle de marca
+    POST /brands: Crear marca (MANAGER/ADMIN)
+    PUT /brands/{id}: Actualizar marca (MANAGER/ADMIN)
+    DELETE /brands/{id}: Soft delete marca (MANAGER/ADMIN)
+
+Permisos:
+    - GET: Usuario autenticado
+    - POST/PUT/DELETE: MANAGER o ADMIN
+
+Características:
+    - Serialización manual con _serialize_brand() para timestamps ISO
+    - Soft delete con is_active
+    - Repository Pattern
+    - Ordenamiento alfabético automático
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
