@@ -1,11 +1,7 @@
 import { useState, useMemo } from 'react';
 import type { Product, ProductFilters } from '../types/inventory.types';
 
-/**
- * useProductFilters Hook
- *
- * Manages product filtering logic
- */
+/** Hook para filtrado de productos por búsqueda, categoría, marca y stock */
 export function useProductFilters(products: Product[]) {
   const [filters, setFilters] = useState<ProductFilters>({
     searchTerm: '',
@@ -16,22 +12,18 @@ export function useProductFilters(products: Product[]) {
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      // Search filter
       const matchesSearch =
         product.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         product.sku.toLowerCase().includes(filters.searchTerm.toLowerCase());
 
-      // Category filter
       const matchesCategory =
         filters.selectedCategory === 'all' ||
         product.category_id?.toString() === filters.selectedCategory;
 
-      // Brand filter
       const matchesBrand =
         filters.selectedBrand === 'all' ||
         product.brand_id?.toString() === filters.selectedBrand;
 
-      // Stock filter
       const matchesStock =
         filters.stockFilter === 'all' ||
         (filters.stockFilter === 'low' &&

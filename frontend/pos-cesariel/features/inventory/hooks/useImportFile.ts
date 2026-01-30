@@ -1,14 +1,12 @@
 import { useState, useCallback } from 'react';
 
-/**
- * Hook para manejar selección y validación de archivos
- */
+/** Hook para validar y seleccionar archivos de importación (CSV/Excel, max 10MB) */
 export function useImportFile() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const VALID_EXTENSIONS = ['.csv', '.xlsx', '.xls'];
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
   const validateFile = useCallback((file: File): string | null => {
     const fileName = file.name.toLowerCase();

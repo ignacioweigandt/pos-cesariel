@@ -2,11 +2,7 @@ import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { MultiBranchProduct } from '../types/inventory.types';
 
-/**
- * useMultiBranchStock Hook
- *
- * Manages multi-branch stock data
- */
+/** Hook para consultar stock de productos en todas las sucursales */
 export function useMultiBranchStock() {
   const [multiBranchProducts, setMultiBranchProducts] = useState<MultiBranchProduct[]>([]);
   const [loading, setLoading] = useState(false);

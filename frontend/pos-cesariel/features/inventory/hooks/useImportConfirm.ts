@@ -17,9 +17,7 @@ export interface ImportResult {
   preview_data?: PreviewProduct[];
 }
 
-/**
- * Hook para confirmar e importar productos
- */
+/** Hook para confirmar e insertar productos en BD tras preview */
 export function useImportConfirm() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [loading, setLoading] = useState(false);

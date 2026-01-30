@@ -15,9 +15,7 @@ export interface PreviewProduct {
   has_sizes: boolean;
 }
 
-/**
- * Hook para manejar la vista previa de productos
- */
+/** Hook para generar preview de productos desde CSV/Excel antes de confirmar importación */
 export function useImportPreview() {
   const [previewData, setPreviewData] = useState<PreviewProduct[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,6 +59,7 @@ export function useImportPreview() {
     []
   );
 
+  // Enriquece preview con categoría autodetectada, talles, stock inicial 0
   const enhancePreviewData = useCallback(
     (
       data: PreviewProduct[],
@@ -75,7 +74,7 @@ export function useImportPreview() {
 
         return {
           ...product,
-          stock_quantity: 0, // Stock inicial en 0
+          stock_quantity: 0,
           min_stock: 1,
           category_id: getCategoryId(detectedCategory),
           detected_category: detectedCategory,

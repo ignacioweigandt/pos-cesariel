@@ -22,9 +22,7 @@ export interface MultiBranchSizeData {
   branches: BranchSizeData[];
 }
 
-/**
- * Hook para cargar stock multi-sucursal de un producto específico
- */
+/** Hook para stock multi-sucursal con desglose por talles de un producto específico */
 export function useProductBranchStock(productId: number | null) {
   const [multiBranchData, setMultiBranchData] =
     useState<MultiBranchSizeData | null>(null);

@@ -3,11 +3,7 @@ import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Product } from '../types/inventory.types';
 
-/**
- * useProducts Hook
- *
- * Manages product data and CRUD operations
- */
+/** Hook principal para CRUD de productos con fallback a datos demo */
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -17,18 +13,13 @@ export function useProducts() {
     setLoading(true);
     setError(null);
     try {
-      // Solicitar un límite alto para obtener todos los productos
-      // 10000 es suficiente para la mayoría de los casos de uso
       const response = await api.get('/products/', {
-        params: {
-          limit: 10000,
-        },
+        params: { limit: 10000 },
       });
       setProducts(response.data);
     } catch (err: any) {
       console.error('Error fetching products:', err);
       setError(err.message || 'Error al cargar productos');
-      // Set demo products if API fails
       setProducts([
         {
           id: 1,

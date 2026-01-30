@@ -2,11 +2,7 @@ import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { Brand } from '../types/inventory.types';
 
-/**
- * useBrands Hook
- *
- * Manages brand data fetching from the backend using the brands table
- */
+/** Hook para gestión de marcas (CRUD) */
 export function useBrands() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +17,6 @@ export function useBrands() {
     } catch (err: any) {
       console.error('Error fetching brands:', err);
       setError(err.message || 'Error al cargar marcas');
-      // Set empty array if API fails
       setBrands([]);
     } finally {
       setLoading(false);
@@ -31,7 +26,7 @@ export function useBrands() {
   const createBrand = useCallback(async (brandData: any) => {
     try {
       const response = await api.post('/brands/', brandData);
-      await loadBrands(); // Reload brands after creating
+      await loadBrands();
       return response.data;
     } catch (err: any) {
       console.error('Error creating brand:', err);
@@ -42,7 +37,7 @@ export function useBrands() {
   const updateBrand = useCallback(async (brandId: number, brandData: any) => {
     try {
       const response = await api.put(`/brands/${brandId}`, brandData);
-      await loadBrands(); // Reload brands after updating
+      await loadBrands();
       return response.data;
     } catch (err: any) {
       console.error('Error updating brand:', err);
@@ -53,7 +48,7 @@ export function useBrands() {
   const deleteBrand = useCallback(async (brandId: number) => {
     try {
       await api.delete(`/brands/${brandId}`);
-      await loadBrands(); // Reload brands after deleting
+      await loadBrands();
     } catch (err: any) {
       console.error('Error deleting brand:', err);
       throw err;

@@ -1,21 +1,11 @@
-/**
- * Inventory Types
- *
- * Type definitions for the inventory management system
- */
+/** Definiciones de tipos para gestión de inventario */
 
-/**
- * Product Category
- */
 export interface Category {
   id: number;
   name: string;
   description?: string;
 }
 
-/**
- * Product Brand
- */
 export interface Brand {
   id: number;
   name: string;
@@ -26,9 +16,6 @@ export interface Brand {
   updated_at: string;
 }
 
-/**
- * Product entity with all fields
- */
 export interface Product {
   id: number;
   name: string;
@@ -41,23 +28,17 @@ export interface Product {
   category?: Category;
   brand_id?: number;
   brand_rel?: Brand;
-  brand?: string; // LEGACY: mantener por compatibilidad
+  brand?: string;
   is_active: boolean;
   has_sizes: boolean;
   created_at: string;
 }
 
-/**
- * Product size variant (for apparel/footwear)
- */
 export interface ProductSize {
   size: string;
   stock_quantity: number;
 }
 
-/**
- * Multi-branch product stock data
- */
 export interface BranchStock {
   branch_id: number;
   branch_name: string;
@@ -71,18 +52,12 @@ export interface MultiBranchProduct {
   branch_stocks: BranchStock[];
 }
 
-/**
- * Stock movement/adjustment
- */
 export interface StockMovement {
   product_id: number;
   new_stock: number;
   notes: string;
 }
 
-/**
- * Product form data
- */
 export interface ProductFormData {
   name: string;
   description: string;
@@ -91,37 +66,25 @@ export interface ProductFormData {
   stock_quantity: string;
   category_id: string;
   brand_id: string;
-  brand: string; // LEGACY: mantener por compatibilidad
+  brand: string;
   has_sizes: boolean;
 }
 
-/**
- * Category form data
- */
 export interface CategoryFormData {
   name: string;
   description: string;
 }
 
-/**
- * Brand form data
- */
 export interface BrandFormData {
   name: string;
   description: string;
 }
 
-/**
- * Stock adjustment form data
- */
 export interface StockFormData {
   new_stock: string;
   notes: string;
 }
 
-/**
- * Filter state for product list
- */
 export interface ProductFilters {
   searchTerm: string;
   selectedCategory: string;
@@ -129,9 +92,6 @@ export interface ProductFilters {
   stockFilter: 'all' | 'low' | 'out';
 }
 
-/**
- * Inventory statistics
- */
 export interface InventoryStats {
   totalProducts: number;
   lowStockCount: number;
@@ -140,9 +100,6 @@ export interface InventoryStats {
   brandsCount: number;
 }
 
-/**
- * Import data interface
- */
 export interface ImportError {
   row: number;
   error: string;

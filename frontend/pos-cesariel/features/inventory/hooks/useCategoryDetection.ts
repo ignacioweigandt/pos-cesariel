@@ -5,11 +5,8 @@ interface Category {
   name: string;
 }
 
-/**
- * Hook para detección inteligente de categorías
- */
+/** Hook para autodetección de categorías y talles desde nombre de archivo/producto */
 export function useCategoryDetection(categories: Category[]) {
-  // Mapas optimizados para detección de categorías
   const CATEGORY_KEYWORDS = {
     Indumentaria: {
       filename: ['ropa', 'indumentaria', 'vestimenta'],

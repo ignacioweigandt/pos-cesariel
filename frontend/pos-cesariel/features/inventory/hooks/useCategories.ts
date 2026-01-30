@@ -2,11 +2,7 @@ import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { Category } from '../types/inventory.types';
 
-/**
- * useCategories Hook
- *
- * Manages category data and CRUD operations
- */
+/** Hook para gestión de categorías con fallback a datos demo */
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +17,6 @@ export function useCategories() {
     } catch (err: any) {
       console.error('Error fetching categories:', err);
       setError(err.message || 'Error al cargar categorías');
-      // Set demo categories if API fails
       setCategories([
         {
           id: 1,

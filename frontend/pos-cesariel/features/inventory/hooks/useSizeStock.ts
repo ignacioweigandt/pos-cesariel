@@ -18,13 +18,10 @@ export interface AvailableSizesResponse {
   all_valid_sizes: string[];
 }
 
-// Talles disponibles según categoría (fallback)
 const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 const SHOE_SIZES = Array.from({ length: 11 }, (_, i) => (35 + i).toString());
 
-/**
- * Hook para manejar stock de talles de un producto
- */
+/** Hook para gestión de stock por talles con autodetección de categoría (indumentaria/calzado) */
 export function useSizeStock(productId: number | null, categoryName?: string) {
   const [sizes, setSizes] = useState<SizeStock[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +72,7 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
       } else {
         setSizes([]);
       }
-    } catch (err: any) {
+      } catch (err: any) {
       const errorMessage =
         err.response?.data?.detail ||
         err.message ||
@@ -83,7 +80,6 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
       setError(errorMessage);
       console.error('Load sizes error:', err);
 
-      // Fallback
       try {
         const response = await api.get(`/products/${productId}/sizes`);
         const data = response.data;
