@@ -1,8 +1,27 @@
 """
-Servicio de notificaciones para POS Cesariel.
+Servicio de Notificaciones - Lógica de Negocio.
 
-Este módulo contiene la lógica de negocio para el sistema de notificaciones,
-incluyendo creación, gestión y generación automática de notificaciones.
+Sistema completo de notificaciones en tiempo real con generación automática
+y gestión de preferencias por usuario.
+
+Responsabilidades:
+    - CRUD de notificaciones con filtros avanzados
+    - Gestión de configuración por usuario (NotificationSetting)
+    - Generación automática de notificaciones:
+      * Stock bajo (LOW_STOCK)
+      * Nuevas ventas (NEW_SALE)
+      * Cambios de estado de órdenes (ORDER_STATUS)
+      * Notificaciones de sistema (SYSTEM)
+    - Marcado masivo de leídas/no leídas
+    - Estadísticas y contadores
+    - Limpieza automática de notificaciones antiguas
+
+Características:
+    - Prioridades: LOW, MEDIUM, HIGH, URGENT
+    - Soft delete (is_active flag)
+    - Expiración automática de notificaciones
+    - WebSocket integration para real-time updates
+    - Configuración granular por tipo de notificación
 """
 
 from typing import List, Optional, Dict
@@ -33,10 +52,18 @@ logger = logging.getLogger(__name__)
 
 class NotificationService:
     """
-    Servicio para gestión de notificaciones del sistema.
+    Servicio de gestión de notificaciones en tiempo real.
+    
+    Coordina creación manual, generación automática y configuración de preferencias.
     """
 
     def __init__(self, db: Session):
+        """
+        Inicializa servicio con sesión de BD.
+        
+        Args:
+            db: Sesión de SQLAlchemy
+        """
         self.db = db
         self.notification_repo = NotificationRepository(db)
         self.setting_repo = NotificationSettingRepository(db)

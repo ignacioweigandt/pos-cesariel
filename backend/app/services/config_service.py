@@ -1,8 +1,28 @@
 """
-Configuration Service for POS Cesariel.
+Servicio de Configuración - Lógica de Negocio.
 
-Handles all configuration-related business logic including branch-specific
-configurations, tax rates, payment methods, and audit logging.
+Gestiona configuraciones multi-tenant (por sucursal) con auditoría completa
+y trazabilidad de cambios.
+
+Responsabilidades:
+    - Configuración de tax rates por sucursal (BranchTaxRate)
+    - Configuración de payment methods por sucursal (BranchPaymentMethod)
+    - Validación de payment methods activos para sucursal
+    - Snapshot de configuraciones para ventas (trazabilidad)
+    - Auditoría de cambios (ConfigChangeLog)
+    - Logs de seguridad (SecurityAuditLog)
+
+Características:
+    - Fallback a configuración de sistema si no hay config por sucursal
+    - Validación de vigencia de configuraciones (effective_from/to)
+    - Registro automático de cambios con IP, user agent, timestamps
+    - Detección de intentos de acceso fallidos
+    - Estadísticas de eventos de seguridad
+
+Trazabilidad:
+    - ConfigChangeLog: tracking de TODOS los cambios en configuraciones
+    - SecurityAuditLog: tracking de eventos de autenticación
+    - Snapshots inmutables en ventas (payment_method_id, tax_rate_id)
 """
 
 from typing import List, Optional, Dict, Any, Tuple
@@ -25,9 +45,19 @@ from app.models import (
 
 
 class ConfigService:
-    """Service for configuration management operations."""
+    """
+    Servicio de gestión de configuraciones por sucursal.
+    
+    Coordina configuraciones multi-tenant con auditoría completa.
+    """
 
     def __init__(self, db: Session):
+        """
+        Inicializa servicio con sesión de BD.
+        
+        Args:
+            db: Sesión de SQLAlchemy
+        """
         self.db = db
         self.branch_tax_repo = BranchTaxRateRepository(db)
         self.branch_payment_repo = BranchPaymentMethodRepository(db)

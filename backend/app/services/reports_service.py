@@ -1,8 +1,33 @@
 """
-Reports Service for POS Cesariel.
+Servicio de Reportes y Analíticas - Lógica de Negocio.
 
-Handles all reporting and analytics business logic.
-Orchestrates between repositories and implements business rules.
+Coordina generación de reportes empresariales con validación de permisos
+y agregaciones complejas.
+
+Responsabilidades:
+    - Dashboard de métricas en tiempo real
+    - Reportes de ventas (por período, sucursal, usuario, tipo)
+    - Análisis de productos (top vendidos, stock bajo, categorías)
+    - Reportes financieros (métodos de pago, cuotas, recargos)
+    - Comparativas temporales (diarias, semanales, mensuales)
+    - Validación de permisos por rol (ADMIN vs MANAGER/SELLER)
+
+Permisos:
+    - ADMIN: Acceso a todas las sucursales
+    - MANAGER/SELLER: Solo su sucursal asignada
+    - Validación automática de branch_id basada en user.role
+
+Características:
+    - Agregaciones optimizadas (group by, sum, avg)
+    - Filtros avanzados por fecha, sucursal, usuario, tipo de venta
+    - Transformación de datos para gráficos y dashboards
+    - Cálculo de tendencias y growth rates
+    - Exportación de datos estructurados (schemas Pydantic)
+
+Integración:
+    - ReportsRepository: queries optimizadas
+    - ProductRepository: enriquecimiento de datos de productos
+    - Schemas: validación y serialización de responses
 """
 
 from sqlalchemy.orm import Session
@@ -29,18 +54,18 @@ from app.schemas.reports import (
 
 class ReportsService:
     """
-    Service for reports and analytics business logic.
+    Servicio de reportes empresariales y analíticas.
     
-    Implements permission checks, data transformations, and business rules
-    for all reporting functionality.
+    Coordina generación de reportes con validación de permisos basada en roles.
+    Transforma datos de repositorio en schemas para API.
     """
     
     def __init__(self, db: Session):
         """
-        Initialize reports service with database session.
+        Inicializa servicio con sesión de BD.
         
         Args:
-            db: SQLAlchemy database session
+            db: Sesión de SQLAlchemy
         """
         self.db = db
         self.reports_repo = ReportsRepository(db)
