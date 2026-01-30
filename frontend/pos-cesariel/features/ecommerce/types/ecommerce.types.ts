@@ -1,6 +1,4 @@
-/**
- * E-commerce Type Definitions
- */
+/** Tipos para módulo e-commerce (productos, config tienda, stats) */
 
 export interface Product {
   id: number;

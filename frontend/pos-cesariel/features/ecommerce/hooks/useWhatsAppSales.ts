@@ -1,3 +1,5 @@
+/** Hook para gestión de ventas por WhatsApp con actualización de estado */
+
 import { useState, useCallback } from 'react';
 import { ecommerceAdvancedApi } from '@/lib/api';
 
@@ -28,9 +30,6 @@ export interface WhatsAppSale {
   };
 }
 
-/**
- * Hook para manejar ventas de WhatsApp
- */
 export function useWhatsAppSales() {
   const [sales, setSales] = useState<WhatsAppSale[]>([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +56,7 @@ export function useWhatsAppSales() {
   const updateSaleStatus = useCallback(async (saleId: number, status: string) => {
     try {
       await ecommerceAdvancedApi.updateSaleStatus(saleId, status);
-      await fetchSales(); // Refresh data
+      await fetchSales();
       return true;
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Error actualizando estado';

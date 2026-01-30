@@ -1,3 +1,5 @@
+/** Hook para CRUD de configuración de WhatsApp Business */
+
 import { useState } from 'react';
 import { ecommerceAdvancedApi } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -10,9 +12,6 @@ export interface WhatsAppConfig {
   auto_response_enabled?: boolean;
 }
 
-/**
- * Hook para manejar configuración de WhatsApp
- */
 export function useWhatsAppConfig() {
   const [config, setConfig] = useState<WhatsAppConfig | null>(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
