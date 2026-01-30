@@ -50,12 +50,6 @@ export interface ReportFilters {
   reportType: "sales" | "products" | "branches";
 }
 
-// ==================== NEW TYPES FOR ADVANCED REPORTS ====================
-
-/**
- * Top Brand data from backend
- * Matches backend schema: TopBrand (backend/app/schemas/reports.py)
- */
 export interface TopBrand {
   brand_id: number;
   brand_name: string;
@@ -64,39 +58,23 @@ export interface TopBrand {
   total_revenue: number;
 }
 
-/**
- * Payment Method statistics
- * Matches backend schema: PaymentMethodData
- */
 export interface PaymentMethodData {
   payment_method: string;
   total_sales: number;
   transaction_count: number;
 }
 
-/**
- * Sale Type breakdown (POS, ECOMMERCE, WHATSAPP)
- * Matches backend schema: SaleTypeData
- */
 export interface SaleTypeData {
   sale_type: string;
   total_sales: number;
   transaction_count: number;
 }
 
-/**
- * Detailed Sales Report (extends SalesReport)
- * Includes payment methods and sale types
- * Matches backend: DetailedSalesReport
- */
 export interface DetailedSalesReport extends SalesReport {
   sales_by_payment_method: PaymentMethodData[];
   sales_by_type: SaleTypeData[];
 }
 
-/**
- * Branch data for filtering
- */
 export interface Branch {
   id: number;
   name: string;
@@ -104,10 +82,6 @@ export interface Branch {
   is_active?: boolean;
 }
 
-/**
- * Branch data with sales statistics
- * Matches backend schema: BranchData (backend/app/schemas/reports.py)
- */
 export interface BranchData {
   branch_id: number;
   branch_name: string;
@@ -115,9 +89,6 @@ export interface BranchData {
   orders_count: number;
 }
 
-/**
- * Tab identifiers for navigation
- */
 export type ReportTab = 
   | 'summary' 
   | 'sales' 
@@ -127,9 +98,6 @@ export type ReportTab =
   | 'payment-methods' 
   | 'ecommerce';
 
-/**
- * Metric card data for Summary tab
- */
 export interface MetricCardData {
   title: string;
   value: string | number;

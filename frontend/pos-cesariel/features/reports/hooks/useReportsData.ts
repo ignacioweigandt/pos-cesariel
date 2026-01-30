@@ -1,3 +1,5 @@
+/** Hook legacy para datos de reportes (usar useReportsQuery con React Query en nuevos componentes) */
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/shared/api/client";

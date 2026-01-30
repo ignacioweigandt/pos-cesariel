@@ -1,24 +1,8 @@
-/**
- * useReportsQuery Hook
- *
- * React Query hooks for Reports module using new backend endpoints (/reports/*)
- * Replaces manual useEffect + fetch with automatic caching, refetching, and error handling
- *
- * Benefits:
- * - Automatic caching and deduplication
- * - Background refetching
- * - Loading and error states
- * - Optimistic updates support
- * - Retry logic
- */
+/** React Query hooks para reportes con cache automático y refetch (usa /reports/*) */
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { apiClient } from '@/shared/api/client';
 import type { BranchData } from '../types/reports.types';
-
-// ============================================================================
-// Types (matching backend schemas from backend/app/schemas/reports.py)
-// ============================================================================
 
 export interface DashboardStats {
   total_sales: number;
@@ -50,12 +34,7 @@ export interface TopProduct {
   total_revenue: number;
 }
 
-// Legacy alias for backward compatibility
 export type BranchSalesData = BranchData;
-
-// ============================================================================
-// Query Keys (for cache management)
-// ============================================================================
 
 export const reportsKeys = {
   all: ['reports'] as const,
@@ -70,10 +49,6 @@ export const reportsKeys = {
   branchesChart: (startDate: string, endDate: string) =>
     [...reportsKeys.all, 'branches-chart', startDate, endDate] as const,
 };
-
-// ============================================================================
-// API Functions (using NEW backend endpoints /reports/*)
-// ============================================================================
 
 async function fetchDashboardStats(
   branchId?: number
@@ -139,7 +114,6 @@ async function fetchBranchesChart(
 
   const response = await apiClient.get('/reports/branches-chart', { params });
   
-  // Transform backend Decimal strings to numbers
   return response.data.map((branch: any) => ({
     branch_id: branch.branch_id,
     branch_name: branch.branch_name,
@@ -148,31 +122,16 @@ async function fetchBranchesChart(
   }));
 }
 
-// ============================================================================
-// React Query Hooks
-// ============================================================================
-
-/**
- * Fetch dashboard statistics
- * @param branchId - Optional branch filter (Admin can see all, Manager sees own branch)
- */
 export function useDashboardStats(
   branchId?: number
 ): UseQueryResult<DashboardStats, Error> {
   return useQuery({
     queryKey: reportsKeys.dashboard(branchId),
     queryFn: () => fetchDashboardStats(branchId),
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
   });
 }
 
-/**
- * Fetch sales report for date range
- * @param startDate - Start date (YYYY-MM-DD)
- * @param endDate - End date (YYYY-MM-DD)
- * @param branchId - Optional branch filter
- * @param enabled - Whether to run the query (defaults to true)
- */
 export function useSalesReport(
   startDate: string,
   endDate: string,
@@ -183,17 +142,10 @@ export function useSalesReport(
     queryKey: reportsKeys.sales(startDate, endDate, branchId),
     queryFn: () => fetchSalesReport(startDate, endDate, branchId),
     enabled: enabled && !!startDate && !!endDate,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Fetch daily sales data for charts
- * @param startDate - Start date
- * @param endDate - End date
- * @param branchId - Optional branch filter
- * @param enabled - Whether to run the query
- */
 export function useDailySales(
   startDate: string,
   endDate: string,
@@ -208,13 +160,6 @@ export function useDailySales(
   });
 }
 
-/**
- * Fetch top products data for pie chart
- * @param startDate - Start date
- * @param endDate - End date
- * @param branchId - Optional branch filter
- * @param enabled - Whether to run the query
- */
 export function useProductsChart(
   startDate: string,
   endDate: string,
@@ -229,12 +174,6 @@ export function useProductsChart(
   });
 }
 
-/**
- * Fetch branch comparison data (Admin only)
- * @param startDate - Start date
- * @param endDate - End date
- * @param enabled - Whether to run the query
- */
 export function useBranchesChart(
   startDate: string,
   endDate: string,
@@ -248,16 +187,6 @@ export function useBranchesChart(
   });
 }
 
-// ==================== NEW HOOKS FOR ADVANCED REPORTS ====================
-
-/**
- * Fetch top brands data for charts
- * @param startDate - Start date
- * @param endDate - End date
- * @param branchId - Optional branch filter
- * @param enabled - Whether to run the query
- * @param limit - Maximum number of brands (default: 10)
- */
 export function useBrandsChart(
   startDate: string,
   endDate: string,
@@ -283,13 +212,6 @@ export function useBrandsChart(
   });
 }
 
-/**
- * Fetch detailed sales report with payment methods and sale types
- * @param startDate - Start date
- * @param endDate - End date
- * @param branchId - Optional branch filter
- * @param enabled - Whether to run the query
- */
 export function useDetailedSalesReport(
   startDate: string,
   endDate: string,

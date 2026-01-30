@@ -1,9 +1,4 @@
-/**
- * useReportFilters Hook
- *
- * Simplified hook for managing report date filters.
- * Supports quick filters and custom date ranges only.
- */
+/** Hook para gestión de filtros de reportes con validación y filtros rápidos */
 
 import { useState, useCallback, useEffect } from 'react';
 import {
@@ -19,8 +14,8 @@ export type QuickFilterPeriod = 'today' | 'month' | 'year' | 'last30' | 'last7';
 
 interface UseReportFiltersOptions {
   onFilterChange?: (startDate: string, endDate: string, branchId?: number) => void;
-  initialDays?: number; // Default: 30
-  autoApply?: boolean; // Default: true
+  initialDays?: number;
+  autoApply?: boolean;
 }
 
 interface FilterError {
@@ -35,23 +30,18 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     autoApply = true
   } = options;
 
-  // Filter states (simplified - removed reportType and selectedYear)
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [selectedBranch, setSelectedBranch] = useState<number | undefined>(undefined);
   const [error, setError] = useState<FilterError>({ type: null, message: '' });
   const [isApplying, setIsApplying] = useState(false);
 
-  // Initialize with default date range
   useEffect(() => {
     const { start, end } = getLastNDaysRange(initialDays);
     setStartDate(start);
     setEndDate(end);
   }, [initialDays]);
 
-  /**
-   * Validates the current date range
-   */
   const validateDates = useCallback((): boolean => {
     if (!startDate || !endDate) {
       setError({
@@ -69,7 +59,6 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
       return false;
     }
 
-    // Optional: Check for excessively large ranges
     const days = getDaysBetween(startDate, endDate);
     if (days > 365) {
       setError({
@@ -83,9 +72,6 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     return true;
   }, [startDate, endDate]);
 
-  /**
-   * Applies the current filter
-   */
   const applyFilter = useCallback(() => {
     if (!validateDates()) {
       return;
@@ -93,33 +79,24 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
 
     setIsApplying(true);
 
-    // Call the onChange callback
     if (onFilterChange) {
       onFilterChange(startDate, endDate, selectedBranch);
     }
 
-    // Small delay for UX feedback
     setTimeout(() => {
       setIsApplying(false);
     }, 500);
   }, [startDate, endDate, selectedBranch, validateDates, onFilterChange]);
 
-  /**
-   * Sets date range and optionally auto-applies
-   */
   const setDateRange = useCallback((start: string, end: string, shouldAutoApply = true) => {
     setStartDate(start);
     setEndDate(end);
 
-    // Auto-apply if enabled - directly call with the new values
     if (autoApply && shouldAutoApply && isValidDateRange(start, end)) {
       onFilterChange?.(start, end, selectedBranch);
     }
   }, [autoApply, selectedBranch, onFilterChange]);
 
-  /**
-   * Quick filter handlers
-   */
   const handleQuickFilter = useCallback((period: QuickFilterPeriod) => {
     let range: { start: string; end: string };
 
@@ -146,11 +123,6 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     setDateRange(range.start, range.end, true);
   }, [setDateRange]);
 
-
-
-  /**
-   * Manual date change handlers
-   */
   const handleStartDateChange = useCallback((date: string) => {
     setStartDate(date);
     setError({ type: null, message: '' });
@@ -166,20 +138,15 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
   }, []);
 
   return {
-    // State
     startDate,
     endDate,
     selectedBranch,
     error,
     isApplying,
     isValid: error.type === null,
-
-    // Setters
     setStartDate: handleStartDateChange,
     setEndDate: handleEndDateChange,
     setSelectedBranch: handleBranchChange,
-
-    // Actions
     applyFilter,
     validateDates,
     handleQuickFilter,

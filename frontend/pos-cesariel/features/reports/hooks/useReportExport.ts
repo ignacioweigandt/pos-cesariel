@@ -1,3 +1,5 @@
+/** Hook para exportar reportes a CSV */
+
 import { useState } from "react";
 import type { SalesReport } from "../types/reports.types";
 
