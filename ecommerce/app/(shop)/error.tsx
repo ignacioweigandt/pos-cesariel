@@ -4,12 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/src/shared/components/ui/button'
 
-/**
- * Error boundary for shop pages
- *
- * Catches unhandled errors in Server Components and provides graceful recovery
- * This is a fallback for cases where API errors propagate despite our handling
- */
+/** Error boundary para páginas de la tienda - captura errores no manejados en Server Components */
 export default function Error({
   error,
   reset,

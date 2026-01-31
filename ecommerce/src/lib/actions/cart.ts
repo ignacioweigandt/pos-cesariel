@@ -1,13 +1,6 @@
 'use server'
 
-/**
- * Server Actions for cart operations
- *
- * These actions run on the server and provide:
- * - Real-time stock validation
- * - Secure sale creation
- * - Better error handling
- */
+/** Server Actions para carrito - validación de stock y creación de ventas */
 
 import { revalidatePath } from 'next/cache'
 import { apiFetch } from '../api/client'
@@ -52,17 +45,7 @@ export interface CreateSaleResult {
 // STOCK VALIDATION
 // ============================================================================
 
-/**
- * Validate product stock availability (Server Action)
- *
- * Checks if a product has sufficient stock before adding to cart.
- * For products with sizes, validates the specific size stock.
- *
- * @param productId - Product ID to validate
- * @param quantity - Quantity requested
- * @param size - Optional size for sized products
- * @returns Stock validation result
- */
+/** Valida stock - productos con/sin talles - retorna disponibilidad y cantidad */
 export async function validateProductStock(
   productId: number,
   quantity: number,
@@ -168,17 +151,7 @@ export async function validateProductStock(
 // CHECKOUT / SALE CREATION
 // ============================================================================
 
-/**
- * Create e-commerce sale (Server Action)
- *
- * Creates a sale in the backend POS system. The sale is created with:
- * - Type: ECOMMERCE
- * - Status: PENDING (requires coordination via WhatsApp)
- * - Payment: Coordinated via WhatsApp
- *
- * @param saleData - Sale data including items and customer info
- * @returns Sale creation result with ID or error
- */
+/** Crea venta ECOMMERCE en POS - status PENDING, pago coordinado por WhatsApp */
 export async function createEcommerceSale(
   saleData: CreateSaleData
 ): Promise<CreateSaleResult> {
@@ -282,11 +255,7 @@ export async function createEcommerceSale(
 // HELPER ACTIONS
 // ============================================================================
 
-/**
- * Validate multiple items in cart (Server Action)
- *
- * Validates stock for all items in the cart before checkout
- */
+/** Valida stock de todos los items del carrito previo a checkout */
 export async function validateCartItems(
   items: Array<{ productId: number; quantity: number; size?: string }>
 ): Promise<{ valid: boolean; errors: string[] }> {

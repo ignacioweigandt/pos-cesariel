@@ -1,9 +1,4 @@
-/**
- * Servicios del frontend E-commerce POS Cesariel.
- * 
- * Este módulo centraliza todos los servicios del e-commerce
- * para mantener una arquitectura organizada.
- */
+/** Export centralizado de servicios del e-commerce */
 
 export * from './api-service';
 export * from './cart-service';

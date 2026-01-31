@@ -1,21 +1,11 @@
-/**
- * Client-side API fetching utilities
- *
- * These functions work in Client Components (with "use client")
- * and fetch data from the browser, not the server.
- */
+/** Utilidades client-side para fetch en Client Components (browser) */
 
-// Hardcoded for Railway production deployment
 const API_URL = 'https://backend-production-c20a.up.railway.app';
 
 interface ApiResponse<T> {
   data: T;
 }
 
-/**
- * Client-side fetch for categories
- * Works in Client Components
- */
 export async function fetchCategoriesClient(): Promise<Array<{ id: number; name: string }>> {
   try {
     const response = await fetch(`${API_URL}/ecommerce/categories`, {
@@ -44,10 +34,6 @@ export async function fetchCategoriesClient(): Promise<Array<{ id: number; name:
   }
 }
 
-/**
- * Client-side fetch for brands
- * Works in Client Components
- */
 export async function fetchBrandsClient(): Promise<Array<{ name: string }>> {
   try {
     const response = await fetch(`${API_URL}/ecommerce/brands`, {

@@ -1,16 +1,8 @@
-/**
- * Servicio centralizado de API para el e-commerce POS Cesariel.
- * 
- * Este módulo maneja todas las comunicaciones con el backend API,
- * incluyendo manejo de errores, timeouts y fallbacks.
- */
+/** Cliente API centralizado con manejo de errores, timeouts y logging */
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { ecommerceApi } from '../app/lib/api';
 
-/**
- * Configuración del cliente API para e-commerce
- */
 class ApiService {
   private api: AxiosInstance;
   
@@ -55,9 +47,6 @@ class ApiService {
     );
   }
 
-  /**
-   * Realiza una petición GET con manejo de errores
-   */
   async get<T>(url: string): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.api.get(url);
@@ -68,9 +57,6 @@ class ApiService {
     }
   }
 
-  /**
-   * Realiza una petición POST con manejo de errores
-   */
   async post<T>(url: string, data?: any): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.api.post(url, data);
@@ -81,9 +67,6 @@ class ApiService {
     }
   }
 
-  /**
-   * Realiza una petición PUT con manejo de errores
-   */
   async put<T>(url: string, data?: any): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.api.put(url, data);
@@ -94,9 +77,6 @@ class ApiService {
     }
   }
 
-  /**
-   * Realiza una petición DELETE con manejo de errores
-   */
   async delete<T>(url: string): Promise<T> {
     try {
       const response: AxiosResponse<T> = await this.api.delete(url);
@@ -107,9 +87,6 @@ class ApiService {
     }
   }
 
-  /**
-   * Verifica la conectividad con el backend
-   */
   async checkConnection(): Promise<boolean> {
     try {
       await this.api.get('/health');
@@ -119,9 +96,7 @@ class ApiService {
     }
   }
 
-  /**
-   * Maneja errores de API de forma centralizada
-   */
+  /** Manejo centralizado de errores - loggea y almacena últimos 50 errores en localStorage */
   private handleApiError(error: any, method: string, url: string) {
     const errorInfo = {
       method,
@@ -152,9 +127,6 @@ class ApiService {
     }
   }
 
-  /**
-   * Obtiene estadísticas de errores almacenados
-   */
   getErrorStats(): any[] {
     if (typeof window === 'undefined') return [];
     
@@ -165,9 +137,6 @@ class ApiService {
     }
   }
 
-  /**
-   * Limpia los errores almacenados
-   */
   clearErrorStats() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('api-errors');
@@ -175,60 +144,34 @@ class ApiService {
   }
 }
 
-/**
- * Instancia singleton del servicio API
- */
 export const apiService = new ApiService();
 
-/**
- * Funciones de utilidad específicas para el e-commerce
- */
+/** Funciones de utilidad específicas para e-commerce con delegación a ecommerceApi */
 export const ecommerceApiService = {
-  /**
-   * Obtiene productos visibles en e-commerce con manejo de caché
-   */
   async getEcommerceProducts() {
     return await ecommerceApi.getProducts();
   },
 
-  /**
-   * Obtiene detalles de un producto específico
-   */
   async getProductById(id: number) {
     return await ecommerceApi.getProductById(id);
   },
 
-  /**
-   * Obtiene categorías activas
-   */
   async getCategories() {
     return await ecommerceApi.getCategories();
   },
 
-  /**
-   * Obtiene banners para la página principal
-   */
   async getBanners() {
     return await ecommerceApi.getBanners();
   },
 
-  /**
-   * Obtiene talles disponibles para un producto
-   */
   async getAvailableSizes(productId: number) {
     return await ecommerceApi.getAvailableSizes(productId);
   },
 
-  /**
-   * Crea una venta desde el e-commerce
-   */
   async createSale(saleData: any) {
     return await ecommerceApi.createSale(saleData);
   },
 
-  /**
-   * Valida stock disponible para un producto
-   */
   async validateStock(productId: number, quantity: number) {
     try {
       const product = await this.getProductById(productId);
@@ -239,9 +182,6 @@ export const ecommerceApiService = {
     }
   },
 
-  /**
-   * Obtiene configuración del e-commerce
-   */
   async getEcommerceConfig() {
     return await ecommerceApi.getEcommerceConfig();
   }

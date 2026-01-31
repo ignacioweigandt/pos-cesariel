@@ -3,12 +3,7 @@ import { apiFetch } from './client';
 import type { ApiPublicBanner, ApiResponse, Banner } from '@/types';
 import { mapApiPublicBannerToFrontend } from '../mappers';
 
-/**
- * Fetch active banners from backend
- *
- * Graceful degradation: Returns empty array if backend is unavailable
- * This prevents page crashes when backend is down
- */
+/** Fetch banners activos - retorna [] si backend offline (degradación graceful) */
 export async function getBanners(): Promise<Banner[]> {
   const response = await apiFetch<ApiResponse<ApiPublicBanner[]>>(
     '/ecommerce/banners',

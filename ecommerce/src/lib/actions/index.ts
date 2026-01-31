@@ -1,8 +1,4 @@
-/**
- * Server Actions Index
- *
- * Centralized export for all Server Actions
- */
+/** Export centralizado de Server Actions */
 
 export {
   validateProductStock,

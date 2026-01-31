@@ -52,16 +52,9 @@ export class ApiError extends Error {
 }
 
 /**
- * Server-side API fetch with proper error handling
- *
- * @param endpoint - API endpoint path (e.g., '/products')
- * @param options - Fetch options with Next.js caching
- * @returns Promise with response data
- *
- * Error Handling Strategy:
- * - Network errors (backend down): Logged but NOT thrown (graceful degradation)
- * - HTTP errors (4xx, 5xx): Can be thrown based on throwOnError option
- * - Consumers should handle null returns for graceful degradation
+ * Fetch server-side con manejo de errores:
+ * - Network errors → null (no se lanzan, degradación graceful)
+ * - HTTP errors → throw solo si throwOnError=true
  */
 export async function apiFetch<T>(
   endpoint: string,
@@ -132,14 +125,7 @@ export async function apiFetch<T>(
   }
 }
 
-/**
- * Type-safe API fetch with default value for graceful degradation
- *
- * @param endpoint - API endpoint
- * @param defaultValue - Fallback value if fetch fails
- * @param options - Fetch options
- * @returns Promise with response data or default value
- */
+/** Wrapper con valor por defecto - retorna defaultValue si fetch falla */
 export async function apiFetchWithDefault<T>(
   endpoint: string,
   defaultValue: T,

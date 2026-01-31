@@ -14,12 +14,7 @@ export interface GetProductsParams {
   skip?: number;
 }
 
-/**
- * Fetch products from backend (Server Component compatible)
- *
- * Supports filtering by category, brand, search, price range, and stock
- * Uses Next.js fetch cache with 5-minute revalidation
- */
+/** Fetch productos con filtros (category, brand, search, price, stock) - cache 5min */
 export async function getProducts(params: GetProductsParams = {}): Promise<Product[]> {
   // Build query string
   const queryParams = new URLSearchParams();
@@ -60,11 +55,8 @@ export async function getProducts(params: GetProductsParams = {}): Promise<Produ
 }
 
 /**
- * Fetch single product by ID (Server Component compatible)
- *
- * Fetches product details including images and sizes from separate endpoints
- * Note: Backend inconsistency - main endpoint returns product directly,
- * not wrapped in { data: ... } like /ecommerce/products does
+ * Fetch producto por ID - paralelo con imágenes y talles
+ * NOTA: endpoint inconsistente - retorna producto directo, no { data: ... }
  */
 export async function getProductById(id: string): Promise<Product | null> {
   try {

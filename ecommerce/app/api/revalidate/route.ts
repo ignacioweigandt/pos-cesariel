@@ -1,27 +1,17 @@
 import { revalidateTag } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 
-/**
- * API endpoint para revalidar el cache de datos
- *
- * Uso: POST /api/revalidate?tag=banners
- *
- * Esto permite invalidar el cache cuando se actualizan banners en el POS
- */
+/** POST /api/revalidate?tag=banners - invalida cache de Next.js para tags específicos */
 export async function POST(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const tag = searchParams.get('tag')
-
-    // Validar que se proporcione un tag
     if (!tag) {
       return NextResponse.json(
         { error: 'Tag parameter is required' },
         { status: 400 }
       )
     }
-
-    // Validar que sea un tag permitido
     const allowedTags = ['banners', 'products', 'categories', 'all']
     if (!allowedTags.includes(tag)) {
       return NextResponse.json(
@@ -29,8 +19,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    // Revalidar el tag específico o todos
     if (tag === 'all') {
       revalidateTag('banners')
       revalidateTag('products')
@@ -54,9 +42,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * GET endpoint para información sobre la API
- */
+/** GET - información del endpoint */
 export async function GET() {
   return NextResponse.json({
     endpoint: '/api/revalidate',
