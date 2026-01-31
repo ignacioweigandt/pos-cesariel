@@ -1,6 +1,5 @@
-// Tipos que coinciden con el backend POS Cesariel
+/** Tipos API del backend POS y mappers a tipos del frontend e-commerce */
 
-// ===== PRODUCTOS =====
 export interface ApiProduct {
   id: number;
   name: string;
@@ -21,7 +20,6 @@ export interface ApiProduct {
   has_sizes: boolean;
   created_at: string;
   updated_at: string;
-  // Relaciones
   category?: ApiCategory;
   sizes?: ApiProductSize[];
   images?: ApiProductImage[];
@@ -43,7 +41,6 @@ export interface ApiProductImage {
   order: number;
 }
 
-// ===== CATEGORÍAS =====
 export interface ApiCategory {
   id: number;
   name: string;
@@ -53,7 +50,6 @@ export interface ApiCategory {
   updated_at: string;
 }
 
-// ===== BANNERS =====
 export interface ApiBanner {
   id: number;
   title: string;
@@ -65,7 +61,6 @@ export interface ApiBanner {
   order: number;
 }
 
-// ===== VENTAS =====
 export interface ApiSale {
   id: number;
   sale_number: string;
@@ -84,7 +79,6 @@ export interface ApiSale {
   notes: string | null;
   created_at: string;
   updated_at: string;
-  // Relaciones
   sale_items?: ApiSaleItem[];
 }
 
@@ -96,11 +90,9 @@ export interface ApiSaleItem {
   unit_price: number;
   total_price: number;
   size: string | null;
-  // Relaciones
   product?: ApiProduct;
 }
 
-// ===== CONFIGURACIÓN E-COMMERCE =====
 export interface ApiEcommerceConfig {
   id: number;
   store_name: string;
@@ -115,7 +107,6 @@ export interface ApiEcommerceConfig {
   is_active: boolean;
 }
 
-// ===== SUCURSALES =====
 export interface ApiBranch {
   id: number;
   name: string;
@@ -127,7 +118,6 @@ export interface ApiBranch {
   updated_at: string;
 }
 
-// ===== USUARIOS =====
 export interface ApiUser {
   id: number;
   email: string;
@@ -138,11 +128,9 @@ export interface ApiUser {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  // Relaciones
   branch?: ApiBranch;
 }
 
-// ===== REQUESTS =====
 export interface CreateSaleRequest {
   sale_type: 'ecommerce';
   customer_name: string;
@@ -160,7 +148,6 @@ export interface CreateSaleItemRequest {
   size?: string;
 }
 
-// ===== RESPONSES =====
 export interface ApiResponse<T> {
   data?: T;
   message?: string;
@@ -176,11 +163,7 @@ export interface PaginatedResponse<T> {
   per_page: number;
 }
 
-// ===== MAPEO DE TIPOS =====
-// Funciones para convertir tipos de API a tipos del frontend
-
 export const mapApiProductToFrontend = (apiProduct: ApiProduct): Product => {
-  // Determinar categoría basada en category_id
   let category = 'otros';
   const brand = apiProduct.brand || 'Sin marca';
   
@@ -195,7 +178,6 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct): Product => {
     }
   }
 
-  // Generar talles basados en categoría y si tiene talles
   let sizes: string[] = ['Único'];
   if (apiProduct.has_sizes) {
     if (category === 'calzado') {
@@ -205,7 +187,6 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct): Product => {
     }
   }
 
-  // Generar imágenes
   const images = apiProduct.images && apiProduct.images.length > 0
     ? apiProduct.images.map(img => img.image_url)
     : [apiProduct.image_url || '/placeholder.svg?height=500&width=500'];
@@ -218,15 +199,15 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct): Product => {
     originalPrice: apiProduct.ecommerce_price && apiProduct.ecommerce_price < apiProduct.price 
       ? apiProduct.price 
       : undefined,
-    images: images.slice(0, 3), // Máximo 3 imágenes
+    images: images.slice(0, 3),
     category,
     brand,
     sizes,
-    colors: ['Negro', 'Blanco'], // Por defecto, se puede expandir más tarde
-    featured: false, // Se puede determinar basado en algún criterio
+    colors: ['Negro', 'Blanco'],
+    featured: false,
     inStock: (apiProduct.stock_quantity || apiProduct.stock || 0) > 0,
-    rating: 4.5, // Valor por defecto, se puede implementar sistema de reviews
-    reviews: Math.floor(Math.random() * 100) + 10 // Temporal
+    rating: 4.5,
+    reviews: Math.floor(Math.random() * 100) + 10
   };
 };
 
@@ -243,10 +224,9 @@ export const mapApiCategoryToFrontend = (apiCategory: ApiCategory): Category => 
   id: apiCategory.id.toString(),
   name: apiCategory.name,
   slug: apiCategory.name.toLowerCase().replace(/\s+/g, '-'),
-  subcategories: [], // Se puede expandir más tarde
+  subcategories: [],
 });
 
-// Importar tipos del frontend existente
 export interface Product {
   id: string;
   name: string;

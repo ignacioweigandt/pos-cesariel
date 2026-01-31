@@ -1,4 +1,5 @@
-// Servicio que maneja la obtención de datos desde el backend del POS
+/** Capa de servicio con cache (5 min) y fallback a datos estáticos para e-commerce */
+
 import { productsApi, categoriesApi, bannersApi } from './api';
 import { 
   mapApiProductToFrontend, 
@@ -13,9 +14,8 @@ import {
   type ApiCategory
 } from './api-types';
 
-// Cache simple para mejorar performance
 const cache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+const CACHE_DURATION = 5 * 60 * 1000;
 
 interface CacheItem<T> {
   data: T;
@@ -41,7 +41,6 @@ function getCache<T>(key: string): T | null {
   return item.data;
 }
 
-// ===== PRODUCTOS =====
 export async function getProducts(filters?: {
   search?: string;
   category?: string;
@@ -55,7 +54,6 @@ export async function getProducts(filters?: {
     const cached = getCache<Product[]>(cacheKey);
     if (cached) return cached;
 
-    // Parámetros para la API
     const params: any = {
       show_in_ecommerce: true,
       limit: 100
@@ -66,7 +64,6 @@ export async function getProducts(filters?: {
     }
 
     if (filters?.category && filters.category !== 'all') {
-      // Buscar category_id basado en el nombre
       const categories = await getCategories();
       const category = categories.find(c => c.slug === filters.category);
       if (category) {
@@ -75,20 +72,17 @@ export async function getProducts(filters?: {
     }
 
     const response = await productsApi.getAll(params);
-    const apiProducts: ApiProduct[] = response.data.data; // La respuesta viene con estructura {data: [...]}
+    const apiProducts: ApiProduct[] = response.data.data;
 
     let products = apiProducts.map(mapApiProductToFrontend);
 
-    // Aplicar filtros del frontend
     if (filters) {
       products = products.filter(product => {
-        // Filtro por marca
         if (filters.brand && filters.brand !== 'all' && 
             product.brand.toLowerCase() !== filters.brand.toLowerCase()) {
           return false;
         }
 
-        // Filtro por precio
         if (filters.minPrice && product.price < filters.minPrice) {
           return false;
         }
@@ -96,7 +90,6 @@ export async function getProducts(filters?: {
           return false;
         }
 
-        // Filtro por stock
         if (filters.inStock && !product.inStock) {
           return false;
         }
@@ -109,7 +102,6 @@ export async function getProducts(filters?: {
     return products;
   } catch (error) {
     console.error('Error al obtener productos:', error);
-    // Fallback a datos estáticos en caso de error
     return getFallbackProducts();
   }
 }
@@ -148,7 +140,6 @@ export async function searchProducts(query: string): Promise<Product[]> {
   }
 }
 
-// ===== CATEGORÍAS =====
 export async function getCategories(): Promise<Category[]> {
   try {
     const cacheKey = 'categories';
@@ -156,7 +147,7 @@ export async function getCategories(): Promise<Category[]> {
     if (cached) return cached;
 
     const response = await categoriesApi.getAll();
-    const apiCategories: ApiCategory[] = response.data.data; // La respuesta viene con estructura {data: [...]}
+    const apiCategories: ApiCategory[] = response.data.data;
     
     const categories = apiCategories
       .filter(c => c.is_active)
@@ -170,7 +161,6 @@ export async function getCategories(): Promise<Category[]> {
   }
 }
 
-// ===== BANNERS =====
 export async function getBanners(): Promise<Banner[]> {
   try {
     const cacheKey = 'banners';
@@ -178,12 +168,12 @@ export async function getBanners(): Promise<Banner[]> {
     if (cached) return cached;
 
     const response = await bannersApi.getActive();
-    const apiBanners: ApiBanner[] = response.data.data; // La respuesta viene con estructura {data: [...]}
+    const apiBanners: ApiBanner[] = response.data.data;
     
     const banners = apiBanners
-      .filter(b => b.active) // El campo es 'active', no 'is_active'
+      .filter(b => b.active)
       .map(mapApiBannerToFrontend)
-      .slice(0, 3); // Máximo 3 banners
+      .slice(0, 3);
 
     setCache(cacheKey, banners);
     return banners;
@@ -193,14 +183,12 @@ export async function getBanners(): Promise<Banner[]> {
   }
 }
 
-// ===== MARCAS =====
 export async function getBrands(): Promise<Brand[]> {
   try {
     const cacheKey = 'brands';
     const cached = getCache<Brand[]>(cacheKey);
     if (cached) return cached;
 
-    // Por ahora usamos marcas estáticas, se puede expandir más tarde
     const brands = getFallbackBrands();
     setCache(cacheKey, brands);
     return brands;
@@ -210,18 +198,15 @@ export async function getBrands(): Promise<Brand[]> {
   }
 }
 
-// ===== STOCK Y TALLES =====
 export async function getProductSizes(productId: string): Promise<{ size: string; stock: number }[]> {
   try {
     const response = await productsApi.getAvailableSizes(parseInt(productId));
     const data = response.data;
     
-    // El endpoint público retorna un objeto con available_sizes
     if (data && data.available_sizes && Array.isArray(data.available_sizes)) {
       return data.available_sizes;
     }
     
-    // Fallback: si el formato es diferente o no hay talles
     return [];
   } catch (error) {
     console.error(`Error al obtener talles del producto ${productId}:`, error);
@@ -240,7 +225,6 @@ export async function validateStock(productId: string, size: string, quantity: n
   }
 }
 
-// ===== FALLBACK DATA =====
 function getFallbackProducts(): Product[] {
   return [
     {
@@ -332,7 +316,6 @@ function getFallbackBrands(): Brand[] {
   ];
 }
 
-// ===== UTILIDADES =====
 export function clearCache(): void {
   cache.clear();
 }
