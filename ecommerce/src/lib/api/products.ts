@@ -122,10 +122,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   }
 }
 
-/**
- * Fetch available categories from backend
- * Gets real categories from the database
- */
+/** Fetch categorías activas - cache 5min */
 export async function getCategories(): Promise<Array<{ id: number; name: string }>> {
   const response = await apiFetch<ApiResponse<Array<{ id: number; name: string; is_active: boolean }>>>(
     '/ecommerce/categories',
@@ -145,10 +142,7 @@ export async function getCategories(): Promise<Array<{ id: number; name: string 
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-/**
- * Fetch available brands from backend
- * Gets active brands from the brands table
- */
+/** Fetch marcas activas - cache 5min */
 export async function getBrands(): Promise<Array<{ id: number; name: string; description?: string | null; logo_url?: string | null }>> {
   const response = await apiFetch<ApiResponse<Array<{ id: number; name: string; description: string | null; logo_url: string | null }>>>(
     '/ecommerce/brands',
