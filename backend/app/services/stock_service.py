@@ -6,7 +6,8 @@ consistencia en escenarios de concurrencia (múltiples vendedores).
 """
 
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import StaleDataError
+from sqlalchemy.orm.exc import StaleDataError
+from sqlalchemy import text
 from typing import Optional
 from app.models import BranchStock, ProductSize, Product, InventoryMovement
 
@@ -139,20 +140,22 @@ class StockService:
         
         # UPDATE con optimistic locking
         # Si version cambió, SQLAlchemy lanza StaleDataError
+        from datetime import datetime
         rows_updated = db.execute(
-            """
+            text("""
             UPDATE branch_stock
             SET stock_quantity = stock_quantity - :quantity,
                 version = version + 1,
-                updated_at = NOW()
+                updated_at = :updated_at
             WHERE id = :stock_id
               AND version = :expected_version
               AND stock_quantity >= :quantity
-            """,
+            """),
             {
                 "stock_id": stock.id,
                 "quantity": quantity,
-                "expected_version": current_version
+                "expected_version": current_version,
+                "updated_at": datetime.now()
             }
         ).rowcount
         
@@ -219,20 +222,22 @@ class StockService:
         current_version = stock.version
         
         # UPDATE con optimistic locking
+        from datetime import datetime
         rows_updated = db.execute(
-            """
+            text("""
             UPDATE product_sizes
             SET stock_quantity = stock_quantity - :quantity,
                 version = version + 1,
-                updated_at = NOW()
+                updated_at = :updated_at
             WHERE id = :stock_id
               AND version = :expected_version
               AND stock_quantity >= :quantity
-            """,
+            """),
             {
                 "stock_id": stock.id,
                 "quantity": quantity,
-                "expected_version": current_version
+                "expected_version": current_version,
+                "updated_at": datetime.now()
             }
         ).rowcount
         

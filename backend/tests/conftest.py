@@ -160,8 +160,10 @@ def test_category(db_session):
 
 
 @pytest.fixture
-def test_product(db_session, test_category):
-    """Create a test product."""
+def test_product(db_session, test_category, test_branch):
+    """Create a test product with branch stock."""
+    from app.models import BranchStock
+    
     product = Product(
         name="Test Product",
         description="A test product",
@@ -173,11 +175,22 @@ def test_product(db_session, test_category):
         stock_quantity=100,
         min_stock=10,
         is_active=True,
-        show_in_ecommerce=True
+        show_in_ecommerce=True,
+        has_sizes=False
     )
     db_session.add(product)
     db_session.commit()
     db_session.refresh(product)
+    
+    # Create branch stock for the product
+    branch_stock = BranchStock(
+        product_id=product.id,
+        branch_id=test_branch.id,
+        stock_quantity=100
+    )
+    db_session.add(branch_stock)
+    db_session.commit()
+    
     return product
 
 

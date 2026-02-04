@@ -34,6 +34,7 @@ from app.services.product_service import ProductService
 from app.services.stock_service import StockConflictError
 from app.models import Sale, SaleItem
 from app.schemas.sale import SaleCreate
+import uuid
 
 
 class SaleService:
@@ -59,6 +60,23 @@ class SaleService:
         # Import here to avoid circular dependency
         from app.services.config_service import ConfigService
         self.config_service = ConfigService(db)
+
+    def _generate_sale_number(self, sale_type: str) -> str:
+        """
+        Genera un número único de venta.
+        
+        Formato: {PREFIX}-{TIMESTAMP}-{UUID}
+        Ejemplo: POS-20260204115959-A3F2B8C1
+        
+        Args:
+            sale_type: Tipo de venta (POS/ECOMMERCE/WHATSAPP)
+        
+        Returns:
+            Número de venta único
+        """
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        prefix = "POS" if sale_type == "POS" else "ECM"
+        return f"{prefix}-{timestamp}-{str(uuid.uuid4())[:8].upper()}"
 
     def create_sale(
         self,
@@ -150,8 +168,10 @@ class SaleService:
         total = subtotal + tax - discount
 
         # Create sale with configuration references
-        sale_dict = sale_data.dict(exclude={'items'})
+        # Exclude 'items' and 'is_confirmed' (not part of Sale model)
+        sale_dict = sale_data.dict(exclude={'items', 'is_confirmed'})
         sale_dict.update({
+            'sale_number': self._generate_sale_number(sale_data.sale_type.value),
             'user_id': user_id,
             'branch_id': branch_id,
             'subtotal': subtotal,

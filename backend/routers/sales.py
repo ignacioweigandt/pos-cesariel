@@ -75,6 +75,7 @@ from app.models import Sale, SaleItem, Product, User, InventoryMovement, SaleTyp
 from app.schemas import Sale as SaleSchema, SaleCreate, SaleStatusUpdate, SalesReport, DashboardStats, DailySales, ChartData
 from auth_compat import get_current_active_user, require_manager_or_admin
 from websocket_manager import notify_new_sale, notify_inventory_change, notify_low_stock, notify_dashboard_update
+from app.services.stock_service import StockConflictError
 import uuid
 from pydantic import ValidationError
 
@@ -177,222 +178,72 @@ async def create_sale(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    """
+    Crea venta con validación de stock y optimistic locking.
+    
+    Utiliza SaleService para lógica de negocio protegida.
+    Maneja race conditions con HTTP 409 para reintentos del cliente.
+    
+    Flujo:
+        1. SaleService valida stock + crea Sale + decrementa inventario (con locking)
+        2. Enviar notificaciones WebSocket
+    
+    Errors:
+        400: Stock insuficiente, producto no existe, validación falla
+        409: Conflicto de stock (otro usuario modificó simultáneamente) - RETRY
+        500: Error interno
+    """
+    from app.services.sale_service import SaleService
+    
     try:
-        # Validate that all products exist and have enough stock
-        for item in sale.items:
-            product = db.query(Product).filter(Product.id == item.product_id).first()
-            if not product:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Product with ID {item.product_id} not found"
-                )
-            
-            # Check stock based on whether product has sizes
-            if product.has_sizes:
-                # Products with sizes must have a size specified
-                if not item.size:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Product {product.name} requires a size to be specified"
-                    )
-                
-                # Check size-specific stock
-                branch_id = sale.branch_id if sale.branch_id else (current_user.branch_id if current_user.branch_id else 1)
-                size_stock = db.query(ProductSize).filter(
-                    ProductSize.product_id == item.product_id,
-                    ProductSize.branch_id == branch_id,
-                    ProductSize.size == item.size
-                ).first()
-                
-                if not size_stock:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Size {item.size} not available for product {product.name}"
-                    )
-                
-                if size_stock.stock_quantity < item.quantity:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Insufficient stock for product {product.name} size {item.size}. Available: {size_stock.stock_quantity}, Requested: {item.quantity}"
-                    )
-            else:
-                # Check stock de la sucursal específica para productos sin talles
-                branch_id = sale.branch_id if sale.branch_id else (current_user.branch_id if current_user.branch_id else 1)
-                branch_stock = db.query(BranchStock).filter(
-                    BranchStock.product_id == item.product_id,
-                    BranchStock.branch_id == branch_id
-                ).first()
-                
-                available_stock = branch_stock.stock_quantity if branch_stock else 0
-                
-                if available_stock < item.quantity:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Insufficient stock for product {product.name} in this branch. Available: {available_stock}, Requested: {item.quantity}"
-                    )
-    
-        # Calculate totals
-        subtotal = Decimal(0)
-        for item in sale.items:
-            subtotal += item.unit_price * item.quantity
-    
-        # For now, use simple tax calculation
-        tax_rate = Decimal("0.12")  # 12% tax
-        tax_amount = subtotal * tax_rate
-        discount_amount = Decimal(0)  # No discount for now
-        total_amount = subtotal + tax_amount - discount_amount
+        # Initialize service
+        sale_service = SaleService(db)
         
-        # Create sale
-        sale_number = generate_sale_number(sale.sale_type)
+        # Determine branch
+        branch_id = sale.branch_id or current_user.branch_id or 1
         
-        branch_id = sale.branch_id if sale.branch_id else (current_user.branch_id if current_user.branch_id else 1)
-        db_sale = Sale(
-            sale_number=sale_number,
-            sale_type=sale.sale_type,
-            branch_id=branch_id,
+        # Create sale with stock protection (optimistic locking)
+        db_sale = sale_service.create_sale(
+            sale_data=sale,
             user_id=current_user.id,
-            customer_name=sale.customer_name,
-            customer_email=sale.customer_email,
-            customer_phone=sale.customer_phone,
-            subtotal=subtotal,
-            tax_amount=tax_amount,
-            discount_amount=discount_amount,
-            total_amount=total_amount,
-            payment_method=sale.payment_method,
-            order_status=sale.order_status,
-            notes=sale.notes
+            branch_id=branch_id
         )
-        
-        db.add(db_sale)
-        db.commit()
-        db.refresh(db_sale)
-        
-        # Create sale items and update inventory
-        for item in sale.items:
-            product = db.query(Product).filter(Product.id == item.product_id).first()
-            
-            # Create sale item
-            sale_item = SaleItem(
-                sale_id=db_sale.id,
-                product_id=item.product_id,
-                quantity=item.quantity,
-                unit_price=item.unit_price,
-                total_price=item.unit_price * item.quantity,
-                size=item.size  # Include size if provided
-            )
-            db.add(sale_item)
-            
-            # Update stock based on whether product has sizes
-            if product.has_sizes:
-                # Update size-specific stock
-                size_stock = db.query(ProductSize).filter(
-                    ProductSize.product_id == item.product_id,
-                    ProductSize.branch_id == db_sale.branch_id,
-                    ProductSize.size == item.size
-                ).first()
-                
-                if size_stock:
-                    old_size_stock = size_stock.stock_quantity
-                    new_size_stock = old_size_stock - item.quantity
-                    size_stock.stock_quantity = new_size_stock
-                    
-                    # Actualizar BranchStock correspondiente  
-                    branch_stock = db.query(BranchStock).filter(
-                        BranchStock.product_id == item.product_id,
-                        BranchStock.branch_id == db_sale.branch_id
-                    ).first()
-                    
-                    if branch_stock:
-                        branch_stock.stock_quantity -= item.quantity
-                    
-                    # Create inventory movement for size stock
-                    inventory_movement = InventoryMovement(
-                        product_id=product.id,
-                        movement_type="OUT",
-                        quantity=item.quantity,
-                        previous_stock=old_size_stock,
-                        new_stock=new_size_stock,
-                        reference_id=db_sale.id,
-                        reference_type="SALE",
-                        notes=f"Sale {sale_number} - Size {item.size}"
-                    )
-                    db.add(inventory_movement)
-            else:
-                # Actualizar BranchStock para productos sin talles
-                branch_stock = db.query(BranchStock).filter(
-                    BranchStock.product_id == item.product_id,
-                    BranchStock.branch_id == db_sale.branch_id
-                ).first()
-                
-                if branch_stock:
-                    old_stock = branch_stock.stock_quantity
-                    new_stock = old_stock - item.quantity
-                    branch_stock.stock_quantity = new_stock
-                else:
-                    # Si no existe BranchStock, no se puede procesar la venta
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"No stock record found for product {product.name} in this branch"
-                    )
-                
-                # Create inventory movement
-                inventory_movement = InventoryMovement(
-                    product_id=product.id,
-                    movement_type="OUT",
-                    quantity=item.quantity,
-                    previous_stock=old_stock,
-                    new_stock=new_stock,
-                    reference_id=db_sale.id,
-                    reference_type="SALE",
-                    notes=f"Sale {sale_number}"
-                )
-                db.add(inventory_movement)
-        
-        # Recalcular stock global de todos los productos modificados
-        processed_products = set()
-        for item in sale.items:
-            if item.product_id not in processed_products:
-                product = db.query(Product).filter(Product.id == item.product_id).first()
-                if product:
-                    product.stock_quantity = product.calculate_total_stock()
-                    processed_products.add(item.product_id)
-        
-        db.commit()
-        db.refresh(db_sale)
         
         # Send WebSocket notifications
         # 1. Notify new sale
         await notify_new_sale(
             sale_id=db_sale.id,
-            total_amount=float(total_amount),
+            total_amount=float(db_sale.total_amount),
             branch_id=db_sale.branch_id,
             user_name=current_user.full_name
         )
         
         # 2. Notify inventory changes for each product and check for low stock
-        for item in sale.items:
+        for item in db_sale.sale_items:
             product = db.query(Product).filter(Product.id == item.product_id).first()
-            old_stock = product.stock_quantity + item.quantity  # Stock antes de la venta
-            new_stock = product.stock_quantity  # Stock después de la venta
-            
-            # Notify inventory change
-            await notify_inventory_change(
-                product_id=product.id,
-                old_stock=old_stock,
-                new_stock=new_stock,
-                branch_id=db_sale.branch_id,
-                user_name=current_user.full_name
-            )
-            
-            # Check for low stock and send alert if needed
-            if new_stock <= product.min_stock:
-                await notify_low_stock(
+            if product:
+                # Calculate stock before sale for notification
+                old_stock = product.stock_quantity + item.quantity
+                new_stock = product.stock_quantity
+                
+                # Notify inventory change
+                await notify_inventory_change(
                     product_id=product.id,
-                    product_name=product.name,
-                    current_stock=new_stock,
-                    min_stock=product.min_stock,
-                    branch_id=db_sale.branch_id
+                    old_stock=old_stock,
+                    new_stock=new_stock,
+                    branch_id=db_sale.branch_id,
+                    user_name=current_user.full_name
                 )
+                
+                # Check for low stock and send alert if needed
+                if new_stock <= product.min_stock:
+                    await notify_low_stock(
+                        product_id=product.id,
+                        product_name=product.name,
+                        current_stock=new_stock,
+                        min_stock=product.min_stock,
+                        branch_id=db_sale.branch_id
+                    )
         
         # 3. Notify dashboard update
         await notify_dashboard_update(
@@ -401,19 +252,34 @@ async def create_sale(
             data={
                 "sale_id": db_sale.id,
                 "sale_number": db_sale.sale_number,
-                "total_amount": float(total_amount),
+                "total_amount": float(db_sale.total_amount),
                 "sale_type": db_sale.sale_type.value,
                 "timestamp": db_sale.created_at.isoformat() if db_sale.created_at else datetime.now().isoformat()
             }
         )
         
         return db_sale
+        
+    except ValueError as e:
+        # Stock insuficiente, producto no existe, o validación falla
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+    except StockConflictError as e:
+        # Race condition: otro vendedor modificó el stock simultáneamente
+        # Cliente debe reintentar la operación
+        raise HTTPException(
+            status_code=409,  # Conflict
+            detail=f"Stock conflict: {str(e)}. Another user modified the stock simultaneously. Please retry the operation."
+        )
     except ValidationError as e:
         raise HTTPException(
             status_code=400,
             detail=f"Validation error: {str(e)}"
         )
     except Exception as e:
+        db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
