@@ -6,10 +6,23 @@ const nextConfig = {
   // Optimizaciones de desarrollo
   reactStrictMode: true,
   
-  // Webpack optimizations
+  // Turbopack experimental config (used when running with --turbo)
+  experimental: {
+    turbo: {
+      // Turbopack rules (equivalent to webpack loaders)
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+  
+  // Webpack optimizations (only used in production builds)
   webpack: (config, { dev, isServer }) => {
-    // En desarrollo, optimizar compilación
-    if (dev) {
+    // En desarrollo con webpack (no turbopack), optimizar compilación
+    if (dev && !process.env.TURBOPACK) {
       // Reducir chunks para compilación más rápida
       config.optimization = {
         ...config.optimization,
