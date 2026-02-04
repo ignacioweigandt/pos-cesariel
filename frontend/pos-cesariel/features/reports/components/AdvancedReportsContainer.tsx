@@ -14,7 +14,7 @@
  * - Loading states
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChartBarIcon,
@@ -31,17 +31,17 @@ import { branchesApi } from "@/features/users/api/branchesApi";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { useReportFilters } from "../hooks";
 import { DateRangeFilter } from "./Filters/DateRangeFilter";
-import { BranchSelector, ExportButton } from "./shared";
-import { 
-  SummaryTab,
-  BranchesTab,
-  ProductsTab,
-  BrandsTab,
-  PaymentMethodsTab,
-  EcommerceTab,
-  SalesTab
-} from "./tabs";
+import { BranchSelector, ExportButton, LoadingSkeleton } from "./shared";
 import type { Branch, ReportTab } from "../types/reports.types";
+
+// Lazy load tabs for better performance (only load when user clicks)
+const SummaryTab = lazy(() => import("./tabs/SummaryTab").then(m => ({ default: m.SummaryTab })));
+const SalesTab = lazy(() => import("./tabs/SalesTab").then(m => ({ default: m.SalesTab })));
+const ProductsTab = lazy(() => import("./tabs/ProductsTab").then(m => ({ default: m.ProductsTab })));
+const BrandsTab = lazy(() => import("./tabs/BrandsTab").then(m => ({ default: m.BrandsTab })));
+const BranchesTab = lazy(() => import("./tabs/BranchesTab").then(m => ({ default: m.BranchesTab })));
+const PaymentMethodsTab = lazy(() => import("./tabs/PaymentMethodsTab").then(m => ({ default: m.PaymentMethodsTab })));
+const EcommerceTab = lazy(() => import("./tabs/EcommerceTab").then(m => ({ default: m.EcommerceTab })));
 
 export function AdvancedReportsContainer() {
   const router = useRouter();
@@ -198,68 +198,82 @@ export function AdvancedReportsContainer() {
               </TabsList>
             </div>
 
-            {/* Tab Content Areas */}
+            {/* Tab Content Areas - Wrapped with Suspense for lazy loading */}
             <TabsContent value="summary" className="space-y-6">
-              <SummaryTab
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                branchId={filters.selectedBranch}
-                isAdmin={isAdmin}
-                branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
-              />
+              <Suspense fallback={<LoadingSkeleton />}>
+                <SummaryTab
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  branchId={filters.selectedBranch}
+                  isAdmin={isAdmin}
+                  branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="sales" className="space-y-6">
-              <SalesTab
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                branchId={filters.selectedBranch}
-                branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
-              />
+              <Suspense fallback={<LoadingSkeleton />}>
+                <SalesTab
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  branchId={filters.selectedBranch}
+                  branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="products" className="space-y-6">
-              <ProductsTab
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                branchId={filters.selectedBranch}
-                branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
-              />
+              <Suspense fallback={<LoadingSkeleton />}>
+                <ProductsTab
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  branchId={filters.selectedBranch}
+                  branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="brands" className="space-y-6">
-              <BrandsTab
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                branchId={filters.selectedBranch}
-                branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
-              />
+              <Suspense fallback={<LoadingSkeleton />}>
+                <BrandsTab
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  branchId={filters.selectedBranch}
+                  branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="branches" className="space-y-6">
-              <BranchesTab
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                isAdmin={isAdmin}
-              />
+              <Suspense fallback={<LoadingSkeleton />}>
+                <BranchesTab
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  isAdmin={isAdmin}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="payment-methods" className="space-y-6">
-              <PaymentMethodsTab
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                branchId={filters.selectedBranch}
-                branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
-              />
+              <Suspense fallback={<LoadingSkeleton />}>
+                <PaymentMethodsTab
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  branchId={filters.selectedBranch}
+                  branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
+                />
+              </Suspense>
             </TabsContent>
 
             <TabsContent value="ecommerce" className="space-y-6">
-              <EcommerceTab
-                startDate={filters.startDate}
-                endDate={filters.endDate}
-                branchId={filters.selectedBranch}
-                branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
-              />
+              <Suspense fallback={<LoadingSkeleton />}>
+                <EcommerceTab
+                  startDate={filters.startDate}
+                  endDate={filters.endDate}
+                  branchId={filters.selectedBranch}
+                  branchName={branches.find(b => b.id === filters.selectedBranch)?.name}
+                />
+              </Suspense>
             </TabsContent>
           </Tabs>
         </div>

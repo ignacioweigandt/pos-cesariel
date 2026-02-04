@@ -10,6 +10,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState } from 'react';
+import { SWRConfig } from 'swr';
 import { CurrencyProvider } from '@/shared/contexts/CurrencyContext';
 import { SessionTimeoutWrapper } from '@/components/auth/SessionTimeoutWrapper';
 import { Toaster } from 'react-hot-toast';
@@ -32,37 +33,51 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <CurrencyProvider>
-        {/* Sistema de cierre automático de sesión por inactividad */}
-        <SessionTimeoutWrapper />
-        {children}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
+      <SWRConfig
+        value={{
+          // Global SWR configuration for better performance
+          revalidateOnFocus: false, // Don't refetch on window focus (avoid duplicates)
+          revalidateOnReconnect: true, // Refetch when reconnecting
+          dedupingInterval: 2000, // Dedupe requests within 2s
+          errorRetryCount: 2, // Retry failed requests 2 times
+          errorRetryInterval: 3000, // Wait 3s between retries
+          shouldRetryOnError: true,
+          // Cache provider for persistence (optional)
+          provider: () => new Map(),
+        }}
+      >
+        <CurrencyProvider>
+          {/* Sistema de cierre automático de sesión por inactividad */}
+          <SessionTimeoutWrapper />
+          {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
               duration: 3000,
-              iconTheme: {
-                primary: '#4ade80',
-                secondary: '#fff',
+              style: {
+                background: '#363636',
+                color: '#fff',
               },
-            },
-            error: {
-              duration: 4000,
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
+              success: {
+                duration: 3000,
+                iconTheme: {
+                  primary: '#4ade80',
+                  secondary: '#fff',
+                },
               },
-            },
-          }}
-        />
-      </CurrencyProvider>
-      {/* React Query Devtools (only in development) */}
-      <ReactQueryDevtools initialIsOpen={false} />
+              error: {
+                duration: 4000,
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
+        </CurrencyProvider>
+        {/* React Query Devtools (only in development) */}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </SWRConfig>
     </QueryClientProvider>
   );
 }
