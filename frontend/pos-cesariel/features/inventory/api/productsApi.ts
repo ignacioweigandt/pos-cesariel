@@ -42,7 +42,5 @@ export const productsApi = {
     apiClient.get('/categories/'),
 
   getBrands: () =>
-   */
-  getBrands: () =>
     apiClient.get('/brands/'),
 };
