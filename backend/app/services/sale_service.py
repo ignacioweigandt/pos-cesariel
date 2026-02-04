@@ -31,6 +31,7 @@ from sqlalchemy.orm import Session
 from app.repositories.sale import SaleRepository, SaleItemRepository
 from app.services.inventory_service import InventoryService
 from app.services.product_service import ProductService
+from app.services.stock_service import StockConflictError
 from app.models import Sale, SaleItem
 from app.schemas.sale import SaleCreate
 
@@ -167,31 +168,47 @@ class SaleService:
         sale = self.sale_repo.create(sale_dict)
 
         # Create sale items and update inventory
-        for item_data in sale_data.items:
-            product = self.product_service.product_repo.get(item_data.product_id)
-            
-            # Create sale item
-            item_dict = {
-                'sale_id': sale.id,
-                'product_id': item_data.product_id,
-                'quantity': item_data.quantity,
-                'unit_price': item_data.unit_price,
-                'total_price': item_data.unit_price * item_data.quantity,
-                'size': getattr(item_data, 'size', None)
-            }
-            self.sale_item_repo.create(item_dict)
+        try:
+            for item_data in sale_data.items:
+                product = self.product_service.product_repo.get(item_data.product_id)
+                
+                # Create sale item
+                item_dict = {
+                    'sale_id': sale.id,
+                    'product_id': item_data.product_id,
+                    'quantity': item_data.quantity,
+                    'unit_price': item_data.unit_price,
+                    'total_price': item_data.unit_price * item_data.quantity,
+                    'size': getattr(item_data, 'size', None)
+                }
+                self.sale_item_repo.create(item_dict)
 
-            # Decrease inventory
-            self.inventory_service.decrease_stock(
-                product_id=item_data.product_id,
-                branch_id=branch_id,
-                quantity=item_data.quantity,
-                size=getattr(item_data, 'size', None),
-                reference_type="SALE",
-                reference_id=sale.id
+                # Decrease inventory with optimistic locking
+                success = self.inventory_service.decrease_stock(
+                    product_id=item_data.product_id,
+                    branch_id=branch_id,
+                    quantity=item_data.quantity,
+                    size=getattr(item_data, 'size', None),
+                    reference_type="SALE",
+                    reference_id=sale.id
+                )
+                
+                if not success:
+                    # Stock was depleted between validation and processing
+                    raise ValueError(
+                        f"Stock for product {product.name} was depleted by another sale. "
+                        f"Please retry the operation."
+                    )
+
+            return sale
+        except StockConflictError as e:
+            # Race condition: otro vendedor modificó el stock simultáneamente
+            # Rollback de la transacción
+            self.db.rollback()
+            raise ValueError(
+                f"Stock conflict detected: {str(e)}. "
+                f"Another user modified the stock simultaneously. Please retry."
             )
-
-        return sale
 
     def _calculate_subtotal(self, items) -> Decimal:
         """
