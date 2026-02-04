@@ -2,6 +2,12 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 const PRODUCTION_BACKEND_URL = 'https://backend-production-c20a.up.railway.app';
 
+// Debug mode: only log in production or when explicitly enabled
+const DEBUG = process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_WS_DEBUG === 'true';
+const log = (...args: any[]) => DEBUG && console.log(...args);
+const warn = (...args: any[]) => DEBUG && console.warn(...args);
+const error = (...args: any[]) => console.error(...args); // Always log errors
+
 /**
  * Determina URL base de WebSocket (usa misma lógica que API client).
  * Prioridad: NEXT_PUBLIC_API_URL > detección hostname > localhost.
@@ -77,24 +83,24 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
 
   const connect = useCallback(() => {
     if (isConnecting.current) {
-      console.log('WebSocket: Already connecting, skipping');
+      log('WebSocket: Already connecting, skipping');
       return;
     }
 
     const currentUrl = urlRef.current;
 
     if (!currentUrl) {
-      console.log('WebSocket: No URL provided, skipping connection');
+      log('WebSocket: No URL provided, skipping connection');
       return;
     }
 
     if (ws.current?.readyState === WebSocket.OPEN) {
-      console.log('WebSocket: Already connected, skipping');
+      log('WebSocket: Already connected, skipping');
       return;
     }
 
     if (ws.current?.readyState === WebSocket.CONNECTING) {
-      console.log('WebSocket: Connection in progress, skipping');
+      log('WebSocket: Connection in progress, skipping');
       return;
     }
 
@@ -109,13 +115,13 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       ws.current = null;
     }
 
-    console.log('WebSocket: Attempting to connect to', currentUrl);
+    log('WebSocket: Attempting to connect to', currentUrl);
 
     try {
       ws.current = new WebSocket(currentUrl);
 
       ws.current.onopen = () => {
-        console.log('WebSocket connected');
+        log('WebSocket connected');
         isConnecting.current = false;
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
@@ -123,22 +129,34 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       };
 
       ws.current.onclose = (event) => {
-        console.log('WebSocket disconnected', event.code, event.reason);
+        // Ignore normal closures (1000, 1001) and HMR disconnections (1005, 1006)
+        const isNormalClosure = [1000, 1001].includes(event.code);
+        const isHMRDisconnect = [1005, 1006].includes(event.code) && process.env.NODE_ENV === 'development';
+        
+        if (!isNormalClosure && !isHMRDisconnect) {
+          log('WebSocket disconnected', event.code, event.reason);
+        }
+        
         isConnecting.current = false;
         setIsConnected(false);
         onDisconnectRef.current?.();
 
+        // Don't reconnect during HMR in development
+        if (isHMRDisconnect) {
+          return;
+        }
+
         if (shouldReconnect.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
           // Backoff exponencial: 5s, 10s, 20s, 40s... máx 60s
           const backoff = Math.min(reconnectInterval * Math.pow(2, reconnectAttemptsRef.current), 60000);
-          console.log(`WebSocket: Reconnecting in ${backoff/1000}s (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`);
+          log(`WebSocket: Reconnecting in ${backoff/1000}s (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`);
 
           reconnectTimer.current = setTimeout(() => {
             reconnectAttemptsRef.current += 1;
             connect();
           }, backoff);
         } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-          console.log('WebSocket: Max reconnection attempts reached');
+          error('WebSocket: Max reconnection attempts reached');
         }
       };
 
@@ -148,22 +166,22 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
           setLastMessage(message);
           setMessages(prev => [...prev.slice(-49), message]);
           onMessageRef.current?.(message);
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+        } catch (err) {
+          error('Error parsing WebSocket message:', err);
         }
       };
 
-      ws.current.onerror = (error) => {
-        console.warn('WebSocket connection failed (this is normal if backend WebSocket is not available):', {
-          url: currentUrl,
-          type: error.type
-        });
+      ws.current.onerror = (err) => {
+        // Only log errors in production or debug mode
+        if (DEBUG) {
+          warn('WebSocket connection failed:', { url: currentUrl });
+        }
         isConnecting.current = false;
-        onErrorRef.current?.(error);
+        onErrorRef.current?.(err);
       };
 
-    } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
+    } catch (err) {
+      error('Error connecting to WebSocket:', err);
       isConnecting.current = false;
     }
   }, [maxReconnectAttempts, reconnectInterval]);
@@ -186,7 +204,7 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       ws.current.send(JSON.stringify(message));
       return true;
     }
-    console.warn('WebSocket is not connected');
+    warn('WebSocket is not connected');
     return false;
   }, []);
 
@@ -248,8 +266,8 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
   const url = enabled && token && branchId ? `${wsBaseUrl}/ws/${branchId}?token=${token}` : '';
 
   useEffect(() => {
-    if (enabled && (!token || !branchId)) {
-      console.log('WebSocket: Not connecting - missing required data:', {
+    if (DEBUG && enabled && (!token || !branchId)) {
+      log('WebSocket: Not connecting - missing required data:', {
         token: token ? 'present' : 'missing',
         branchId: branchId || 'missing'
       });
@@ -262,7 +280,7 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     }
 
     if (message.type === 'subscription_confirmed') {
-      console.log('WebSocket: Subscription confirmed', message.subscription_types);
+      log('WebSocket: Subscription confirmed', message.subscription_types);
       return;
     }
 
@@ -270,7 +288,7 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
       return;
     }
 
-    console.log('POS WebSocket message:', message);
+    log('POS WebSocket message:', message);
 
     if (['inventory_change', 'new_sale', 'low_stock_alert', 'user_action', 'system_message', 'product_update', 'sale_status_change', 'dashboard_update'].includes(message.type)) {
       setNotifications(prev => [...prev.slice(-19), message]);
@@ -280,7 +298,7 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
 
   const handleConnect = useCallback(() => {
     if (enabledRef.current && tokenRef.current) {
-      console.log(`Connected to POS WebSocket for branch ${branchIdRef.current}`);
+      log(`Connected to POS WebSocket for branch ${branchIdRef.current}`);
 
       if (subscriptionTimeoutRef.current) {
         clearTimeout(subscriptionTimeoutRef.current);
@@ -295,7 +313,7 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
             subscription_types: ['inventory_change', 'new_sale', 'low_stock_alert', 'user_action', 'system_message', 'product_update', 'sale_status_change', 'dashboard_update']
           });
           if (sent) {
-            console.log('WebSocket: Subscription message sent successfully');
+            log('WebSocket: Subscription message sent successfully');
           }
         }
       }, 500);
@@ -303,7 +321,7 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
   }, []);
 
   const handleDisconnect = useCallback(() => {
-    console.log(`Disconnected from POS WebSocket for branch ${branchIdRef.current}`);
+    log(`Disconnected from POS WebSocket for branch ${branchIdRef.current}`);
   }, []);
 
   const {

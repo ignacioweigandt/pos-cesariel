@@ -97,11 +97,6 @@ export function AdvancedReportsContainer() {
 
   // Check if user is admin (role can be 'admin' or 'ADMIN')
   const isAdmin = user?.role?.toUpperCase() === "ADMIN";
-  
-  // Debug: Log user data
-  console.log("AdvancedReportsContainer - User:", user);
-  console.log("AdvancedReportsContainer - User role:", user?.role);
-  console.log("AdvancedReportsContainer - isAdmin:", isAdmin);
 
   return (
     <div className="min-h-screen bg-gray-50">

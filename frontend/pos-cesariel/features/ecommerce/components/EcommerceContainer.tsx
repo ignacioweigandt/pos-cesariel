@@ -161,7 +161,7 @@ export function EcommerceContainer() {
 
       // Set up polling interval
       const interval = setInterval(() => {
-        console.log("Auto-refreshing dashboard data...");
+        // console.log("Auto-refreshing dashboard data...");
         fetchStoreConfig();
         fetchStats();
       }, 30000); // 30 seconds
@@ -193,11 +193,9 @@ export function EcommerceContainer() {
   const fetchProducts = async () => {
     try {
       const response = await productsApi.getProducts();
-      console.log("fetchProducts response:", response);
       setProducts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error("Error fetching products:", error);
-      console.error("Error details:", error.response);
       setProducts([]);
     }
   };
@@ -234,7 +232,7 @@ export function EcommerceContainer() {
   const fetchStoreConfig = async () => {
     try {
       const response = await ecommercePublicApi.getStoreConfig();
-      console.log("fetchStoreConfig response:", response);
+      // console.log("fetchStoreConfig response:", response);
 
       // Extract data from nested structure
       const configData = response.data?.data || response.data;
@@ -269,7 +267,7 @@ export function EcommerceContainer() {
   const fetchStats = async () => {
     try {
       const response = await ecommerceAdvancedApi.getDashboardStats();
-      console.log("fetchStats response:", response);
+      // console.log("fetchStats response:", response);
 
       // Extract data from nested structure
       const statsData = response.data?.data || response.data;
@@ -454,7 +452,7 @@ export function EcommerceContainer() {
         onClose={() => setShowBannerManager(false)}
         onBannersUpdated={() => {
           // Could refresh banner data here
-          console.log("Banners updated");
+          // console.log("Banners updated");
         }}
       />
 
@@ -462,7 +460,7 @@ export function EcommerceContainer() {
         isOpen={showLogoManager}
         onClose={() => setShowLogoManager(false)}
         onConfigUpdated={() => {
-          console.log("Store config updated");
+          // console.log("Store config updated");
         }}
       />
 
@@ -482,7 +480,7 @@ export function EcommerceContainer() {
         isOpen={showWhatsAppConfig}
         onClose={() => setShowWhatsAppConfig(false)}
         onConfigUpdated={() => {
-          console.log("WhatsApp config updated");
+          // console.log("WhatsApp config updated");
         }}
       />
 
