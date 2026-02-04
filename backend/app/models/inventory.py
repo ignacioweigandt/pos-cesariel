@@ -187,7 +187,15 @@ class BranchStock(Base):
     #         "available_stock = stock_quantity - reserved_stock"
     # )
     
-    # ===== AUDITORÍA =====
+    # ===== AUDITORÍA Y CONCURRENCIA =====
+    
+    version = Column(
+        Integer,
+        default=0,
+        nullable=False,
+        doc="Versión para optimistic locking. Se incrementa en cada UPDATE "
+            "para prevenir race conditions en ventas concurrentes."
+    )
     
     created_at = Column(
         DateTime, 
@@ -709,7 +717,14 @@ class ProductSize(Base):
         doc="Cantidad disponible de este talle específico en esta sucursal"
     )
     
-    # ===== AUDITORÍA =====
+    # ===== AUDITORÍA Y CONCURRENCIA =====
+    
+    version = Column(
+        Integer,
+        default=0,
+        nullable=False,
+        doc="Versión para optimistic locking. Previene race conditions."
+    )
     
     created_at = Column(
         DateTime, 

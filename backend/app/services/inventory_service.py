@@ -29,6 +29,7 @@ from app.repositories.inventory import (
 )
 from app.repositories.product import ProductRepository
 from app.models import Product, BranchStock, ProductSize, InventoryMovement
+from app.services.stock_service import StockService, InsufficientStockError, StockConflictError
 
 
 class InventoryService:
@@ -210,12 +211,15 @@ class InventoryService:
         notes: Optional[str] = None
     ) -> bool:
         """
-        Disminuye stock con tracking de movimiento.
+        Disminuye stock con tracking de movimiento y optimistic locking.
+        
+        ACTUALIZADO: Ahora usa StockService para prevenir race conditions.
         
         Operación crítica que:
         1. Valida stock suficiente
-        2. Actualiza BranchStock o ProductSize
+        2. Actualiza BranchStock o ProductSize con optimistic locking
         3. Crea InventoryMovement para auditoría
+        4. Reintenta automáticamente en caso de conflicto (max 3 veces)
         
         Args:
             product_id: ID del producto
@@ -229,46 +233,32 @@ class InventoryService:
         Returns:
             True si exitoso, False si stock insuficiente o producto no existe
         
+        Raises:
+            StockConflictError: Si después de 3 reintentos aún hay conflictos
+        
         Efectos Secundarios:
             - Modifica BranchStock.stock_quantity o ProductSize.stock_quantity
             - Crea registro en InventoryMovement
         """
-        product = self.product_repo.get(product_id)
-        if not product:
+        try:
+            StockService.decrement_stock_with_locking(
+                db=self.db,
+                product_id=product_id,
+                branch_id=branch_id,
+                quantity=quantity,
+                size=size,
+                reference_type=reference_type,
+                reference_id=reference_id,
+                notes=notes
+            )
+            return True
+        except InsufficientStockError:
+            # No hay stock suficiente
             return False
-
-        if product.has_sizes and size:
-            # Handle sized product
-            sizes = self.product_size_repo.get_by_product_and_branch(product_id, branch_id)
-            size_stock = next((s for s in sizes if s.size == size), None)
-            if not size_stock or size_stock.stock_quantity < quantity:
-                return False
-            
-            previous_stock = size_stock.stock_quantity
-            size_stock.stock_quantity -= quantity
-            self.db.commit()
-        else:
-            # Handle non-sized product
-            branch_stock = self.branch_stock_repo.get_by_branch_and_product(branch_id, product_id)
-            if not branch_stock or branch_stock.stock_quantity < quantity:
-                return False
-            
-            previous_stock = branch_stock.stock_quantity
-            branch_stock.stock_quantity -= quantity
-            self.db.commit()
-
-        # Create inventory movement
-        movement_data = {
-            "product_id": product_id,
-            "branch_id": branch_id,
-            "movement_type": "OUT",
-            "quantity": -quantity,
-            "previous_stock": previous_stock,
-            "new_stock": previous_stock - quantity,
-            "reference_type": reference_type,
-            "reference_id": reference_id,
-            "notes": notes or f"Stock decreased by {quantity}"
-        }
-        self.inventory_movement_repo.create(movement_data)
-
-        return True
+        except StockConflictError:
+            # Race condition después de 3 reintentos
+            # El llamador debe manejar esto (ej: mostrar error al usuario)
+            raise
+        except ValueError:
+            # Producto no existe u otro error de validación
+            return False
