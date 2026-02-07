@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { apiClient } from '@/shared/api/client';
 
 export interface PreviewProduct {
@@ -21,7 +21,8 @@ export function useImportPreview() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPreview = useCallback(async (file: File): Promise<boolean> => {
+  // React Compiler handles optimization
+  const loadPreview = async (file: File): Promise<boolean> => {
     setLoading(true);
     setError(null);
 
@@ -38,59 +39,62 @@ export function useImportPreview() {
       const result = response.data;
       setPreviewData(result.preview_data || []);
       return true;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error de conexión al servidor';
+    } catch (error) {
+      let errorMessage = 'Error de conexión al servidor';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       setError(errorMessage);
-      console.error('Preview error:', err);
+      console.error('Preview error:', error);
       return false;
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const updateProduct = useCallback(
-    (index: number, field: string, value: any) => {
-      setPreviewData((prev) => {
-        const updated = [...prev];
-        updated[index] = { ...updated[index], [field]: value };
-        return updated;
-      });
-    },
-    []
-  );
+  // React Compiler handles optimization
+  const updateProduct = (index: number, field: string, value: unknown) => {
+    setPreviewData((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
 
+  // React Compiler handles optimization
   // Enriquece preview con categoría autodetectada, talles, stock inicial 0
-  const enhancePreviewData = useCallback(
-    (
-      data: PreviewProduct[],
-      fileCategory: string | null,
-      detectCategory: (name: string) => string | null,
-      hasSize: (name: string) => boolean,
-      getCategoryId: (name: string | null) => number | null
-    ) => {
-      const enhanced = data.map((product) => {
-        const productCategory = detectCategory(product.name);
-        const detectedCategory = productCategory || fileCategory;
+  const enhancePreviewData = (
+    data: PreviewProduct[],
+    fileCategory: string | null,
+    detectCategory: (name: string) => string | null,
+    hasSize: (name: string) => boolean,
+    getCategoryId: (name: string | null) => number | null
+  ) => {
+    const enhanced = data.map((product) => {
+      const productCategory = detectCategory(product.name);
+      const detectedCategory = productCategory || fileCategory;
 
-        return {
-          ...product,
-          stock_quantity: 0,
-          min_stock: 1,
-          category_id: getCategoryId(detectedCategory),
-          detected_category: detectedCategory,
-          has_sizes: hasSize(product.name),
-        };
-      });
+      return {
+        ...product,
+        stock_quantity: 0,
+        min_stock: 1,
+        category_id: getCategoryId(detectedCategory),
+        detected_category: detectedCategory,
+        has_sizes: hasSize(product.name),
+      };
+    });
 
-      setPreviewData(enhanced);
-    },
-    []
-  );
+    setPreviewData(enhanced);
+  };
 
-  const clearPreview = useCallback(() => {
+  // React Compiler handles optimization
+  const clearPreview = () => {
     setPreviewData([]);
     setError(null);
-  }, []);
+  };
 
   const stats = {
     total: previewData.length,

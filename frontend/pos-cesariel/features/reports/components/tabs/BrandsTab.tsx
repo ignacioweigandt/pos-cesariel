@@ -16,7 +16,7 @@ import { MetricCard } from "../cards/MetricCard";
 import { LoadingSkeleton, EmptyState } from "../shared";
 import { ProductsPieChart } from "../Charts/ProductsPieChart";
 import { useBrandsChart } from "../../hooks";
-import { BrandsTable } from "../tables/BrandsTable";
+import { BrandsTable } from "../Tables/BrandsTable";
 
 interface BrandsTabProps {
   startDate: string;

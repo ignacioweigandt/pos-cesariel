@@ -1,6 +1,6 @@
 /** Hook para gestión de moneda (SOLO ARS y USD permitidos) con formateo de precios */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { configurationApi } from '../api';
 import type { Currency, CurrencyConfig, CurrencyCode } from '../types';
 import toast from 'react-hot-toast';
@@ -21,7 +21,8 @@ export function useCurrencyConfig() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const availableCurrencies = useMemo(() => ALLOWED_CURRENCIES, []);
+  // React 19: No useMemo needed - constant reference is already stable
+  const availableCurrencies = ALLOWED_CURRENCIES;
 
   const formatPrice = (amount: number, customConfig?: Partial<CurrencyConfig>) => {
     const activeConfig = customConfig ? { ...config, ...customConfig } : config;

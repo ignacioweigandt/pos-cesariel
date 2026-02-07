@@ -1,13 +1,14 @@
+// ✅ OPTIMIZATION: Dynamic imports for recharts
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Legend,
-} from "recharts";
+  DynamicBar as Bar,
+  DynamicBarChart as BarChart,
+  DynamicCartesianGrid as CartesianGrid,
+  DynamicResponsiveContainer as ResponsiveContainer,
+  DynamicTooltip as Tooltip,
+  DynamicXAxis as XAxis,
+  DynamicYAxis as YAxis,
+  DynamicLegend as Legend,
+} from "./LazyCharts";
 import { BuildingStorefrontIcon } from "@heroicons/react/24/outline";
 import type { ChartData } from "../../types/reports.types";
 

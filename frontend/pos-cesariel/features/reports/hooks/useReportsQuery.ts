@@ -63,7 +63,7 @@ async function fetchSalesReport(
   endDate: string,
   branchId?: number
 ): Promise<SalesReport> {
-  const params: any = {
+  const params: Record<string, string | number> = {
     start_date: startDate,
     end_date: endDate,
   };
@@ -78,7 +78,7 @@ async function fetchDailySales(
   endDate: string,
   branchId?: number
 ): Promise<DailySale[]> {
-  const params: any = {
+  const params: Record<string, string | number> = {
     start_date: startDate,
     end_date: endDate,
   };
@@ -93,7 +93,7 @@ async function fetchProductsChart(
   endDate: string,
   branchId?: number
 ): Promise<TopProduct[]> {
-  const params: any = {
+  const params: Record<string, string | number> = {
     start_date: startDate,
     end_date: endDate,
   };
@@ -114,7 +114,8 @@ async function fetchBranchesChart(
 
   const response = await apiClient.get('/reports/branches-chart', { params });
   
-  return response.data.map((branch: any) => ({
+  // Type-safe transformation
+  return response.data.map((branch: BranchData) => ({
     branch_id: branch.branch_id,
     branch_name: branch.branch_name,
     total_sales: Number(branch.total_sales || 0),
@@ -197,7 +198,7 @@ export function useBrandsChart(
   return useQuery({
     queryKey: [...reportsKeys.all, 'brands-chart', startDate, endDate, branchId, limit] as const,
     queryFn: async () => {
-      const params: any = {
+      const params: Record<string, string | number> = {
         start_date: startDate,
         end_date: endDate,
         limit,
@@ -212,16 +213,34 @@ export function useBrandsChart(
   });
 }
 
+// Type for detailed sales report - extend as needed based on backend response
+type DetailedSalesReport = {
+  sales: Array<{
+    id: number;
+    date: string;
+    total: number;
+    items: Array<{
+      product_name: string;
+      quantity: number;
+      price: number;
+    }>;
+  }>;
+  summary: {
+    total_sales: number;
+    total_orders: number;
+  };
+};
+
 export function useDetailedSalesReport(
   startDate: string,
   endDate: string,
   branchId?: number,
   enabled = true
-): UseQueryResult<any, Error> {
+): UseQueryResult<DetailedSalesReport, Error> {
   return useQuery({
     queryKey: [...reportsKeys.all, 'detailed-sales', startDate, endDate, branchId] as const,
     queryFn: async () => {
-      const params: any = {
+      const params: Record<string, string | number> = {
         start_date: startDate,
         end_date: endDate,
       };

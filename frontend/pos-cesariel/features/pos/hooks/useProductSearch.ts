@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiClient } from "@/shared/api/client";
 import type { Product } from "../types/pos.types";
 
@@ -69,26 +69,23 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
     fetchProducts();
   }, [token]);
 
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
+  // React Compiler detects pure computation and optimizes automatically
+  let filteredProducts = products;
 
-    if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(lowerSearch) ||
-          product.sku.toLowerCase().includes(lowerSearch)
-      );
-    }
+  if (searchTerm) {
+    const lowerSearch = searchTerm.toLowerCase();
+    filteredProducts = filteredProducts.filter(
+      (product) =>
+        product.name.toLowerCase().includes(lowerSearch) ||
+        product.sku.toLowerCase().includes(lowerSearch)
+    );
+  }
 
-    if (selectedCategory !== null) {
-      filtered = filtered.filter(
-        (product) => product.category?.id === selectedCategory
-      );
-    }
-
-    return filtered;
-  }, [products, searchTerm, selectedCategory]);
+  if (selectedCategory !== null) {
+    filteredProducts = filteredProducts.filter(
+      (product) => product.category?.id === selectedCategory
+    );
+  }
 
   return {
     products,

@@ -41,6 +41,34 @@ function getCache<T>(key: string): T | null {
   return item.data;
 }
 
+/** Helper: Apply client-side filters to products */
+function applyClientFilters(products: Product[], filters: {
+  brand?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  inStock?: boolean;
+}): Product[] {
+  return products.filter(product => {
+    if (filters.brand && filters.brand !== 'all' && 
+        product.brand.toLowerCase() !== filters.brand.toLowerCase()) {
+      return false;
+    }
+
+    if (filters.minPrice && product.price < filters.minPrice) {
+      return false;
+    }
+    if (filters.maxPrice && product.price > filters.maxPrice) {
+      return false;
+    }
+
+    if (filters.inStock && !product.inStock) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
 export async function getProducts(filters?: {
   search?: string;
   category?: string;
@@ -63,39 +91,43 @@ export async function getProducts(filters?: {
       params.search = filters.search;
     }
 
+    // ✅ OPTIMIZATION: Start both requests in parallel (async-defer-await pattern)
+    // Before: getCategories blocks productsApi, After: both start immediately
+    let categoriesPromise: Promise<Category[]> | null = null;
     if (filters?.category && filters.category !== 'all') {
-      const categories = await getCategories();
+      categoriesPromise = getCategories();
+    }
+
+    const productsPromise = productsApi.getAll(params);
+
+    // Await categories only if needed to set category_id
+    if (categoriesPromise) {
+      const categories = await categoriesPromise;
       const category = categories.find(c => c.slug === filters.category);
       if (category) {
         params.category_id = parseInt(category.id);
+        // Need to re-fetch with category_id - this is a limitation of the current API
+        const response = await productsApi.getAll(params);
+        const apiProducts: ApiProduct[] = response.data.data;
+        let products = apiProducts.map(mapApiProductToFrontend);
+        
+        // Apply client-side filters
+        if (filters) {
+          products = applyClientFilters(products, filters);
+        }
+        
+        setCache(cacheKey, products);
+        return products;
       }
     }
 
-    const response = await productsApi.getAll(params);
+    const response = await productsPromise;
     const apiProducts: ApiProduct[] = response.data.data;
 
     let products = apiProducts.map(mapApiProductToFrontend);
 
     if (filters) {
-      products = products.filter(product => {
-        if (filters.brand && filters.brand !== 'all' && 
-            product.brand.toLowerCase() !== filters.brand.toLowerCase()) {
-          return false;
-        }
-
-        if (filters.minPrice && product.price < filters.minPrice) {
-          return false;
-        }
-        if (filters.maxPrice && product.price > filters.maxPrice) {
-          return false;
-        }
-
-        if (filters.inStock && !product.inStock) {
-          return false;
-        }
-
-        return true;
-      });
+      products = applyClientFilters(products, filters);
     }
 
     setCache(cacheKey, products);

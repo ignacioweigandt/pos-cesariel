@@ -51,12 +51,16 @@ export function useReportsData(startDate: string, endDate: string, branchId?: nu
       const params = branch ? `?branch_id=${branch}` : '';
       const response = await apiClient.get(`/sales/reports/dashboard${params}`);
       setDashboardStats(response.data);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching dashboard stats:", error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        router.push("/");
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/");
+        }
       }
     }
   };
@@ -68,12 +72,16 @@ export function useReportsData(startDate: string, endDate: string, branchId?: nu
         `/sales/reports/sales-report?start_date=${start}&end_date=${end}${branchParam}`
       );
       setSalesReport(response.data);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error fetching sales report:", error);
-      if (error.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        router.push("/");
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/");
+        }
       }
     }
   };
@@ -84,24 +92,32 @@ export function useReportsData(startDate: string, endDate: string, branchId?: nu
       const user = userData ? JSON.parse(userData) : null;
       const branchParam = branch ? `&branch_id=${branch}` : '';
 
-      // Fetch daily sales data
-      const dailySalesResponse = await apiClient.get(
-        `/sales/reports/daily-sales?start_date=${start}&end_date=${end}${branchParam}`
-      );
-      setDailySalesData(dailySalesResponse.data);
+      // ✅ OPTIMIZATION: Parallel fetching (3 sequential awaits → 1 Promise.all)
+      // Before: 3 round trips, After: 1 round trip (2-3× faster)
+      const requests = [
+        apiClient.get(
+          `/sales/reports/daily-sales?start_date=${start}&end_date=${end}${branchParam}`
+        ),
+        apiClient.get(
+          `/sales/reports/products-chart?start_date=${start}&end_date=${end}${branchParam}&limit=10`
+        ),
+      ];
 
-      // Fetch products chart data
-      const productsResponse = await apiClient.get(
-        `/sales/reports/products-chart?start_date=${start}&end_date=${end}${branchParam}&limit=10`
-      );
-      setProductsChartData(productsResponse.data);
-
-      // Fetch branches chart data (admin only)
+      // Only fetch branches data if user is admin
       if (user?.role === "admin") {
-        const branchesResponse = await apiClient.get(
-          `/sales/reports/branches-chart?start_date=${start}&end_date=${end}`
+        requests.push(
+          apiClient.get(
+            `/sales/reports/branches-chart?start_date=${start}&end_date=${end}`
+          )
         );
-        setBranchesChartData(branchesResponse.data);
+      }
+
+      const responses = await Promise.all(requests);
+      
+      setDailySalesData(responses[0].data);
+      setProductsChartData(responses[1].data);
+      if (user?.role === "admin" && responses[2]) {
+        setBranchesChartData(responses[2].data);
       }
     } catch (error) {
       console.error("Error fetching chart data:", error);

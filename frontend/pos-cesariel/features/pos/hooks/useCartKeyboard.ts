@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 export type PaymentMethod = 'efectivo' | 'tarjeta' | 'transferencia';
 export type CardType = 'bancarizadas' | 'no_bancarizadas' | 'tarjeta_naranja';
@@ -26,6 +26,14 @@ interface PaymentConfig {
   is_active?: boolean;
 }
 
+type ProcessSaleData = {
+  payment_method: PaymentMethod;
+  card_type?: CardType;
+  installments: number;
+  surcharge_percentage: number;
+  total: number;
+};
+
 interface UseCartKeyboardProps {
   isOpen: boolean;
   cart: CartItem[];
@@ -50,7 +58,7 @@ interface UseCartKeyboardProps {
   onUpdateQuantity: (id: number, quantity: number) => void;
   onRemoveItem: (id: number) => void;
   onClearCart: () => void;
-  onProcessSale: (data: any) => void;
+  onProcessSale: (data: ProcessSaleData) => void;
   onClose: () => void;
   calculateTotals: () => { surchargePercentage: number; total: number };
   paymentConfigs: PaymentConfig[];
@@ -87,17 +95,16 @@ export function useCartKeyboard({
   paymentConfigs,
 }: UseCartKeyboardProps) {
 
-  const availableInstallments = useMemo(() => {
-    return paymentConfigs
-      .filter(
-        (c) =>
-          c.payment_type === 'tarjeta' &&
-          c.card_type === selectedCardType &&
-          c.is_active !== false
-      )
-      .map((c) => c.installments)
-      .sort((a, b) => a - b);
-  }, [paymentConfigs, selectedCardType]);
+  // React Compiler handles optimization - pure computation
+  const availableInstallments = paymentConfigs
+    .filter(
+      (c) =>
+        c.payment_type === 'tarjeta' &&
+        c.card_type === selectedCardType &&
+        c.is_active !== false
+    )
+    .map((c) => c.installments)
+    .sort((a, b) => a - b);
   useEffect(() => {
     if (!isOpen) return;
 

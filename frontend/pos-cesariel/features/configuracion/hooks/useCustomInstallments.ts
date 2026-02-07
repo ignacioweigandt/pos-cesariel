@@ -1,6 +1,6 @@
 /** Hook para planes de cuotas personalizadas (bancarizadas/no_bancarizadas, 1-60 cuotas, 0-100% recargo) */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { configurationApi } from '../api';
 import type { CustomInstallment, CustomInstallmentCreate, CardType } from '../types';
 import toast from 'react-hot-toast';
@@ -17,7 +17,8 @@ export function useCustomInstallments(options: UseCustomInstallmentsOptions = {}
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const loadInstallments = useCallback(async (filterCardType?: CardType) => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const loadInstallments = async (filterCardType?: CardType) => {
     try {
       setLoading(true);
       setError(null);
@@ -31,7 +32,7 @@ export function useCustomInstallments(options: UseCustomInstallmentsOptions = {}
     } finally {
       setLoading(false);
     }
-  }, [cardType]);
+  };
 
   const createInstallment = async (data: CustomInstallmentCreate) => {
     try {
@@ -103,20 +104,22 @@ export function useCustomInstallments(options: UseCustomInstallmentsOptions = {}
     }
   };
 
-  const getInstallmentsByCardType = useCallback((type: CardType) => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const getInstallmentsByCardType = (type: CardType) => {
     return installments.filter(i => i.card_type === type);
-  }, [installments]);
+  };
 
-  const getActiveInstallments = useCallback((type?: CardType) => {
+  const getActiveInstallments = (type?: CardType) => {
     const filtered = type ? getInstallmentsByCardType(type) : installments;
     return filtered.filter(i => i.is_active);
-  }, [installments, getInstallmentsByCardType]);
+  };
 
   useEffect(() => {
     if (autoLoad) {
       loadInstallments();
     }
-  }, [autoLoad, loadInstallments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLoad]);
 
   return {
     installments,

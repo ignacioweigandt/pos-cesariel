@@ -1,11 +1,12 @@
+// ✅ OPTIMIZATION: Dynamic imports for recharts
 import {
-  Cell,
-  Legend,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
+  DynamicCell as Cell,
+  DynamicLegend as Legend,
+  DynamicPie as Pie,
+  DynamicPieChart as PieChart,
+  DynamicResponsiveContainer as ResponsiveContainer,
+  DynamicTooltip as Tooltip,
+} from "./LazyCharts";
 import type { ChartData } from "../../types/reports.types";
 
 interface ProductsPieChartProps {

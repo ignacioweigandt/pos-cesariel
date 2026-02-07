@@ -1,14 +1,25 @@
 /** Hook para CRUD de sucursales con soporte de soft delete */
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { branchesApi } from "@/lib/api";
 import { Branch } from "../types/users.types";
 import toast from "react-hot-toast";
 
+// Type-safe branch data based on backend schema
+type CreateBranchData = {
+  name: string;
+  address?: string;
+  phone?: string;
+  is_active?: boolean;
+};
+
+type UpdateBranchData = Partial<CreateBranchData>;
+
 export function useBranches() {
   const [branches, setBranches] = useState<Branch[]>([]);
 
-  const loadBranches = useCallback(async () => {
+  // React Compiler handles optimization
+  const loadBranches = async () => {
     try {
       const response = await branchesApi.getBranches();
       setBranches(response.data);
@@ -16,39 +27,52 @@ export function useBranches() {
       console.error("Error fetching branches:", error);
       toast.error("Error al cargar sucursales");
     }
-  }, []);
+  };
 
-  const createBranch = useCallback(async (branchData: any) => {
+  // React Compiler handles optimization
+  const createBranch = async (branchData: CreateBranchData) => {
     try {
       await branchesApi.createBranch(branchData);
       toast.success("Sucursal creada exitosamente");
       await loadBranches();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating branch:", error);
-      const errorMessage =
-        error.response?.data?.detail || "Error al crear sucursal";
+      
+      let errorMessage = "Error al crear sucursal";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
       return false;
     }
-  }, [loadBranches]);
+  };
 
-  const updateBranch = useCallback(async (id: number, branchData: any) => {
+  // React Compiler handles optimization
+  const updateBranch = async (id: number, branchData: UpdateBranchData) => {
     try {
       await branchesApi.updateBranch(id, branchData);
       toast.success("Sucursal actualizada exitosamente");
       await loadBranches();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating branch:", error);
-      const errorMessage =
-        error.response?.data?.detail || "Error al actualizar sucursal";
+      
+      let errorMessage = "Error al actualizar sucursal";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
       return false;
     }
-  }, [loadBranches]);
+  };
 
-  const deleteBranch = useCallback(async (id: number) => {
+  // React Compiler handles optimization
+  const deleteBranch = async (id: number) => {
     try {
       const response = await branchesApi.deleteBranch(id);
 
@@ -60,14 +84,19 @@ export function useBranches() {
 
       await loadBranches();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting branch:", error);
-      const errorMessage =
-        error.response?.data?.detail || "Error al eliminar sucursal";
+      
+      let errorMessage = "Error al eliminar sucursal";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
       return false;
     }
-  }, [loadBranches]);
+  };
 
   return {
     branches,

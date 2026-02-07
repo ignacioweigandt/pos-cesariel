@@ -1,6 +1,6 @@
 /** Hook para gestión de filtros de reportes con validación y filtros rápidos */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   getTodayRange,
   getCurrentMonthRange,
@@ -42,7 +42,8 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     setEndDate(end);
   }, [initialDays]);
 
-  const validateDates = useCallback((): boolean => {
+  // React Compiler handles optimization
+  const validateDates = (): boolean => {
     if (!startDate || !endDate) {
       setError({
         type: 'validation',
@@ -70,9 +71,10 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
 
     setError({ type: null, message: '' });
     return true;
-  }, [startDate, endDate]);
+  };
 
-  const applyFilter = useCallback(() => {
+  // React Compiler handles optimization
+  const applyFilter = () => {
     if (!validateDates()) {
       return;
     }
@@ -86,18 +88,20 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     setTimeout(() => {
       setIsApplying(false);
     }, 500);
-  }, [startDate, endDate, selectedBranch, validateDates, onFilterChange]);
+  };
 
-  const setDateRange = useCallback((start: string, end: string, shouldAutoApply = true) => {
+  // React Compiler handles optimization
+  const setDateRange = (start: string, end: string, shouldAutoApply = true) => {
     setStartDate(start);
     setEndDate(end);
 
     if (autoApply && shouldAutoApply && isValidDateRange(start, end)) {
       onFilterChange?.(start, end, selectedBranch);
     }
-  }, [autoApply, selectedBranch, onFilterChange]);
+  };
 
-  const handleQuickFilter = useCallback((period: QuickFilterPeriod) => {
+  // React Compiler handles optimization
+  const handleQuickFilter = (period: QuickFilterPeriod) => {
     let range: { start: string; end: string };
 
     switch (period) {
@@ -121,21 +125,24 @@ export function useReportFilters(options: UseReportFiltersOptions = {}) {
     }
 
     setDateRange(range.start, range.end, true);
-  }, [setDateRange]);
+  };
 
-  const handleStartDateChange = useCallback((date: string) => {
+  // React Compiler handles optimization
+  const handleStartDateChange = (date: string) => {
     setStartDate(date);
     setError({ type: null, message: '' });
-  }, []);
+  };
 
-  const handleEndDateChange = useCallback((date: string) => {
+  // React Compiler handles optimization
+  const handleEndDateChange = (date: string) => {
     setEndDate(date);
     setError({ type: null, message: '' });
-  }, []);
+  };
 
-  const handleBranchChange = useCallback((branchId: number | undefined) => {
+  // React Compiler handles optimization
+  const handleBranchChange = (branchId: number | undefined) => {
     setSelectedBranch(branchId);
-  }, []);
+  };
 
   return {
     startDate,

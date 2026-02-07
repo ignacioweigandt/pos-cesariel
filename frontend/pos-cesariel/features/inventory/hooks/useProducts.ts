@@ -1,7 +1,29 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Product } from '../types/inventory.types';
+
+// Type-safe product data based on backend schema
+type CreateProductData = {
+  name: string;
+  sku: string;
+  barcode?: string;
+  price: number;
+  cost?: number;
+  category_id: number;
+  brand_id?: number;
+  min_stock: number;
+  has_sizes: boolean;
+  show_in_ecommerce: boolean;
+  description?: string;
+};
+
+type UpdateProductData = Partial<CreateProductData>;
+
+type StockAdjustmentData = {
+  new_stock: number;
+  notes: string;
+};
 
 /** Hook principal para CRUD de productos con fallback a datos demo */
 export function useProducts() {
@@ -9,7 +31,8 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProducts = useCallback(async () => {
+  // React Compiler handles optimization - no useCallback needed
+  const loadProducts = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -17,9 +40,15 @@ export function useProducts() {
         params: { limit: 10000 },
       });
       setProducts(response.data);
-    } catch (err: any) {
-      console.error('Error fetching products:', err);
-      setError(err.message || 'Error al cargar productos');
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al cargar productos');
+      }
+      
       setProducts([
         {
           id: 1,
@@ -38,63 +67,95 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const createProduct = useCallback(async (productData: any) => {
+  // React Compiler handles optimization
+  const createProduct = async (productData: CreateProductData) => {
     try {
       await api.post('/products/', productData);
       await loadProducts();
       toast.success('Producto creado exitosamente');
       return true;
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || err.message || 'Error de conexión';
+    } catch (error) {
+      let errorMessage = 'Error de conexión';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
-      throw err;
+      throw error;
     }
-  }, [loadProducts]);
+  };
 
-  const updateProduct = useCallback(async (id: number, productData: any) => {
+  // React Compiler handles optimization
+  const updateProduct = async (id: number, productData: UpdateProductData) => {
     try {
       await api.put(`/products/${id}`, productData);
       await loadProducts();
       toast.success('Producto actualizado exitosamente');
       return true;
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || err.message || 'Error de conexión';
+    } catch (error) {
+      let errorMessage = 'Error de conexión';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
-      throw err;
+      throw error;
     }
-  }, [loadProducts]);
+  };
 
-  const deleteProduct = useCallback(async (id: number) => {
+  // React Compiler handles optimization
+  const deleteProduct = async (id: number) => {
     try {
       await api.delete(`/products/${id}`);
       await loadProducts();
       toast.success('Producto eliminado exitosamente');
       return true;
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || err.message || 'Error de conexión';
+    } catch (error) {
+      let errorMessage = 'Error de conexión';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
-      throw err;
+      throw error;
     }
-  }, [loadProducts]);
+  };
 
-  const adjustStock = useCallback(async (id: number, stockData: { new_stock: number; notes: string }) => {
+  // React Compiler handles optimization
+  const adjustStock = async (id: number, stockData: StockAdjustmentData) => {
     try {
       await api.post(`/products/${id}/adjust-stock`, stockData);
       await loadProducts();
       toast.success('Stock actualizado exitosamente');
       return true;
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || err.message || 'Error de conexión';
+    } catch (error) {
+      let errorMessage = 'Error de conexión';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
-      throw err;
+      throw error;
     }
-  }, [loadProducts]);
+  };
 
   return {
     products,

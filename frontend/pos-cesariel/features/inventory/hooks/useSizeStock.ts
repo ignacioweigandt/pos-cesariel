@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -30,7 +30,8 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
   const [availableSizesData, setAvailableSizesData] =
     useState<AvailableSizesResponse | null>(null);
 
-  const getAvailableSizes = useCallback(() => {
+  // React Compiler handles optimization
+  const getAvailableSizes = () => {
     if (availableSizesData && availableSizesData.all_valid_sizes) {
       return availableSizesData.all_valid_sizes;
     }
@@ -47,9 +48,10 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
       return SHOE_SIZES;
     }
     return CLOTHING_SIZES;
-  }, [availableSizesData, categoryName]);
+  };
 
-  const loadSizes = useCallback(async () => {
+  // React Compiler handles optimization
+  const loadSizes = async () => {
     if (!productId) return;
 
     setLoading(true);
@@ -72,13 +74,18 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
       } else {
         setSizes([]);
       }
-      } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail ||
-        err.message ||
-        'Error al cargar los talles del producto';
+    } catch (error) {
+      let errorMessage = 'Error al cargar los talles del producto';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
-      console.error('Load sizes error:', err);
+      console.error('Load sizes error:', error);
 
       try {
         const response = await api.get(`/products/${productId}/sizes`);
@@ -92,16 +99,17 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
             availableSizes.map((size) => ({ size, stock_quantity: 0 }))
           );
         }
-      } catch (fallbackErr) {
-        console.error('Fallback load error:', fallbackErr);
+      } catch (fallbackError) {
+        console.error('Fallback load error:', fallbackError);
         toast.error('Error al cargar los talles del producto');
       }
     } finally {
       setLoading(false);
     }
-  }, [productId, getAvailableSizes]);
+  };
 
-  const updateSizeStock = useCallback((size: string, change: number) => {
+  // React Compiler handles optimization
+  const updateSizeStock = (size: string, change: number) => {
     setSizes((prevSizes) => {
       const existingIndex = prevSizes.findIndex((s) => s.size === size);
 
@@ -119,9 +127,10 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
         return [...prevSizes, { size, stock_quantity: Math.max(0, change) }];
       }
     });
-  }, []);
+  };
 
-  const setSizeStockValue = useCallback((size: string, stock: number) => {
+  // React Compiler handles optimization
+  const setSizeStockValue = (size: string, stock: number) => {
     setSizes((prevSizes) => {
       const existingIndex = prevSizes.findIndex((s) => s.size === size);
 
@@ -136,35 +145,36 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
         return [...prevSizes, { size, stock_quantity: Math.max(0, stock) }];
       }
     });
-  }, []);
+  };
 
-  const getSizeStock = useCallback(
-    (size: string): number => {
-      const sizeData = sizes.find((s) => s.size === size);
-      return sizeData ? sizeData.stock_quantity : 0;
-    },
-    [sizes]
-  );
+  // React Compiler handles optimization
+  const getSizeStock = (size: string): number => {
+    const sizeData = sizes.find((s) => s.size === size);
+    return sizeData ? sizeData.stock_quantity : 0;
+  };
 
-  const bulkAdjustStock = useCallback((adjustment: number) => {
+  // React Compiler handles optimization
+  const bulkAdjustStock = (adjustment: number) => {
     setSizes((prevSizes) =>
       prevSizes.map((size) => ({
         ...size,
         stock_quantity: Math.max(0, size.stock_quantity + adjustment),
       }))
     );
-  }, []);
+  };
 
-  const resetAllStock = useCallback(() => {
+  // React Compiler handles optimization
+  const resetAllStock = () => {
     setSizes((prevSizes) =>
       prevSizes.map((size) => ({
         ...size,
         stock_quantity: 0,
       }))
     );
-  }, []);
+  };
 
-  const saveSizes = useCallback(async () => {
+  // React Compiler handles optimization
+  const saveSizes = async () => {
     if (!productId) return false;
 
     setSaving(true);
@@ -177,25 +187,31 @@ export function useSizeStock(productId: number | null, categoryName?: string) {
 
       toast.success('Stock de talles actualizado correctamente');
       return true;
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail ||
-        err.message ||
-        'Error al actualizar stock de talles';
+    } catch (error) {
+      let errorMessage = 'Error al actualizar stock de talles';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       setError(errorMessage);
       toast.error(`Error: ${errorMessage}`);
-      console.error('Save sizes error:', err);
+      console.error('Save sizes error:', error);
       return false;
     } finally {
       setSaving(false);
     }
-  }, [productId, sizes]);
+  };
 
-  const reset = useCallback(() => {
+  // React Compiler handles optimization
+  const reset = () => {
     setSizes([]);
     setError(null);
     setAvailableSizesData(null);
-  }, []);
+  };
 
   return {
     sizes,

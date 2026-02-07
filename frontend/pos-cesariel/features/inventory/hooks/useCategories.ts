@@ -1,6 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { api } from '@/lib/api';
 import type { Category } from '../types/inventory.types';
+
+type CreateCategoryData = {
+  name: string;
+  description?: string;
+};
+
+type UpdateCategoryData = Partial<CreateCategoryData>;
 
 /** Hook para gestión de categorías con fallback a datos demo */
 export function useCategories() {
@@ -8,15 +15,22 @@ export function useCategories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadCategories = useCallback(async () => {
+  // React Compiler handles optimization
+  const loadCategories = async () => {
     setLoading(true);
     setError(null);
     try {
       const response = await api.get('/categories/');
       setCategories(response.data);
-    } catch (err: any) {
-      console.error('Error fetching categories:', err);
-      setError(err.message || 'Error al cargar categorías');
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Error al cargar categorías');
+      }
+      
       setCategories([
         {
           id: 1,
@@ -32,33 +46,49 @@ export function useCategories() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const createCategory = useCallback(async (categoryData: any) => {
+  // React Compiler handles optimization
+  const createCategory = async (categoryData: CreateCategoryData) => {
     try {
       await api.post('/categories/', categoryData);
       await loadCategories();
       alert('Categoría creada exitosamente');
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || err.message || 'Error de conexión';
+    } catch (error) {
+      let errorMessage = 'Error de conexión';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       alert(`Error: ${errorMessage}`);
-      throw err;
+      throw error;
     }
-  }, [loadCategories]);
+  };
 
-  const updateCategory = useCallback(async (id: number, categoryData: any) => {
+  // React Compiler handles optimization
+  const updateCategory = async (id: number, categoryData: UpdateCategoryData) => {
     try {
       await api.put(`/categories/${id}`, categoryData);
       await loadCategories();
       alert('Categoría actualizada exitosamente');
-    } catch (err: any) {
-      const errorMessage =
-        err.response?.data?.detail || err.message || 'Error de conexión';
+    } catch (error) {
+      let errorMessage = 'Error de conexión';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } }; message?: string };
+        errorMessage = axiosError.response?.data?.detail || axiosError.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       alert(`Error: ${errorMessage}`);
-      throw err;
+      throw error;
     }
-  }, [loadCategories]);
+  };
 
   return {
     categories,

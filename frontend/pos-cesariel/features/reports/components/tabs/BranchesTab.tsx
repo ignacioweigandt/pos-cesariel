@@ -12,7 +12,7 @@ import { MetricCard } from "../cards/MetricCard";
 import { LoadingSkeleton, EmptyState } from "../shared";
 import { BranchSalesChart } from "../Charts/BranchSalesChart";
 import { useBranchesChart, useSalesReport } from "../../hooks";
-import { BranchesComparisonTable, BranchComparison } from "../tables/BranchesComparisonTable";
+import { BranchesComparisonTable, BranchComparison } from "../Tables/BranchesComparisonTable";
 
 interface BranchesTabProps {
   startDate: string;

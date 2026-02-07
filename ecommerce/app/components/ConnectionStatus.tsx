@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Wifi, WifiOff } from "lucide-react"
 import { testConnection } from '../lib/data-service'
@@ -13,7 +13,8 @@ export default function ConnectionStatus({ onConnectionChange }: ConnectionStatu
   const [connectionStatus, setConnectionStatus] = useState<boolean | null>(null)
   const [isChecking, setIsChecking] = useState(false)
 
-  const checkConnection = useCallback(async () => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const checkConnection = async () => {
     setIsChecking(true)
     try {
       const isConnected = await testConnection()
@@ -25,7 +26,7 @@ export default function ConnectionStatus({ onConnectionChange }: ConnectionStatu
     } finally {
       setIsChecking(false)
     }
-  }, [onConnectionChange])
+  }
 
   useEffect(() => {
     checkConnection()
@@ -34,7 +35,8 @@ export default function ConnectionStatus({ onConnectionChange }: ConnectionStatu
     const interval = setInterval(checkConnection, 30000)
 
     return () => clearInterval(interval)
-  }, [checkConnection])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onConnectionChange])
 
   if (connectionStatus === null && !isChecking) {
     return null

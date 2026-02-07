@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { getProducts, getProductById, searchProducts, getCategories } from '../lib/data-service'
 import type { Product, Category } from '../lib/api-types'
 
@@ -29,7 +29,8 @@ export function useProducts(options: UseProductsOptions = {}): UseProductsResult
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
 
-  const loadProducts = useCallback(async (reset = true) => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const loadProducts = async (reset = true) => {
     try {
       if (reset) {
         setLoading(true)
@@ -68,11 +69,12 @@ export function useProducts(options: UseProductsOptions = {}): UseProductsResult
     } finally {
       setLoading(false)
     }
-  }, [options.search, options.category, options.brand, options.minPrice, options.maxPrice, options.inStock, options.featured])
+  }
 
   useEffect(() => {
     loadProducts(true)
-  }, [loadProducts])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.search, options.category, options.brand, options.minPrice, options.maxPrice, options.inStock, options.featured])
 
   return {
     products,
@@ -96,7 +98,8 @@ export function useProduct(id: string): UseProductResult {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadProduct = useCallback(async () => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const loadProduct = async () => {
     try {
       setLoading(true)
       setError(null)
@@ -110,13 +113,14 @@ export function useProduct(id: string): UseProductResult {
     } finally {
       setLoading(false)
     }
-  }, [id])
+  }
 
   useEffect(() => {
     if (id) {
       loadProduct()
     }
-  }, [loadProduct, id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   return {
     product,
@@ -139,7 +143,8 @@ export function useSearch(): UseSearchResult {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const search = useCallback(async (query: string) => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const search = async (query: string) => {
     if (!query.trim()) {
       setResults([])
       return
@@ -158,12 +163,12 @@ export function useSearch(): UseSearchResult {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
-  const clear = useCallback(() => {
+  const clear = () => {
     setResults([])
     setError(null)
-  }, [])
+  }
 
   return {
     results,
@@ -186,7 +191,8 @@ export function useCategories(): UseCategoriesResult {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadCategories = useCallback(async () => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const loadCategories = async () => {
     try {
       setLoading(true)
       setError(null)
@@ -200,11 +206,12 @@ export function useCategories(): UseCategoriesResult {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
   useEffect(() => {
     loadCategories()
-  }, [loadCategories])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
     categories,

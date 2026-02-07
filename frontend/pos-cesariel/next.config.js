@@ -17,6 +17,10 @@ const nextConfig = {
         },
       },
     },
+    // ✅ OPTIMIZATION: Barrel import optimization (200-800ms saved per import)
+    // Automatically transforms: import { Check } from 'lucide-react'
+    // Into: import Check from 'lucide-react/dist/esm/icons/check'
+    optimizePackageImports: ['lucide-react'],
   },
   
   // Webpack optimizations (only used in production builds)

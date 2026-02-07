@@ -142,9 +142,40 @@ export interface PaginatedResponse<T> {
   per_page: number;
 }
 
-export const handleApiError = (error: any) => {
-  if (error.response) {
-    const { status, data } = error.response;
+// React 19: Type-safe error handling structures
+interface ValidationError {
+  msg?: string;
+  loc?: string | string[];
+  type?: string;
+}
+
+interface ApiErrorResponse {
+  response?: {
+    status: number;
+    data?: {
+      detail?: string | ValidationError[];
+      message?: string;
+      errors?: string[];
+    };
+  };
+  request?: unknown;
+  message?: string;
+}
+
+export const handleApiError = (error: unknown) => {
+  // React 19: Type guard for axios error
+  if (typeof error !== 'object' || error === null) {
+    return {
+      status: -1,
+      message: 'Error desconocido',
+      errors: []
+    };
+  }
+
+  const apiError = error as ApiErrorResponse;
+
+  if (apiError.response) {
+    const { status, data } = apiError.response;
     
     let message = 'Error del servidor';
     let errors: string[] = [];
@@ -156,7 +187,7 @@ export const handleApiError = (error: any) => {
         message = data.detail;
       } else if (Array.isArray(data.detail)) {
         message = 'Error de validación';
-        errors = data.detail.map((err: any) => {
+        errors = data.detail.map((err: ValidationError) => {
           if (typeof err === 'string') return err;
           if (err.msg && err.loc) {
             const location = Array.isArray(err.loc) ? err.loc.join('.') : err.loc;
@@ -176,7 +207,7 @@ export const handleApiError = (error: any) => {
       message,
       errors
     };
-  } else if (error.request) {
+  } else if (apiError.request) {
     return {
       status: 0,
       message: 'Error de conexión. Verifica que el servidor esté funcionando.',
@@ -185,7 +216,7 @@ export const handleApiError = (error: any) => {
   } else {
     return {
       status: -1,
-      message: error.message || 'Error desconocido',
+      message: apiError.message || 'Error desconocido',
       errors: []
     };
   }

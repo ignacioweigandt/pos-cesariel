@@ -1,15 +1,28 @@
 /** Hook para CRUD de usuarios con soft delete y reset de contraseña */
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { usersApi } from "@/lib/api";
 import { User } from "../types/users.types";
 import toast from "react-hot-toast";
+
+// Type-safe user data based on backend schema
+type CreateUserData = {
+  username: string;
+  email: string;
+  password: string;
+  role: 'ADMIN' | 'MANAGER' | 'SELLER' | 'ECOMMERCE';
+  branch_id: number | null;
+  is_active?: boolean;
+};
+
+type UpdateUserData = Partial<Omit<CreateUserData, 'password'>>;
 
 export function useUsers() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const loadUsers = useCallback(async () => {
+  // React Compiler handles optimization
+  const loadUsers = async () => {
     try {
       const response = await usersApi.getUsers();
       setUsers(response.data);
@@ -17,39 +30,52 @@ export function useUsers() {
       console.error("Error fetching users:", error);
       toast.error("Error al cargar usuarios");
     }
-  }, []);
+  };
 
-  const createUser = useCallback(async (userData: any) => {
+  // React Compiler handles optimization
+  const createUser = async (userData: CreateUserData) => {
     try {
       await usersApi.createUser(userData);
       toast.success("Usuario creado exitosamente");
       await loadUsers();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error creating user:", error);
-      const errorMessage =
-        error.response?.data?.detail || "Error al crear usuario";
+      
+      let errorMessage = "Error al crear usuario";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
       return false;
     }
-  }, [loadUsers]);
+  };
 
-  const updateUser = useCallback(async (id: number, userData: any) => {
+  // React Compiler handles optimization
+  const updateUser = async (id: number, userData: UpdateUserData) => {
     try {
       await usersApi.updateUser(id, userData);
       toast.success("Usuario actualizado exitosamente");
       await loadUsers();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating user:", error);
-      const errorMessage =
-        error.response?.data?.detail || "Error al actualizar usuario";
+      
+      let errorMessage = "Error al actualizar usuario";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
       return false;
     }
-  }, [loadUsers]);
+  };
 
-  const deleteUser = useCallback(async (id: number) => {
+  // React Compiler handles optimization
+  const deleteUser = async (id: number) => {
     try {
       const response = await usersApi.deleteUser(id);
 
@@ -61,16 +87,22 @@ export function useUsers() {
 
       await loadUsers();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error deleting user:", error);
-      const errorMessage =
-        error.response?.data?.detail || "Error al eliminar usuario";
+      
+      let errorMessage = "Error al eliminar usuario";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
       return false;
     }
-  }, [loadUsers]);
+  };
 
-  const resetPassword = useCallback(async (id: number) => {
+  // React Compiler handles optimization
+  const resetPassword = async (id: number) => {
     try {
       const response = await usersApi.resetPassword(id);
       const tempPassword = response.data?.temporary_password;
@@ -86,14 +118,19 @@ export function useUsers() {
 
       await loadUsers();
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error resetting password:", error);
-      const errorMessage =
-        error.response?.data?.detail || "Error al restablecer la contraseña";
+      
+      let errorMessage = "Error al restablecer la contraseña";
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      
       toast.error(`Error: ${errorMessage}`);
       return false;
     }
-  }, [loadUsers]);
+  };
 
   return {
     users,

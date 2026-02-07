@@ -1,6 +1,6 @@
 /** Hook para gestión de ventas por WhatsApp con actualización de estado */
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { ecommerceAdvancedApi } from '@/lib/api';
 
 export interface WhatsAppSale {
@@ -30,12 +30,22 @@ export interface WhatsAppSale {
   };
 }
 
+// React 19: Type for API error response
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+}
+
 export function useWhatsAppSales() {
   const [sales, setSales] = useState<WhatsAppSale[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSales = useCallback(async () => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const fetchSales = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -43,27 +53,29 @@ export function useWhatsAppSales() {
       const salesData = response.data || [];
       setSales(salesData);
       return salesData;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error al cargar ventas WhatsApp';
+    } catch (err) {
+      const apiError = err as ApiErrorResponse;
+      const errorMessage = apiError.response?.data?.detail || 'Error al cargar ventas WhatsApp';
       setError(errorMessage);
       console.error('Error loading WhatsApp sales:', err);
       return [];
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const updateSaleStatus = useCallback(async (saleId: number, status: string) => {
+  const updateSaleStatus = async (saleId: number, status: string) => {
     try {
       await ecommerceAdvancedApi.updateSaleStatus(saleId, status);
       await fetchSales();
       return true;
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.detail || 'Error actualizando estado';
+    } catch (err) {
+      const apiError = err as ApiErrorResponse;
+      const errorMessage = apiError.response?.data?.detail || 'Error actualizando estado';
       console.error('Error updating status:', errorMessage);
       throw err;
     }
-  }, [fetchSales]);
+  };
 
   return {
     sales,

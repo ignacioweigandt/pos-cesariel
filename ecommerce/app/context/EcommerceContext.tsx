@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, type ReactNode } from "react"
 import { salesApi, handleApiError } from "../lib/api"
 // import { validateStock } from "../lib/data-service" // Removed - not needed for e-commerce
 
@@ -88,7 +88,8 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  const addItem = useCallback(async (newItem: CartItem): Promise<boolean> => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const addItem = async (newItem: CartItem): Promise<boolean> => {
     try {
       setError(null)
       
@@ -125,9 +126,10 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
       setError('Error al agregar producto al carrito')
       return false
     }
-  }, [])
+  }
 
-  const removeItem = useCallback((id: string, size?: string, color?: string) => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const removeItem = (id: string, size?: string, color?: string) => {
     setCartState(prev => {
       const newItems = prev.items.filter(item => 
         !(item.id === id && item.size === size && item.color === color)
@@ -139,9 +141,10 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
         total: calculateTotal(newItems)
       }
     })
-  }, [])
+  }
 
-  const updateQuantity = useCallback(async (id: string, quantity: number, size?: string, color?: string): Promise<boolean> => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const updateQuantity = async (id: string, quantity: number, size?: string, color?: string): Promise<boolean> => {
     try {
       setError(null)
       
@@ -177,22 +180,24 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
       setError('Error al actualizar cantidad')
       return false
     }
-  }, [cartState.items, removeItem])
+  }
 
-  const clearCart = useCallback(() => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const clearCart = () => {
     setCartState(initialState)
     setError(null)
-  }, [])
+  }
 
-  const setCustomerInfo = useCallback((info: CustomerInfo) => {
+  const setCustomerInfo = (info: CustomerInfo) => {
     setCartState(prev => ({ ...prev, customerInfo: info }))
-  }, [])
+  }
 
-  const setDeliveryMethod = useCallback((method: 'pickup' | 'delivery') => {
+  const setDeliveryMethod = (method: 'pickup' | 'delivery') => {
     setCartState(prev => ({ ...prev, deliveryMethod: method }))
-  }, [])
+  }
 
-  const processCheckout = useCallback(async (): Promise<{ success: boolean; saleId?: number; error?: string }> => {
+  // React 19: No useCallback needed - React Compiler optimizes automatically
+  const processCheckout = async (): Promise<{ success: boolean; saleId?: number; error?: string }> => {
     try {
       setLoading(true)
       setError(null)
@@ -277,15 +282,17 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
 
     } catch (err) {
       console.error('Error processing checkout:', err)
+      // React 19: Type-safe error handling
       if (err && typeof err === 'object') {
-        const error = err as any
-        if ('response' in error) {
-          console.error('Error response:', error.response)
-          console.error('Error status:', error.response?.status)
-          console.error('Error data:', error.response?.data)
+        if ('response' in err) {
+          const axiosError = err as { response?: { status?: number; data?: unknown } }
+          console.error('Error response:', axiosError.response)
+          console.error('Error status:', axiosError.response?.status)
+          console.error('Error data:', axiosError.response?.data)
         }
-        if ('message' in error) {
-          console.error('Error message:', error.message)
+        if ('message' in err) {
+          const errorWithMessage = err as { message?: string }
+          console.error('Error message:', errorWithMessage.message)
         }
       }
       const errorInfo = handleApiError(err)
@@ -303,7 +310,7 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [cartState, clearCart])
+  }
 
   const contextValue: EcommerceContextValue = {
     cartState,
@@ -333,13 +340,20 @@ export function useEcommerce() {
   return context
 }
 
+// React 19: Type-safe action types
+type CartAction =
+  | { type: 'ADD_ITEM'; payload: CartItem }
+  | { type: 'REMOVE_ITEM'; payload: string }
+  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
+  | { type: 'CLEAR_CART' }
+
 // Legacy compatibility with existing CartContext
 export function useCart() {
   const { cartState, addItem, removeItem, updateQuantity, clearCart } = useEcommerce()
   
   return {
     state: cartState,
-    dispatch: (action: any) => {
+    dispatch: (action: CartAction) => {
       switch (action.type) {
         case 'ADD_ITEM':
           addItem(action.payload)

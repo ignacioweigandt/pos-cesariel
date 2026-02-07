@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const PRODUCTION_BACKEND_URL = 'https://backend-production-c20a.up.railway.app';
 
 // Debug mode: only log in production or when explicitly enabled
 const DEBUG = process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_WS_DEBUG === 'true';
-const log = (...args: any[]) => DEBUG && console.log(...args);
-const warn = (...args: any[]) => DEBUG && console.warn(...args);
-const error = (...args: any[]) => console.error(...args); // Always log errors
+const log = (...args: unknown[]) => DEBUG && console.log(...args);
+const warn = (...args: unknown[]) => DEBUG && console.warn(...args);
+const error = (...args: unknown[]) => console.error(...args); // Always log errors
 
 /**
  * Determina URL base de WebSocket (usa misma lógica que API client).
@@ -28,12 +28,91 @@ function getWebSocketBaseUrl(): string {
   return 'ws://localhost:8000';
 }
 
-export interface WebSocketMessage {
+// Base message type
+type BaseWebSocketMessage = {
   type: string;
   message?: string;
   timestamp?: string;
-  [key: string]: any;
-}
+};
+
+// Specific message types with proper typing
+type InventoryChangeMessage = BaseWebSocketMessage & {
+  type: 'inventory_change';
+  productId: number;
+  newStock: number;
+  branchId: number;
+};
+
+type NewSaleMessage = BaseWebSocketMessage & {
+  type: 'new_sale';
+  saleId: number;
+  total: number;
+  branchId: number;
+};
+
+type LowStockMessage = BaseWebSocketMessage & {
+  type: 'low_stock_alert';
+  productId: number;
+  productName: string;
+  currentStock: number;
+  minStock: number;
+};
+
+type ProductUpdateMessage = BaseWebSocketMessage & {
+  type: 'product_update';
+  productId: number;
+  action: 'create' | 'update' | 'delete';
+};
+
+type SaleStatusChangeMessage = BaseWebSocketMessage & {
+  type: 'sale_status_change';
+  saleId: number;
+  status: string;
+};
+
+type DashboardUpdateMessage = BaseWebSocketMessage & {
+  type: 'dashboard_update';
+  data: unknown;
+};
+
+type UserActionMessage = BaseWebSocketMessage & {
+  type: 'user_action';
+  userId: number;
+  action: string;
+};
+
+type SystemMessage = BaseWebSocketMessage & {
+  type: 'system_message';
+  severity: 'info' | 'warning' | 'error';
+};
+
+type ConnectionMessage = BaseWebSocketMessage & {
+  type: 'connection_established' | 'subscription_confirmed';
+  subscription_types?: string[];
+};
+
+type HeartbeatMessage = BaseWebSocketMessage & {
+  type: 'ping' | 'pong' | 'server_heartbeat';
+};
+
+type SubscribeMessage = {
+  type: 'subscribe';
+  subscription_types: string[];
+};
+
+// Discriminated union type for all WebSocket messages
+export type WebSocketMessage =
+  | InventoryChangeMessage
+  | NewSaleMessage
+  | LowStockMessage
+  | ProductUpdateMessage
+  | SaleStatusChangeMessage
+  | DashboardUpdateMessage
+  | UserActionMessage
+  | SystemMessage
+  | ConnectionMessage
+  | HeartbeatMessage
+  | SubscribeMessage;
 
 export interface WebSocketOptions {
   reconnectInterval?: number;
@@ -81,7 +160,8 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
     urlRef.current = url;
   }, [url]);
 
-  const connect = useCallback(() => {
+  // React Compiler optimizes this automatically - no useCallback needed
+  const connect = () => {
     if (isConnecting.current) {
       log('WebSocket: Already connecting, skipping');
       return;
@@ -184,9 +264,10 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       error('Error connecting to WebSocket:', err);
       isConnecting.current = false;
     }
-  }, [maxReconnectAttempts, reconnectInterval]);
+  };
 
-  const disconnect = useCallback(() => {
+  // React Compiler optimizes this automatically
+  const disconnect = () => {
     shouldReconnect.current = false;
     isConnecting.current = false;
     if (reconnectTimer.current) {
@@ -197,21 +278,23 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
       ws.current.close();
       ws.current = null;
     }
-  }, []);
+  };
 
-  const sendMessage = useCallback((message: any) => {
+  // Type-safe sendMessage - React Compiler handles optimization
+  const sendMessage = (message: WebSocketMessage) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(message));
       return true;
     }
     warn('WebSocket is not connected');
     return false;
-  }, []);
+  };
 
-  const clearMessages = useCallback(() => {
+  // React Compiler handles optimization
+  const clearMessages = () => {
     setMessages([]);
     setLastMessage(null);
-  }, []);
+  };
 
   useEffect(() => {
     if (!url) return;
@@ -253,7 +336,7 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
   const branchIdRef = useRef(branchId);
   const tokenRef = useRef(token);
   const enabledRef = useRef(enabled);
-  const sendMessageRef = useRef<((message: any) => boolean) | null>(null);
+  const sendMessageRef = useRef<((message: WebSocketMessage) => boolean) | null>(null);
   const subscriptionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -274,7 +357,8 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     }
   }, [enabled, token, branchId]);
 
-  const handleMessage = useCallback((message: WebSocketMessage) => {
+  // React Compiler optimizes this automatically
+  const handleMessage = (message: WebSocketMessage) => {
     if (message.type === 'pong' || message.type === 'server_heartbeat') {
       return;
     }
@@ -294,9 +378,10 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
       setNotifications(prev => [...prev.slice(-19), message]);
       setUnreadCount(prev => prev + 1);
     }
-  }, []);
+  };
 
-  const handleConnect = useCallback(() => {
+  // React Compiler optimizes this automatically
+  const handleConnect = () => {
     if (enabledRef.current && tokenRef.current) {
       log(`Connected to POS WebSocket for branch ${branchIdRef.current}`);
 
@@ -318,11 +403,12 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
         }
       }, 500);
     }
-  }, []);
+  };
 
-  const handleDisconnect = useCallback(() => {
+  // React Compiler optimizes this automatically
+  const handleDisconnect = () => {
     log(`Disconnected from POS WebSocket for branch ${branchIdRef.current}`);
-  }, []);
+  };
 
   const {
     isConnected,
@@ -343,14 +429,16 @@ export const usePOSWebSocket = (branchId: number, token: string, enabled: boolea
     sendMessageRef.current = sendMessage;
   }, [sendMessage]);
 
-  const markAllAsRead = useCallback(() => {
+  // React Compiler optimizes this automatically
+  const markAllAsRead = () => {
     setUnreadCount(0);
-  }, []);
+  };
 
-  const clearNotifications = useCallback(() => {
+  // React Compiler optimizes this automatically
+  const clearNotifications = () => {
     setNotifications([]);
     setUnreadCount(0);
-  }, []);
+  };
 
   // Ping cada 25s para mantener conexión activa (timeout típico: 30s)
   useEffect(() => {

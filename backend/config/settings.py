@@ -203,13 +203,16 @@ class Settings:
     # - No mezclar "*" con allow_credentials=True (error de CORS)
     #
     # Ver también: main.py → CORSMiddleware para configuración completa
-    cors_origins: List[str] = [
-        "http://localhost:3000",  # POS Frontend administrativo (desarrollo local)
-        "http://frontend:3000",   # POS Frontend administrativo (contenedor Docker)
-        "http://localhost:3001",  # E-commerce frontend (desarrollo local)
-        "http://ecommerce:3001",  # E-commerce frontend (contenedor Docker)
-        "*"  # Wildcard para desarrollo - ELIMINAR EN PRODUCCIÓN
-    ]
+    cors_origins: List[str] = (
+        # Leer de variable de entorno CORS_ORIGINS (separados por comas)
+        os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else [
+            "http://localhost:3000",  # POS Frontend administrativo (desarrollo local)
+            "http://frontend:3000",   # POS Frontend administrativo (contenedor Docker)
+            "http://localhost:3001",  # E-commerce frontend (desarrollo local)
+            "http://ecommerce:3001",  # E-commerce frontend (contenedor Docker)
+            "*"  # Wildcard para desarrollo - ELIMINAR EN PRODUCCIÓN
+        ]
+    )
     
     
     # ===== CONFIGURACIÓN DE AUTENTICACIÓN JWT =====

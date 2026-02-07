@@ -16,22 +16,66 @@ export interface UpdateStatusData {
   new_status: string;
 }
 
+// React 19: Type-safe sale structures
+export interface SaleItem {
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  size?: string;
+}
+
+export interface CreateSaleData {
+  sale_type: 'POS' | 'ECOMMERCE' | 'WHATSAPP';
+  customer_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
+  items: SaleItem[];
+  payment_method: string;
+  notes?: string;
+  delivery_address?: string;
+  branch_id?: number;
+}
+
+export interface Sale {
+  id: number;
+  sale_number: string;
+  sale_type: 'POS' | 'ECOMMERCE' | 'WHATSAPP';
+  total_amount: number;
+  order_status: string;
+  payment_method: string;
+  customer_name?: string;
+  customer_email?: string;
+  customer_phone?: string;
+  notes?: string;
+  created_at: string;
+  branch_id?: number;
+  sale_items?: Array<{
+    id: number;
+    product_id: number;
+    product?: { name: string };
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    size?: string;
+  }>;
+}
+
 export const salesApi = {
   /** Obtener ventas con filtros opcionales */
   getSales: (params?: SalesParams) =>
-    apiClient.get('/sales/', { params }),
+    apiClient.get<Sale[]>('/sales/', { params }),
 
   /** Obtener venta por ID con items */
   getSale: (id: number) =>
-    apiClient.get(`/sales/${id}`),
+    apiClient.get<Sale>(`/sales/${id}`),
 
   /** Crear nueva venta */
-  createSale: (data: any) =>
-    apiClient.post('/sales/', data),
+  createSale: (data: CreateSaleData) =>
+    apiClient.post<Sale>('/sales/', data),
 
   /** Actualizar estado de venta (completed, cancelled, pending) */
   updateSaleStatus: (id: number, status: string) =>
-    apiClient.put(`/sales/${id}/status`, { new_status: status }),
+    apiClient.put<Sale>(`/sales/${id}/status`, { new_status: status }),
 
   /** Cancelar/eliminar venta */
   cancelSale: (id: number) =>

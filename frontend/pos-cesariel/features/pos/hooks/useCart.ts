@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import type { CartItem, Product, ProductSize } from "../types/pos.types";
 
@@ -29,143 +29,136 @@ interface UseCartReturn {
 export function useCart(): UseCartReturn {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
-  const addToCart = useCallback(
-    (product: Product, size?: string, quantity: number = 1) => {
-      if (product.stock_quantity <= 0) {
-        toast.error("Producto sin stock");
+  // React Compiler optimizes this automatically - no useCallback needed
+  const addToCart = (product: Product, size?: string, quantity: number = 1) => {
+    if (product.stock_quantity <= 0) {
+      toast.error("Producto sin stock");
+      return;
+    }
+
+    const existingItem = cartItems.find(
+      (item) =>
+        item.product.id === product.id &&
+        (!size || item.size === size)
+    );
+
+    if (existingItem) {
+      if (existingItem.quantity >= product.stock_quantity) {
+        toast.error("No hay suficiente stock");
         return;
-      }
-
-      const existingItem = cartItems.find(
-        (item) =>
-          item.product.id === product.id &&
-          (!size || item.size === size)
-      );
-
-      if (existingItem) {
-        if (existingItem.quantity >= product.stock_quantity) {
-          toast.error("No hay suficiente stock");
-          return;
-        }
-
-        setCartItems(
-          cartItems.map((item) =>
-            item.product.id === product.id &&
-            (!size || item.size === size)
-              ? { ...item, quantity: item.quantity + quantity }
-              : item
-          )
-        );
-      } else {
-        setCartItems([
-          ...cartItems,
-          {
-            id: Date.now(),
-            product,
-            quantity,
-            price: Number(product.price),
-            size,
-          },
-        ]);
-      }
-
-      const sizeText = size ? ` talle ${size}` : "";
-      toast.success(`${product.name}${sizeText} agregado al carrito`);
-    },
-    [cartItems]
-  );
-
-  const addToCartWithSize = useCallback(
-    (product: Product, size: string, availableSizes: ProductSize[]) => {
-      const existingItem = cartItems.find(
-        (item) => item.product.id === product.id && item.size === size
-      );
-
-      const sizeStock = availableSizes.find((s) => s.size === size);
-      if (!sizeStock) {
-        toast.error(`Talle ${size} no disponible`);
-        return;
-      }
-
-      if (existingItem) {
-        if (existingItem.quantity >= sizeStock.stock_quantity) {
-          toast.error(`No hay suficiente stock para talle ${size}`);
-          return;
-        }
-
-        setCartItems(
-          cartItems.map((item) =>
-            item.product.id === product.id && item.size === size
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          )
-        );
-      } else {
-        setCartItems([
-          ...cartItems,
-          {
-            id: Date.now(),
-            product,
-            quantity: 1,
-            price: Number(product.price),
-            size,
-          },
-        ]);
-      }
-
-      toast.success(`${product.name} talle ${size} agregado al carrito`);
-    },
-    [cartItems]
-  );
-
-  const removeFromCart = useCallback(
-    (cartItemId: number) => {
-      setCartItems(cartItems.filter((item) => item.id !== cartItemId));
-    },
-    [cartItems]
-  );
-
-  const updateQuantity = useCallback(
-    async (
-      cartItemId: number,
-      newQuantity: number,
-      availableSizes?: ProductSize[]
-    ) => {
-      if (newQuantity <= 0) {
-        removeFromCart(cartItemId);
-        return;
-      }
-
-      const cartItem = cartItems.find((item) => item.id === cartItemId);
-      if (!cartItem) return;
-
-      if (cartItem.product.has_sizes && cartItem.size && availableSizes) {
-        const sizeStock = availableSizes.find((s) => s.size === cartItem.size);
-
-        if (!sizeStock || newQuantity > sizeStock.stock_quantity) {
-          toast.error(`No hay suficiente stock para talle ${cartItem.size}`);
-          return;
-        }
-      } else {
-        if (newQuantity > cartItem.product.stock_quantity) {
-          toast.error("No hay suficiente stock");
-          return;
-        }
       }
 
       setCartItems(
         cartItems.map((item) =>
-          item.id === cartItemId ? { ...item, quantity: newQuantity } : item
+          item.product.id === product.id &&
+          (!size || item.size === size)
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
         )
       );
-    },
-    [cartItems, removeFromCart]
-  );
+    } else {
+      setCartItems([
+        ...cartItems,
+        {
+          id: Date.now(),
+          product,
+          quantity,
+          price: Number(product.price),
+          size,
+        },
+      ]);
+    }
 
-  const clearCart = useCallback(() => {
+    const sizeText = size ? ` talle ${size}` : "";
+    toast.success(`${product.name}${sizeText} agregado al carrito`);
+  };
+
+  // React Compiler handles optimization
+  const addToCartWithSize = (product: Product, size: string, availableSizes: ProductSize[]) => {
+    const existingItem = cartItems.find(
+      (item) => item.product.id === product.id && item.size === size
+    );
+
+    const sizeStock = availableSizes.find((s) => s.size === size);
+    if (!sizeStock) {
+      toast.error(`Talle ${size} no disponible`);
+      return;
+    }
+
+    if (existingItem) {
+      if (existingItem.quantity >= sizeStock.stock_quantity) {
+        toast.error(`No hay suficiente stock para talle ${size}`);
+        return;
+      }
+
+      setCartItems(
+        cartItems.map((item) =>
+          item.product.id === product.id && item.size === size
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      );
+    } else {
+      setCartItems([
+        ...cartItems,
+        {
+          id: Date.now(),
+          product,
+          quantity: 1,
+          price: Number(product.price),
+          size,
+        },
+      ]);
+    }
+
+    toast.success(`${product.name} talle ${size} agregado al carrito`);
+  };
+
+  // React Compiler handles optimization
+  const removeFromCart = (cartItemId: number) => {
+    setCartItems(cartItems.filter((item) => item.id !== cartItemId));
+  };
+
+  // React Compiler handles optimization
+  const updateQuantity = async (
+    cartItemId: number,
+    newQuantity: number,
+    availableSizes?: ProductSize[]
+  ) => {
+    if (newQuantity <= 0) {
+      removeFromCart(cartItemId);
+      return;
+    }
+
+    const cartItem = cartItems.find((item) => item.id === cartItemId);
+    if (!cartItem) return;
+
+    if (cartItem.product.has_sizes && cartItem.size && availableSizes) {
+      const sizeStock = availableSizes.find((s) => s.size === cartItem.size);
+
+      if (!sizeStock || newQuantity > sizeStock.stock_quantity) {
+        toast.error(`No hay suficiente stock para talle ${cartItem.size}`);
+        return;
+      }
+    } else {
+      if (newQuantity > cartItem.product.stock_quantity) {
+        toast.error("No hay suficiente stock");
+        return;
+      }
+    }
+
+    setCartItems(
+      cartItems.map((item) =>
+        item.id === cartItemId ? { ...item, quantity: newQuantity } : item
+      )
+    );
+  };
+
+  // React Compiler handles optimization
+  const clearCart = () => {
     setCartItems([]);
     toast.success("Carrito vaciado");
-  }, []);
+  };
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + Number(item.price) * item.quantity,
