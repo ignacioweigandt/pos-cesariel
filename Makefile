@@ -1,10 +1,10 @@
-.PHONY: help dev dev-pos dev-ecommerce down restart clean clean-volumes logs-backend logs-frontend logs-ecommerce logs-db shell-backend shell-frontend shell-ecommerce shell-db build-prod deploy-prod stop-prod restart-prod logs-prod clean-prod backup-db restore-db
+.PHONY: help dev dev-pos dev-ecommerce down restart clean clean-volumes logs-backend logs-frontend logs-ecommerce logs-db shell-backend shell-frontend shell-ecommerce shell-db build-prod deploy-prod stop-prod restart-prod logs-prod clean-prod backup-db restore-db prod-test prod-stop prod-rebuild prod-logs prod-status down-prod status-prod health-prod
 
 # ==================================
 # VARIABLES
 # ==================================
 DOCKER_COMPOSE_DEV = docker compose -f docker-compose.yml
-DOCKER_COMPOSE_PROD = docker compose -f docker-compose.production.yml
+DOCKER_COMPOSE_PROD = docker compose -f docker-compose.prod.yml
 
 # ==================================
 # AYUDA
@@ -147,6 +147,16 @@ clean-prod: ## Limpiar contenedores de producción (MANTIENE volúmenes)
 		echo "❌ Operación cancelada"; \
 	fi
 
+status-prod: ## Ver estado de contenedores de producción
+	$(DOCKER_COMPOSE_PROD) ps
+
+health-prod: ## Verificar salud de servicios en producción
+	@echo "Verificando servicios de producción..."
+	@curl -f http://localhost:8000/ || echo "❌ Backend no responde"
+	@curl -f http://localhost:3000/ || echo "❌ Frontend POS no responde"
+	@curl -f http://localhost:3001/ || echo "❌ E-commerce no responde"
+	@echo "✅ Verificación completa"
+
 # ==================================
 # BASE DE DATOS
 # ==================================
@@ -252,39 +262,53 @@ prune: ## Limpiar recursos Docker no utilizados
 		echo "❌ Operación cancelada"; \
 	fi
 
-# ============================================
-# PRODUCCIÓN
-# ============================================
+# ==================================
+# PRODUCCIÓN - TEST DE PERFORMANCE
+# ==================================
+# Usa overlay de configs para pruebas locales de performance
+DOCKER_COMPOSE_PROD_TEST = $(DOCKER_COMPOSE_PROD)
 
-.PHONY: build-prod deploy-prod logs-prod down-prod status-prod
+prod-test: ## Testear performance de producción (build + start)
+	@echo "🚀 Iniciando modo PRODUCCIÓN para test de performance..."
+	@echo ""
+	@echo "⚠️  IMPORTANTE:"
+	@echo "   - Esto construirá builds optimizados (5-10 min)"
+	@echo "   - Sin hot reload (rebuild para ver cambios)"
+	@echo "   - Velocidad REAL que verán los usuarios"
+	@echo ""
+	@read -p "¿Continuar? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	@echo ""
+	@echo "🏗️  Building..."
+	$(DOCKER_COMPOSE_PROD_TEST) build --no-cache
+	@echo ""
+	@echo "🚀 Starting services..."
+	$(DOCKER_COMPOSE_PROD_TEST) up -d
+	@echo ""
+	@echo "✅ PRODUCCIÓN corriendo:"
+	@echo "📍 POS Admin (PROD): http://localhost:3000"
+	@echo "📍 E-commerce (PROD): http://localhost:3001"
+	@echo "📍 Backend API: http://localhost:8000"
+	@echo ""
+	@echo "💡 Navegá entre módulos y medí la velocidad"
+	@echo "🛑 Para detener: make prod-stop"
 
-build-prod: ## Build production images
-	docker compose -f docker-compose.prod.yml build
-	@echo "✅ Production images built successfully"
+prod-stop: ## Detener modo producción y volver a desarrollo
+	@echo "🛑 Deteniendo producción..."
+	$(DOCKER_COMPOSE_PROD_TEST) down
+	@echo ""
+	@echo "🔄 Volviendo a modo desarrollo..."
+	$(DOCKER_COMPOSE_DEV) up -d
+	@echo "✅ De vuelta en desarrollo"
 
-deploy-prod: ## Deploy to production
-	@echo "🚀 Deploying to production..."
-	docker compose -f docker-compose.prod.yml up -d
-	@echo "✅ Production deployment complete"
-	@echo "📍 Frontend: http://localhost:3000"
-	@echo "📍 E-commerce: http://localhost:3001"
-	@echo "📍 API: http://localhost:8000"
+prod-rebuild: ## Reconstruir producción (después de cambios en código)
+	@echo "🔨 Reconstruyendo producción..."
+	$(DOCKER_COMPOSE_PROD_TEST) build --no-cache
+	$(DOCKER_COMPOSE_PROD_TEST) up -d
+	@echo "✅ Rebuild completo"
 
-logs-prod: ## View production logs
-	docker compose -f docker-compose.prod.yml logs -f
+prod-logs: ## Ver logs de producción
+	$(DOCKER_COMPOSE_PROD_TEST) logs -f
 
-down-prod: ## Stop production services
-	docker compose -f docker-compose.prod.yml down
-
-status-prod: ## Check production services status
-	docker compose -f docker-compose.prod.yml ps
-
-restart-prod: ## Restart production services
-	docker compose -f docker-compose.prod.yml restart
-
-health-prod: ## Check health of production services
-	@echo "Checking production services health..."
-	@curl -f http://localhost:8000/ || echo "❌ Backend unhealthy"
-	@curl -f http://localhost:3000/ || echo "❌ Frontend unhealthy"
-	@curl -f http://localhost:3001/ || echo "❌ E-commerce unhealthy"
+prod-status: ## Ver estado de servicios de producción
+	$(DOCKER_COMPOSE_PROD_TEST) ps
 
