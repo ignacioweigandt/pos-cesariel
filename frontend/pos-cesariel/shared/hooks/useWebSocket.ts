@@ -315,7 +315,8 @@ export const useWebSocket = (url: string, options: WebSocketOptions = {}) => {
         ws.current = null;
       }
     };
-  }, [url, connect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url]); // ✅ FIX: Remove `connect` from deps to prevent infinite reconnection loop
 
   return {
     isConnected,
