@@ -1,95 +1,47 @@
 /**
  * Lazy-loaded Chart Components
- * 
- * ✅ OPTIMIZATION: Dynamic import for recharts (~150KB bundle)
- * Charts are only loaded when Reports page is accessed, not on initial bundle.
- * 
+ *
+ * OPTIMIZATION (bundle-dynamic-imports): Dynamic import for complete chart components.
+ * Recharts (~150KB) is only loaded when the Reports page renders a chart,
+ * NOT on the initial bundle.
+ *
+ * IMPORTANT: We wrap the FULL chart component, not individual recharts primitives.
+ * Wrapping primitives (Bar, XAxis, Tooltip) individually breaks recharts because
+ * parent components (BarChart, PieChart) scan children synchronously for specific types.
+ * Suspense boundaries from next/dynamic make children async, which breaks that scanning.
+ *
  * Before: Recharts loads on every page (impacts TTI)
- * After: Recharts loads only when needed (150KB saved from initial bundle)
+ * After: Recharts loads only when a chart component is rendered
  */
 
-import dynamic from 'next/dynamic';
-import { Skeleton } from '@/shared/components/ui/skeleton';
+import dynamic from "next/dynamic";
 
-// Loading fallback for charts
 const ChartLoader = () => (
-  <div className="w-full h-[300px] flex items-center justify-center">
-    <Skeleton className="w-full h-full" />
+  <div className="w-full h-80 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
   </div>
 );
 
-// Dynamically import chart components (no SSR needed for charts)
-export const DynamicBarChart = dynamic(
-  () => import('recharts').then((mod) => mod.BarChart),
+export const LazyDailySalesChart = dynamic(
+  () =>
+    import("./DailySalesChart").then((mod) => mod.DailySalesChart),
   { ssr: false, loading: ChartLoader }
 );
 
-export const DynamicBar = dynamic(
-  () => import('recharts').then((mod) => mod.Bar),
-  { ssr: false }
-);
-
-export const DynamicPieChart = dynamic(
-  () => import('recharts').then((mod) => mod.PieChart),
+export const LazyProductsPieChart = dynamic(
+  () =>
+    import("./ProductsPieChart").then((mod) => mod.ProductsPieChart),
   { ssr: false, loading: ChartLoader }
 );
 
-export const DynamicPie = dynamic(
-  () => import('recharts').then((mod) => mod.Pie),
-  { ssr: false }
-);
-
-export const DynamicLineChart = dynamic(
-  () => import('recharts').then((mod) => mod.LineChart),
+export const LazyBranchSalesChart = dynamic(
+  () =>
+    import("./BranchSalesChart").then((mod) => mod.BranchSalesChart),
   { ssr: false, loading: ChartLoader }
 );
 
-export const DynamicLine = dynamic(
-  () => import('recharts').then((mod) => mod.Line),
-  { ssr: false }
-);
-
-export const DynamicAreaChart = dynamic(
-  () => import('recharts').then((mod) => mod.AreaChart),
+export const LazyBranchesBarChart = dynamic(
+  () =>
+    import("./BranchesBarChart").then((mod) => mod.BranchesBarChart),
   { ssr: false, loading: ChartLoader }
-);
-
-export const DynamicArea = dynamic(
-  () => import('recharts').then((mod) => mod.Area),
-  { ssr: false }
-);
-
-export const DynamicCell = dynamic(
-  () => import('recharts').then((mod) => mod.Cell),
-  { ssr: false }
-);
-
-export const DynamicXAxis = dynamic(
-  () => import('recharts').then((mod) => mod.XAxis),
-  { ssr: false }
-);
-
-export const DynamicYAxis = dynamic(
-  () => import('recharts').then((mod) => mod.YAxis),
-  { ssr: false }
-);
-
-export const DynamicCartesianGrid = dynamic(
-  () => import('recharts').then((mod) => mod.CartesianGrid),
-  { ssr: false }
-);
-
-export const DynamicTooltip = dynamic(
-  () => import('recharts').then((mod) => mod.Tooltip),
-  { ssr: false }
-);
-
-export const DynamicLegend = dynamic(
-  () => import('recharts').then((mod) => mod.Legend),
-  { ssr: false }
-);
-
-export const DynamicResponsiveContainer = dynamic(
-  () => import('recharts').then((mod) => mod.ResponsiveContainer),
-  { ssr: false }
 );

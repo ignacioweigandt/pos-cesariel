@@ -28,62 +28,79 @@ function getWebSocketBaseUrl(): string {
   return 'ws://localhost:8000';
 }
 
-// Base message type
+// Base message type — includes common display fields used by NotificationCenter
 type BaseWebSocketMessage = {
   type: string;
   message?: string;
   timestamp?: string;
+  user_name?: string;
+  branch_id?: number;
+  details?: string;
 };
 
-// Specific message types with proper typing
+// Specific message types matching backend snake_case JSON
 type InventoryChangeMessage = BaseWebSocketMessage & {
   type: 'inventory_change';
-  productId: number;
-  newStock: number;
-  branchId: number;
+  product_id: number;
+  old_stock: number;
+  new_stock: number;
+  branch_id: number;
+  user_name: string;
 };
 
 type NewSaleMessage = BaseWebSocketMessage & {
   type: 'new_sale';
-  saleId: number;
-  total: number;
-  branchId: number;
+  sale_id: number;
+  total_amount: number;
+  branch_id: number;
+  user_name: string;
 };
 
 type LowStockMessage = BaseWebSocketMessage & {
   type: 'low_stock_alert';
-  productId: number;
-  productName: string;
-  currentStock: number;
-  minStock: number;
+  product_id: number;
+  product_name: string;
+  current_stock: number;
+  min_stock: number;
+  branch_id: number;
 };
 
 type ProductUpdateMessage = BaseWebSocketMessage & {
   type: 'product_update';
-  productId: number;
-  action: 'create' | 'update' | 'delete';
+  product_id: number;
+  product_name: string;
+  action: 'created' | 'updated' | 'deleted';
+  user_name: string;
+  branch_id: number;
 };
 
 type SaleStatusChangeMessage = BaseWebSocketMessage & {
   type: 'sale_status_change';
-  saleId: number;
-  status: string;
+  sale_id: number;
+  sale_number: string;
+  old_status: string;
+  new_status: string;
+  branch_id: number;
 };
 
 type DashboardUpdateMessage = BaseWebSocketMessage & {
   type: 'dashboard_update';
+  update_type: string;
+  branch_id: number;
   data: unknown;
 };
 
 type UserActionMessage = BaseWebSocketMessage & {
   type: 'user_action';
-  userId: number;
   action: string;
+  user_name: string;
+  branch_id: number;
+  details: string;
 };
 
 type SystemMessage = BaseWebSocketMessage & {
   type: 'system_message';
-  severity: 'info' | 'warning' | 'error';
+  message_type: 'info' | 'warning' | 'error' | 'success';
 };
 
 type ConnectionMessage = BaseWebSocketMessage & {

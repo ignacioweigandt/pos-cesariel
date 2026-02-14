@@ -10,7 +10,7 @@
 import { BuildingStorefrontIcon, TrophyIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 import { MetricCard } from "../cards/MetricCard";
 import { LoadingSkeleton, EmptyState } from "../shared";
-import { BranchSalesChart } from "../Charts/BranchSalesChart";
+import { LazyBranchSalesChart as BranchSalesChart } from "../Charts/LazyCharts";
 import { useBranchesChart, useSalesReport } from "../../hooks";
 import { BranchesComparisonTable, BranchComparison } from "../Tables/BranchesComparisonTable";
 

@@ -12,6 +12,7 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { salesApi, ecommerceAdvancedApi } from '@/lib/api';
+import { formatDateOnly, formatTimeOnly } from '@/shared/utils/format/date';
 
 interface SaleAlert {
   id: number;
@@ -323,7 +324,7 @@ export default function SalesAlertsPanel({ refreshTrigger = 0 }: SalesAlertsPane
                         <span>Cliente: {alert.customer_name}</span>
                         <span>Total: ${alert.total_amount.toLocaleString()}</span>
                         <span>#{alert.sale_number}</span>
-                        <span>{new Date(alert.created_at).toLocaleDateString()} {new Date(alert.created_at).toLocaleTimeString()}</span>
+                        <span>{formatDateOnly(alert.created_at)} {formatTimeOnly(alert.created_at)}</span>
                       </div>
                     </div>
                   </div>
@@ -426,7 +427,7 @@ export default function SalesAlertsPanel({ refreshTrigger = 0 }: SalesAlertsPane
                   Fecha y Hora
                 </label>
                 <p className="text-sm text-gray-900">
-                  {new Date(selectedAlert.created_at).toLocaleDateString()} a las {new Date(selectedAlert.created_at).toLocaleTimeString()}
+                  {formatDateOnly(selectedAlert.created_at)} a las {formatTimeOnly(selectedAlert.created_at)}
                 </p>
               </div>
             </div>

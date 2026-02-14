@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Star, ChevronLeft, ChevronRight } from "lucide-react"
 import type { Product } from "../lib/types"
 import { productsApi } from "../lib/api"
+import { getImageUrl, getProductImage } from "../lib/image-utils"
 import { Button } from "@/components/ui/button"
 
 interface ProductImage {
@@ -100,11 +101,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           ) : (
             <>
               <Image
-                src={currentImage?.image_url || "/placeholder.svg"}
+                src={getImageUrl(currentImage?.image_url, getProductImage(product))}
                 alt={currentImage?.alt_text || product.name}
                 width={300}
                 height={300}
                 className="w-full h-48 object-contain p-2"
+                unoptimized={currentImage?.image_url ? !currentImage.image_url.includes('cloudinary') : true}
               />
               
               {/* Botones de navegación - aparecen en hover y solo si hay más de 1 imagen */}

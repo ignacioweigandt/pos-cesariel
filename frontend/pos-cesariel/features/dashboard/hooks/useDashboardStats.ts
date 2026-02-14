@@ -1,14 +1,14 @@
 /** 
- * Hook para stats de dashboard con SWR 
+ * Hook para stats de dashboard con React Query
  * 
  * Optimizaciones:
- * - Cache con SWR (evita requests duplicadas)
+ * - Cache con React Query (evita requests duplicadas)
  * - Revalidación automática cada 30s
  * - Fallback a datos por defecto en caso de error
  * - Prefetch en hover de links
  */
 
-import useSWR from "swr";
+import { useQuery } from "@tanstack/react-query";
 import { salesApi } from "@/lib/api";
 import type { DashboardStats } from "../types/dashboard.types";
 
@@ -21,33 +21,29 @@ const FALLBACK_STATS: DashboardStats = {
   total_users: 1,
 };
 
-const fetcher = async () => {
-  try {
-    const response = await salesApi.getDashboardStats();
-    return response.data;
-  } catch (err) {
-    console.error("Error fetching dashboard stats:", err);
-    return FALLBACK_STATS;
-  }
-};
-
 export function useDashboardStats() {
-  const { data, error, isLoading, mutate } = useSWR<DashboardStats>(
-    "/sales/reports/dashboard",
-    fetcher,
-    {
-      refreshInterval: 30000, // Auto-refresh cada 30s
-      revalidateOnFocus: true, // Revalidar al enfocar ventana
-      revalidateOnReconnect: true, // Revalidar al reconectar
-      dedupingInterval: 5000, // Evitar requests duplicadas en 5s
-      fallbackData: FALLBACK_STATS, // Datos por defecto mientras carga
-    }
-  );
+  const { data, error, isLoading, refetch } = useQuery<DashboardStats>({
+    queryKey: ["/sales/reports/dashboard"],
+    queryFn: async () => {
+      try {
+        const response = await salesApi.getDashboardStats();
+        return response.data;
+      } catch (err) {
+        console.error("Error fetching dashboard stats:", err);
+        return FALLBACK_STATS;
+      }
+    },
+    refetchInterval: 30000, // Auto-refresh cada 30s
+    refetchOnWindowFocus: true, // Revalidar al enfocar ventana
+    refetchOnReconnect: true, // Revalidar al reconectar
+    staleTime: 5000, // Considerar datos frescos por 5s
+    placeholderData: FALLBACK_STATS, // Datos por defecto mientras carga
+  });
 
   return {
     stats: data || FALLBACK_STATS,
     loading: isLoading,
     error: error ? "Error al cargar las estadísticas" : null,
-    refresh: mutate, // Forzar re-fetch manual
+    refresh: refetch, // Forzar re-fetch manual
   };
 }

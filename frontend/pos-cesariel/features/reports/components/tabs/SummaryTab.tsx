@@ -16,9 +16,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { MetricCard } from "../cards/MetricCard";
 import { LoadingSkeleton, EmptyState } from "../shared";
-import { DailySalesChart } from "../Charts/DailySalesChart";
-import { ProductsPieChart } from "../Charts/ProductsPieChart";
-import { BranchSalesChart } from "../Charts/BranchSalesChart";
+import { LazyDailySalesChart as DailySalesChart } from "../Charts/LazyCharts";
+import { LazyProductsPieChart as ProductsPieChart } from "../Charts/LazyCharts";
+import { LazyBranchSalesChart as BranchSalesChart } from "../Charts/LazyCharts";
 import {
   useDashboardStats,
   useSalesReport,

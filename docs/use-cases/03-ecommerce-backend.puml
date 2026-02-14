@@ -1,0 +1,69 @@
+@startuml Casos de Uso - E-commerce Backend
+!theme plain
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+title Módulo E-commerce - Administración
+
+' Actores
+actor "Gerente" as Manager
+actor "Administrador" as Admin
+
+' Sistema
+rectangle "Sistema E-commerce Backend" {
+  
+  package "Configuración" {
+    usecase "Configurar Tienda" as UC1
+    usecase "Gestionar Banners" as UC2
+    usecase "Configurar WhatsApp" as UC3
+  }
+  
+  package "Catálogo Online" {
+    usecase "Gestionar Imágenes\nde Productos" as UC4
+    usecase "Controlar Visibilidad\nen Tienda" as UC5
+  }
+  
+  package "Órdenes" {
+    usecase "Ver Órdenes Online" as UC6
+    usecase "Cambiar Estado\nde Orden" as UC7
+    usecase "Confirmar/Completar\nÓrdenes" as UC8
+  }
+}
+
+' Relaciones
+Manager --> UC1
+Manager --> UC2
+Manager --> UC3
+Manager --> UC4
+Manager --> UC5
+Manager --> UC6
+Manager --> UC7
+Manager --> UC8
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC7
+Admin --> UC8
+
+' Notas
+note right of UC1
+  **Configuración:**
+  - Colores y textos
+  - Logo y banners
+  - Métodos de pago
+  - Redes sociales
+end note
+
+note bottom of UC7
+  **Gestión de Estados:**
+  PENDING → CONFIRMED
+  → COMPLETED / CANCELLED
+  
+  Con notificaciones automáticas
+end note
+
+@enduml

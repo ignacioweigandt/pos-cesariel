@@ -29,7 +29,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
 import { branchesApi } from "@/features/users/api/branchesApi";
 import { useAuth } from "@/shared/hooks/useAuth";
-import { useReportFilters } from "../hooks";
+import { useReportFilters, useTabExport } from "../hooks";
 import { DateRangeFilter } from "./Filters/DateRangeFilter";
 import { BranchSelector, ExportButton, LoadingSkeleton } from "./shared";
 import type { Branch, ReportTab } from "../types/reports.types";
@@ -80,11 +80,21 @@ export function AdvancedReportsContainer() {
     autoApply: true,
   });
 
-  // Export handler (placeholder - will be implemented per tab)
-  const handleExport = () => {
-    console.log("Export for tab:", activeTab);
-    // TODO: Implement per-tab export logic
-  };
+  // Check if user is admin (role can be 'admin' or 'ADMIN')
+  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
+
+  // Get selected branch name
+  const selectedBranchName = branches.find(b => b.id === filters.selectedBranch)?.name;
+
+  // Export handler using the new hook
+  const { handleExport, exporting } = useTabExport({
+    activeTab,
+    startDate: filters.startDate,
+    endDate: filters.endDate,
+    branchId: filters.selectedBranch,
+    branchName: selectedBranchName,
+    isAdmin,
+  });
 
   // Loading state
   if (!mounted) {
@@ -94,9 +104,6 @@ export function AdvancedReportsContainer() {
       </div>
     );
   }
-
-  // Check if user is admin (role can be 'admin' or 'ADMIN')
-  const isAdmin = user?.role?.toUpperCase() === "ADMIN";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -132,6 +139,7 @@ export function AdvancedReportsContainer() {
               <ExportButton
                 onClick={handleExport}
                 disabled={!filters.isValid}
+                loading={exporting}
               />
             </div>
           </div>

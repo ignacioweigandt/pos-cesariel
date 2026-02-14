@@ -20,20 +20,19 @@ import {
   ChartPieIcon,
   ChartBarIcon as ChartBarIconOutline,
 } from "@heroicons/react/24/outline";
-// ✅ OPTIMIZATION: Dynamic imports for recharts
 import {
-  DynamicBarChart as BarChart,
-  DynamicBar as Bar,
-  DynamicPieChart as PieChart,
-  DynamicPie as Pie,
-  DynamicCell as Cell,
-  DynamicXAxis as XAxis,
-  DynamicYAxis as YAxis,
-  DynamicCartesianGrid as CartesianGrid,
-  DynamicTooltip as Tooltip,
-  DynamicLegend as Legend,
-  DynamicResponsiveContainer as ResponsiveContainer,
-} from "../Charts/LazyCharts";
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
 import {
   Table,
   TableBody,

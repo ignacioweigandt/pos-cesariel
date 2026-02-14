@@ -40,16 +40,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import get_db
 from app.models import User, UserRole
-import os
+from config.settings import settings
 
 # ===== CONFIGURACIÓN DE SEGURIDAD =====
 
-# Clave secreta para firmar tokens JWT
-# IMPORTANTE: En producción debe ser una clave robusta y secreta
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
-
-# Algoritmo de encriptación para JWT (HS256 es el estándar recomendado)
-ALGORITHM = "HS256"
+# Centralizado en config/settings.py (single source of truth)
+SECRET_KEY = settings.jwt_secret_key
+ALGORITHM = settings.jwt_algorithm
 
 # Tiempo de expiración de tokens de acceso (8 horas = 480 minutos)
 # Balance entre seguridad (tokens cortos) y UX (no re-autenticar constantemente)

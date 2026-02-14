@@ -67,6 +67,8 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 import os
+import json
+import re
 
 # Configuración de base de datos y aplicación
 from database import engine, Base
@@ -119,6 +121,63 @@ else:
 
 
 # ===== MIDDLEWARE PERSONALIZADO =====
+
+class DateTimeMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware que agrega 'Z' a todos los datetime en las respuestas JSON.
+    
+    Solución al problema de timezone:
+        - Backend guarda datetime sin timezone (naive datetime)
+        - JavaScript interpreta datetime sin 'Z' como hora local
+        - Este middleware agrega 'Z' para indicar que es UTC
+        
+    Regex pattern:
+        Busca strings en formato ISO 8601: "2026-02-14T23:17:35.840854"
+        Y agrega 'Z' al final: "2026-02-14T23:17:35.840854Z"
+    """
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        
+        # Solo procesar respuestas JSON
+        if response.headers.get("content-type", "").startswith("application/json"):
+            # Leer el body
+            body = b""
+            async for chunk in response.body_iterator:
+                body += chunk
+            
+            try:
+                # Decodificar JSON
+                body_str = body.decode()
+                
+                # Regex para encontrar datetime ISO 8601 SIN timezone
+                # Formato: "YYYY-MM-DDTHH:MM:SS.ffffff" (sin Z al final)
+                pattern = r'"(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?)"'
+                
+                # Agregar 'Z' a todos los datetime encontrados
+                modified_body = re.sub(pattern, r'"\1Z"', body_str)
+                
+                # Actualizar Content-Length header
+                headers = dict(response.headers)
+                headers['content-length'] = str(len(modified_body.encode()))
+                
+                # Crear nueva respuesta con body modificado
+                return Response(
+                    content=modified_body,
+                    status_code=response.status_code,
+                    headers=headers,
+                    media_type=response.media_type
+                )
+            except:
+                # Si falla, devolver respuesta original
+                return Response(
+                    content=body,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type
+                )
+        
+        return response
+
 
 class OptionsMiddleware(BaseHTTPMiddleware):
     """
@@ -208,13 +267,17 @@ app.add_middleware(SlowAPIMiddleware)
 #
 # Orden actual:
 #   1. SlowAPIMiddleware (rate limiting) - Primero para prevenir abuso
-#   2. OptionsMiddleware (CORS preflight) - Antes de CORS principal
-#   3. CORSMiddleware (CORS completo) - Headers para todos los requests
+#   2. DateTimeMiddleware (timezone fix) - Agregar 'Z' a datetime en JSON
+#   3. OptionsMiddleware (CORS preflight) - Antes de CORS principal
+#   4. CORSMiddleware (CORS completo) - Headers para todos los requests
 
-# 1. Middleware de OPTIONS para CORS preflight
+# 1. Middleware de timezone para datetime
+app.add_middleware(DateTimeMiddleware)
+
+# 2. Middleware de OPTIONS para CORS preflight
 app.add_middleware(OptionsMiddleware)
 
-# 2. Middleware de CORS para comunicación frontend-backend
+# 3. Middleware de CORS para comunicación frontend-backend
 #
 # Configuración multi-frontend:
 #   - POS Admin: localhost:3000 (dev) + frontend:3000 (Docker) + Railway URL

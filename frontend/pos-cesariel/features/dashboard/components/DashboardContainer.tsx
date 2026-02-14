@@ -18,14 +18,9 @@ export function DashboardContainer() {
 
   const { stats, loading, refresh } = useDashboardStats();
 
-  // WebSocket for real-time updates
-  const branchId = user?.branch_id || 1;
-  const shouldConnectWebSocket = true;
-
+  // WebSocket for real-time updates (uses shared context, no duplicate connection)
   useRealTimeUpdates({
-    branchId,
-    token: token || "",
-    enabled: shouldConnectWebSocket,
+    enabled: true,
     onUpdate: refresh,
   });
 

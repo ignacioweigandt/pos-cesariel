@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Product } from '../types/inventory.types';
@@ -31,8 +31,7 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // React Compiler handles optimization - no useCallback needed
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -42,13 +41,13 @@ export function useProducts() {
       setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
-      
+
       if (error instanceof Error) {
         setError(error.message);
       } else {
         setError('Error al cargar productos');
       }
-      
+
       setProducts([
         {
           id: 1,
@@ -67,7 +66,7 @@ export function useProducts() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // React Compiler handles optimization
   const createProduct = async (productData: CreateProductData) => {

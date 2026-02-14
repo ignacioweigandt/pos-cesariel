@@ -29,7 +29,14 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+    // Silenciar errores 404 para endpoints de imágenes (es esperado que algunos productos no tengan)
+    const isImageEndpoint = error.config?.url?.includes('/images');
+    const is404 = error.response?.status === 404;
+    
+    if (!(isImageEndpoint && is404)) {
+      console.error('API Error:', error.response?.data || error.message || 'Unknown error');
+    }
+    
     return Promise.reject(error);
   }
 );

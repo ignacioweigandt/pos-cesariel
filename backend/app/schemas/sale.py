@@ -40,7 +40,7 @@ class SaleBase(BaseModel):
     customer_email: Optional[EmailStr] = None
     customer_phone: Optional[str] = None
     payment_method: Optional[str] = None
-    order_status: OrderStatus = OrderStatus.PENDING
+    order_status: Optional[OrderStatus] = None  # Se setea automáticamente según sale_type
     notes: Optional[str] = None
 
 

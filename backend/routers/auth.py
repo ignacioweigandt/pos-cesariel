@@ -50,7 +50,8 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.username, "role": user.role.value if hasattr(user.role, 'value') else str(user.role)},
+        expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -71,7 +72,8 @@ async def login_json(request: Request, user_login: UserLogin, db: Session = Depe
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": user.username, "role": user.role.value if hasattr(user.role, 'value') else str(user.role)},
+        expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

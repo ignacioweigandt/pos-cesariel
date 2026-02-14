@@ -36,9 +36,9 @@ import { branchesApi } from "@/features/users/api/branchesApi";
 import { StatsCards } from "./Stats/StatsCards";
 import { TotalSalesCard } from "./Stats/TotalSalesCard";
 import { DateRangeFilter } from "./Filters/DateRangeFilter";
-import { DailySalesChart } from "./Charts/DailySalesChart";
-import { ProductsPieChart } from "./Charts/ProductsPieChart";
-import { BranchSalesChart } from "./Charts/BranchSalesChart";
+import { LazyDailySalesChart as DailySalesChart } from "./Charts/LazyCharts";
+import { LazyProductsPieChart as ProductsPieChart } from "./Charts/LazyCharts";
+import { LazyBranchSalesChart as BranchSalesChart } from "./Charts/LazyCharts";
 
 interface Branch {
   id: number;

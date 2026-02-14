@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import NotificationCenter from '@/components/NotificationCenter'
-import { WebSocketMessage } from '@/lib/websocket'
+import { WebSocketMessage } from '@/shared/hooks/useWebSocket'
 
 // Mock the heroicons
 jest.mock('@heroicons/react/24/outline', () => ({

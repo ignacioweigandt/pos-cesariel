@@ -245,6 +245,7 @@ def mock_websocket_manager(mocker):
     mock = mocker.patch("websocket_manager.manager")
     # Make all methods async-compatible
     mock.connect = mocker.AsyncMock()
+    mock.register_connection = mocker.AsyncMock()
     mock.disconnect = mocker.MagicMock()
     mock.send_personal_message = mocker.AsyncMock()
     mock.broadcast_to_branch = mocker.AsyncMock()
@@ -253,7 +254,10 @@ def mock_websocket_manager(mocker):
     mock.get_connection_count = mocker.MagicMock(return_value=0)
     mock.get_branch_connection_count = mocker.MagicMock(return_value=0)
     mock.get_connected_branches = mocker.MagicMock(return_value=[])
-    
+    mock.set_subscriptions = mocker.MagicMock()
+    mock.get_role = mocker.MagicMock(return_value=None)
+    mock.check_rate_limit = mocker.MagicMock(return_value=True)
+
     # Also mock the global notification functions
     mocker.patch("websocket_manager.notify_inventory_change", new_callable=mocker.AsyncMock)
     mocker.patch("websocket_manager.notify_new_sale", new_callable=mocker.AsyncMock)
@@ -262,7 +266,7 @@ def mock_websocket_manager(mocker):
     mocker.patch("websocket_manager.notify_product_update", new_callable=mocker.AsyncMock)
     mocker.patch("websocket_manager.notify_sale_status_change", new_callable=mocker.AsyncMock)
     mocker.patch("websocket_manager.notify_dashboard_update", new_callable=mocker.AsyncMock)
-    
+
     return mock
 
 

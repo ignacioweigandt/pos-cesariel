@@ -1,12 +1,11 @@
-// ✅ OPTIMIZATION: Dynamic imports for recharts
 import {
-  DynamicCell as Cell,
-  DynamicLegend as Legend,
-  DynamicPie as Pie,
-  DynamicPieChart as PieChart,
-  DynamicResponsiveContainer as ResponsiveContainer,
-  DynamicTooltip as Tooltip,
-} from "./LazyCharts";
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 import type { ChartData } from "../../types/reports.types";
 
 interface ProductsPieChartProps {
@@ -30,6 +29,12 @@ const COLORS = [
 
 export function ProductsPieChart({ data, loading, branchName }: ProductsPieChartProps) {
   const title = branchName ? `Productos Más Vendidos - ${branchName}` : 'Productos Más Vendidos';
+
+  // Transform data to ensure values are numbers (backend sends them as strings)
+  const chartData = data.map(item => ({
+    name: item.name,
+    value: typeof item.value === 'string' ? parseFloat(item.value) : item.value
+  }));
 
   if (loading) {
     return (
@@ -56,7 +61,7 @@ export function ProductsPieChart({ data, loading, branchName }: ProductsPieChart
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={data}
+                data={chartData}
                 cx="50%"
                 cy="50%"
                 outerRadius={80}
@@ -64,7 +69,7 @@ export function ProductsPieChart({ data, loading, branchName }: ProductsPieChart
                 dataKey="value"
                 label={({ name, value }) => `${name}: ${value}`}
               >
-                {data.map((entry, index) => (
+                {chartData.map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={COLORS[index % COLORS.length]}

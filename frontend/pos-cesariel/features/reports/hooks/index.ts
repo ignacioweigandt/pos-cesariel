@@ -1,6 +1,7 @@
 export { useReportsData } from "./useReportsData";
 export { useReportExport } from "./useReportExport";
 export { useReportFilters } from "./useReportFilters";
+export { useTabExport } from "./useTabExport";
 export type { QuickFilterPeriod } from "./useReportFilters";
 
 // New React Query hooks

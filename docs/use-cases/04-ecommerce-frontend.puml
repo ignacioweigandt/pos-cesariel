@@ -1,0 +1,76 @@
+@startuml Casos de Uso - E-commerce Frontend
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+title Sistema E-commerce - Tienda Online
+
+' Actores
+actor "Cliente" as Customer
+
+' Sistema
+rectangle "Tienda Online (Cliente)" {
+  
+  package "Navegación" {
+    usecase "Explorar Productos" as UC1
+    usecase "Filtrar por\nCategoría/Marca" as UC2
+    usecase "Buscar Productos" as UC3
+    usecase "Ver Detalle\nde Producto" as UC4
+  }
+  
+  package "Carrito de Compras" {
+    usecase "Agregar al Carrito" as UC5
+    usecase "Gestionar Carrito" as UC6
+    usecase "Seleccionar Talle" as UC7
+  }
+  
+  package "Checkout" {
+    usecase "Realizar Checkout" as UC8
+    usecase "Ingresar Datos\nde Envío" as UC9
+    usecase "Confirmar Compra" as UC10
+  }
+  
+  package "Soporte" {
+    usecase "Contactar por\nWhatsApp" as UC11
+    usecase "Ver Información\nde la Tienda" as UC12
+  }
+}
+
+' Relaciones
+Customer --> UC1
+Customer --> UC2
+Customer --> UC3
+Customer --> UC4
+Customer --> UC5
+Customer --> UC6
+Customer --> UC7
+Customer --> UC8
+Customer --> UC9
+Customer --> UC10
+Customer --> UC11
+Customer --> UC12
+
+' Notas
+note right of UC5
+  **Validación en tiempo real:**
+  - Stock disponible
+  - Stock por talle
+  - Cálculo de totales
+end note
+
+note bottom of UC10
+  **Confirmar Compra:**
+  - Crea orden en backend
+  - Valida stock final
+  - Actualiza inventario
+  - Genera número de orden
+  
+  Estado inicial: PENDING
+end note
+
+note left of UC11
+  **WhatsApp:**
+  Link directo con mensaje
+  predefinido del producto
+end note
+
+@enduml

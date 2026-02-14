@@ -8,6 +8,7 @@ import { useState, useEffect } from "react"
 import { Search, ShoppingCart, Menu, X, ChevronDown } from "lucide-react"
 import { useEcommerce } from "../context/EcommerceContext"
 import { categoriesApi, brandsApi, storeConfigApi } from "../lib/api"
+import { getImageUrl } from "../lib/image-utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -128,11 +129,12 @@ export default function Header() {
               <>
                 {storeConfig?.store_logo ? (
                   <Image
-                    src={storeConfig.store_logo}
+                    src={getImageUrl(storeConfig.store_logo, '/logo-placeholder.png')}
                     alt={storeConfig.store_name}
                     width={40}
                     height={40}
                     className="h-10 w-10 object-contain"
+                    unoptimized={!storeConfig.store_logo.includes('cloudinary')}
                   />
                 ) : null}
                 <span className="text-2xl font-bold text-gray-800">

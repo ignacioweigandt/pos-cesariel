@@ -1,0 +1,57 @@
+@startuml Casos de Uso - Módulo de Ventas POS
+!theme plain
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+title Módulo de Ventas - Sistema POS
+
+' Actores
+actor "Vendedor" as Seller
+actor "Gerente" as Manager
+actor "Administrador" as Admin
+
+' Sistema
+rectangle "Sistema de Ventas POS" {
+  usecase "Registrar Venta" as UC1
+  usecase "Consultar Ventas" as UC2
+  usecase "Generar Reportes" as UC3
+  usecase "Ver Dashboard" as UC4
+  usecase "Cancelar Venta" as UC5
+  usecase "Gestionar Órdenes\nE-commerce" as UC6
+}
+
+' Relaciones
+Seller --> UC1
+Seller --> UC2
+
+Manager --> UC1
+Manager --> UC2
+Manager --> UC3
+Manager --> UC4
+Manager --> UC5
+Manager --> UC6
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+
+' Nota explicativa
+note right of UC1
+  **Tipos de Venta:**
+  - POS (tienda física)
+  - E-commerce (online)
+  - WhatsApp (redes sociales)
+  
+  Valida stock y actualiza
+  inventario automáticamente
+end note
+
+note bottom of UC6
+  **Estados:** PENDING → CONFIRMED
+  → COMPLETED / CANCELLED
+end note
+
+@enduml

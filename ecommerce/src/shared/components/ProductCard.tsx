@@ -49,21 +49,23 @@ export default function ProductCard({ product }: ProductCardProps) {
         }
 
         // Solo si no hay imágenes, intentar cargarlas desde el endpoint específico
-        const response = await productsApi.getImages(Number(product.id))
-        const productImages = response.data.data
+        try {
+          const response = await productsApi.getImages(Number(product.id))
+          const productImages = response.data.data
 
-        if (productImages && productImages.length > 0) {
-          // Ordenar imágenes: imagen principal primero, luego por orden
-          const sortedImages = productImages.sort((a: ProductImage, b: ProductImage) => {
-            if (a.is_main && !b.is_main) return -1
-            if (!a.is_main && b.is_main) return 1
-            return a.order - b.order
-          })
-          setImages(sortedImages)
+          if (productImages && productImages.length > 0) {
+            // Ordenar imágenes: imagen principal primero, luego por orden
+            const sortedImages = productImages.sort((a: ProductImage, b: ProductImage) => {
+              if (a.is_main && !b.is_main) return -1
+              if (!a.is_main && b.is_main) return 1
+              return a.order - b.order
+            })
+            setImages(sortedImages)
+          }
+        } catch (error) {
+          // Silenciar error - es esperado que algunos productos no tengan imágenes adicionales
+          // El componente ya tiene un fallback visual (usa image_url del producto)
         }
-      } catch (error) {
-        // Silenciar error - es esperado que algunos productos no tengan imágenes adicionales
-        // El componente ya tiene un fallback visual
       } finally {
         setIsLoadingImages(false)
       }

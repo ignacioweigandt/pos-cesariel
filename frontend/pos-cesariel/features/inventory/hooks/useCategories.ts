@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { Category } from '../types/inventory.types';
 
@@ -15,8 +15,7 @@ export function useCategories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // React Compiler handles optimization
-  const loadCategories = async () => {
+  const loadCategories = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -24,13 +23,13 @@ export function useCategories() {
       setCategories(response.data);
     } catch (error) {
       console.error('Error fetching categories:', error);
-      
+
       if (error instanceof Error) {
         setError(error.message);
       } else {
         setError('Error al cargar categorías');
       }
-      
+
       setCategories([
         {
           id: 1,
@@ -46,7 +45,7 @@ export function useCategories() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // React Compiler handles optimization
   const createCategory = async (categoryData: CreateCategoryData) => {

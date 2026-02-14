@@ -3,7 +3,7 @@
 import { canAccessModule, useAuth } from "@/lib/auth";
 import { configApi } from "@/lib/api";
 import { apiClient } from "@/shared/api/client";
-import { usePOSWebSocket } from "@/lib/websocket";
+import { useWebSocketContext } from "@/shared/contexts/WebSocketContext";
 import {
   ArrowLeftIcon,
   ShoppingCartIcon,
@@ -68,13 +68,7 @@ export function POSContainer() {
 
   const { processing, processSale: processSaleHook } = useSaleProcessing();
 
-  const branchId = user?.branch_id || 1;
-  const shouldConnectWebSocket = false;
-  const { lastMessage } = usePOSWebSocket(
-    branchId,
-    token || "",
-    shouldConnectWebSocket
-  );
+  const { lastMessage } = useWebSocketContext();
 
   const handleBarcodeDetected = useCallback(
     async (barcode: string) => {

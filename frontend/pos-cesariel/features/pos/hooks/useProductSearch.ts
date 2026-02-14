@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "@/shared/api/client";
 import type { Product } from "../types/pos.types";
 
@@ -24,7 +24,7 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     if (!token) {
       setLoading(false);
       return;
@@ -63,11 +63,11 @@ export function useProductSearch(token: string | null): UseProductSearchReturn {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     fetchProducts();
-  }, [token]);
+  }, [fetchProducts]);
 
   // React Compiler detects pure computation and optimizes automatically
   let filteredProducts = products;

@@ -1,13 +1,12 @@
-// ✅ OPTIMIZATION: Dynamic imports for recharts
 import {
-  DynamicArea as Area,
-  DynamicAreaChart as AreaChart,
-  DynamicCartesianGrid as CartesianGrid,
-  DynamicResponsiveContainer as ResponsiveContainer,
-  DynamicTooltip as Tooltip,
-  DynamicXAxis as XAxis,
-  DynamicYAxis as YAxis,
-} from "./LazyCharts";
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { DailySales } from "../../types/reports.types";
 
 interface DailySalesChartProps {

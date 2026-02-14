@@ -66,7 +66,7 @@ class ReportsRepository:
             end: End datetime
             branch_id: Optional branch filter
             sale_type: Optional sale type filter
-            exclude_cancelled: Whether to exclude cancelled sales
+            exclude_cancelled: Whether to exclude cancelled/pending sales
             
         Returns:
             Total sales amount as Decimal
@@ -77,7 +77,11 @@ class ReportsRepository:
         )
         
         if exclude_cancelled:
-            query = query.filter(Sale.order_status != OrderStatus.CANCELLED)
+            # Excluir ventas canceladas Y pendientes (e-commerce no confirmado)
+            query = query.filter(
+                Sale.order_status != OrderStatus.CANCELLED,
+                Sale.order_status != OrderStatus.PENDING
+            )
         
         if branch_id is not None:
             query = query.filter(Sale.branch_id == branch_id)
@@ -104,7 +108,7 @@ class ReportsRepository:
             end: End datetime
             branch_id: Optional branch filter
             sale_type: Optional sale type filter
-            exclude_cancelled: Whether to exclude cancelled sales
+            exclude_cancelled: Whether to exclude cancelled/pending sales
             
         Returns:
             Number of transactions
@@ -115,7 +119,11 @@ class ReportsRepository:
         )
         
         if exclude_cancelled:
-            query = query.filter(Sale.order_status != OrderStatus.CANCELLED)
+            # Excluir ventas canceladas Y pendientes (e-commerce no confirmado)
+            query = query.filter(
+                Sale.order_status != OrderStatus.CANCELLED,
+                Sale.order_status != OrderStatus.PENDING
+            )
         
         if branch_id is not None:
             query = query.filter(Sale.branch_id == branch_id)
@@ -154,7 +162,10 @@ class ReportsRepository:
         )
         
         if exclude_cancelled:
-            query = query.filter(Sale.order_status != OrderStatus.CANCELLED)
+            query = query.filter(
+                Sale.order_status != OrderStatus.CANCELLED,
+                Sale.order_status != OrderStatus.PENDING
+            )
         
         if branch_id is not None:
             query = query.filter(Sale.branch_id == branch_id)
@@ -195,7 +206,8 @@ class ReportsRepository:
         ).join(SaleItem).join(Sale).filter(
             Sale.created_at >= start,
             Sale.created_at <= end,
-            Sale.order_status != OrderStatus.CANCELLED
+            Sale.order_status != OrderStatus.CANCELLED,
+            Sale.order_status != OrderStatus.PENDING
         )
         
         if branch_id is not None:
@@ -238,7 +250,8 @@ class ReportsRepository:
         ).join(SaleItem).join(Sale).filter(
             Sale.created_at >= start,
             Sale.created_at <= end,
-            Sale.order_status != OrderStatus.CANCELLED
+            Sale.order_status != OrderStatus.CANCELLED,
+            Sale.order_status != OrderStatus.PENDING
         )
         
         if branch_id is not None:
@@ -289,6 +302,7 @@ class ReportsRepository:
             Sale.created_at >= start,
             Sale.created_at <= end,
             Sale.order_status != OrderStatus.CANCELLED,
+            Sale.order_status != OrderStatus.PENDING,
             Product.brand_id.isnot(None)  # Only products with assigned brand
         )
         
@@ -335,7 +349,10 @@ class ReportsRepository:
         )
         
         if exclude_cancelled:
-            query = query.filter(Sale.order_status != OrderStatus.CANCELLED)
+            query = query.filter(
+                Sale.order_status != OrderStatus.CANCELLED,
+                Sale.order_status != OrderStatus.PENDING
+            )
         
         return query.group_by(Branch.name).order_by(
             func.sum(Sale.total_amount).desc()
@@ -369,7 +386,10 @@ class ReportsRepository:
         )
         
         if exclude_cancelled:
-            query = query.filter(Sale.order_status != OrderStatus.CANCELLED)
+            query = query.filter(
+                Sale.order_status != OrderStatus.CANCELLED,
+                Sale.order_status != OrderStatus.PENDING
+            )
         
         return query.group_by(Branch.id, Branch.name).order_by(
             func.sum(Sale.total_amount).desc()
@@ -401,7 +421,8 @@ class ReportsRepository:
         ).filter(
             Sale.created_at >= start,
             Sale.created_at <= end,
-            Sale.order_status != OrderStatus.CANCELLED
+            Sale.order_status != OrderStatus.CANCELLED,
+            Sale.order_status != OrderStatus.PENDING
         )
         
         if branch_id is not None:
@@ -433,7 +454,8 @@ class ReportsRepository:
         ).filter(
             Sale.created_at >= start,
             Sale.created_at <= end,
-            Sale.order_status != OrderStatus.CANCELLED
+            Sale.order_status != OrderStatus.CANCELLED,
+            Sale.order_status != OrderStatus.PENDING
         )
         
         if branch_id is not None:

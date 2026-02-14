@@ -720,6 +720,7 @@ async def create_ecommerce_sale(request: Request, sale_data: SaleCreate, db: Ses
         order_status = "DELIVERED" if is_confirmed else "PENDING"
         
         # Crear la venta
+        # IMPORTANTE: Todas las ventas de e-commerce usan "Transferencia" como método de pago
         db_sale = Sale(
             sale_number=sale_number,
             user_id=default_user.id,
@@ -731,7 +732,7 @@ async def create_ecommerce_sale(request: Request, sale_data: SaleCreate, db: Ses
             tax_amount=0,  # Sin impuestos para e-commerce por ahora
             discount_amount=0,
             total_amount=total_amount,
-            payment_method=sale_data.payment_method or "WHATSAPP",
+            payment_method_name="Transferencia",  # Todas las ventas e-commerce son por transferencia
             sale_type=actual_sale_type,
             notes=sale_data.notes,
             order_status=order_status

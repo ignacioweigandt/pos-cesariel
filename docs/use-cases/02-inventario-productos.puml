@@ -1,0 +1,71 @@
+@startuml Casos de Uso - Módulo de Inventario
+!theme plain
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+title Módulo de Inventario y Productos
+
+' Actores
+actor "Vendedor" as Seller
+actor "Gerente" as Manager
+actor "Administrador" as Admin
+
+' Sistema
+rectangle "Sistema de Inventario Multi-Sucursal" {
+  
+  package "Productos" {
+    usecase "Gestionar Productos" as UC1
+    usecase "Buscar Productos" as UC2
+  }
+  
+  package "Stock" {
+    usecase "Ajustar Stock" as UC3
+    usecase "Consultar Stock\npor Sucursal" as UC4
+    usecase "Gestionar Talles" as UC5
+    usecase "Monitorear Stock Bajo" as UC6
+  }
+  
+  package "Operaciones Masivas" {
+    usecase "Importar desde Excel" as UC7
+    usecase "Actualizar Precios\nMasivamente" as UC8
+  }
+}
+
+' Relaciones - Vendedor (solo consulta)
+Seller --> UC2
+Seller --> UC4
+
+' Relaciones - Manager y Admin (gestión completa)
+Manager --> UC1
+Manager --> UC2
+Manager --> UC3
+Manager --> UC4
+Manager --> UC5
+Manager --> UC6
+Manager --> UC7
+Manager --> UC8
+
+Admin --> UC1
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC7
+Admin --> UC8
+
+' Nota
+note right of UC3
+  **Stock Multi-Sucursal:**
+  - Independiente por sucursal
+  - Control por talle/variante
+  - Auditoría de movimientos
+end note
+
+note bottom of UC7
+  **Importación masiva**
+  con validación y log
+  de errores detallado
+end note
+
+@enduml

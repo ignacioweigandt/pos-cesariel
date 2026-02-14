@@ -33,6 +33,7 @@ from app.services.inventory_service import InventoryService
 from app.services.product_service import ProductService
 from app.services.stock_service import StockConflictError
 from app.models import Sale, SaleItem
+from app.schemas.common import SaleType, OrderStatus
 from app.schemas.sale import SaleCreate
 import uuid
 
@@ -167,9 +168,20 @@ class SaleService:
         discount = getattr(sale_data, 'discount_amount', Decimal(0))
         total = subtotal + tax - discount
 
+        # Determine order_status based on sale type and confirmation
+        # POS sales → DELIVERED (immediate in-person transaction)
+        # ECOMMERCE/WHATSAPP confirmed → DELIVERED (admin coordinated)
+        # ECOMMERCE/WHATSAPP not confirmed → PENDING (public website order)
+        if sale_data.sale_type == SaleType.POS:
+            order_status = OrderStatus.DELIVERED
+        else:
+            # E-commerce or WhatsApp
+            is_confirmed = getattr(sale_data, 'is_confirmed', False)
+            order_status = OrderStatus.DELIVERED if is_confirmed else OrderStatus.PENDING
+
         # Create sale with configuration references
-        # Exclude 'items' and 'is_confirmed' (not part of Sale model)
-        sale_dict = sale_data.dict(exclude={'items', 'is_confirmed'})
+        # Exclude 'items', 'is_confirmed', and 'order_status' (set automatically above)
+        sale_dict = sale_data.dict(exclude={'items', 'is_confirmed', 'order_status'})
         sale_dict.update({
             'sale_number': self._generate_sale_number(sale_data.sale_type.value),
             'user_id': user_id,
@@ -178,6 +190,7 @@ class SaleService:
             'tax_amount': tax,
             'discount_amount': discount,
             'total_amount': total,
+            'order_status': order_status,  # Set based on sale type and confirmation
             # Configuration references (traceability)
             'payment_method_id': payment_method_id,
             'payment_method_name': payment_method_name,

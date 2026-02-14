@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { api } from '@/lib/api';
 import type { Brand } from '../types/inventory.types';
 
@@ -15,8 +15,7 @@ export function useBrands() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // React Compiler handles optimization
-  const loadBrands = async () => {
+  const loadBrands = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -24,18 +23,18 @@ export function useBrands() {
       setBrands(response.data || []);
     } catch (error) {
       console.error('Error fetching brands:', error);
-      
+
       if (error instanceof Error) {
         setError(error.message);
       } else {
         setError('Error al cargar marcas');
       }
-      
+
       setBrands([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // React Compiler handles optimization
   const createBrand = async (brandData: CreateBrandData) => {

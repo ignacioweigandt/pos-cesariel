@@ -36,7 +36,7 @@ export interface DailySales {
 
 export interface ChartData {
   name: string;
-  value: number;
+  value: number | string; // Backend sends Decimal as string
 }
 
 export interface DateRange {

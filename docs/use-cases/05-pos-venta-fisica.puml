@@ -1,0 +1,49 @@
+@startuml Caso de Uso - POS Venta Física
+!theme plain
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+title Módulo POS - Venta en Local
+
+' Actores
+actor "Vendedor/\nAdministrador" as User
+
+' Sistema
+rectangle "Sistema POS Ventas" {
+  usecase "Buscar Producto" as UC1
+  usecase "Agregar al Carrito" as UC2
+  usecase "Seleccionar Método\nde Pago" as UC3
+  usecase "Procesar Venta" as UC4
+  usecase "Imprimir Ticket" as UC5
+}
+
+' Relaciones
+User --> UC1
+User --> UC2
+User --> UC3
+User --> UC4
+User --> UC5
+
+' Flujo secuencial
+UC1 .down.> UC2 : <<secuencia>>
+UC2 .down.> UC3 : <<secuencia>>
+UC3 .down.> UC4 : <<secuencia>>
+UC4 .down.> UC5 : <<secuencia>>
+
+' Nota del flujo
+note right of UC4
+  **Procesar Venta:**
+  1. Valida stock disponible
+  2. Crea registro de venta
+  3. Actualiza inventario
+  4. Genera número de venta
+end note
+
+note left of UC1
+  **Búsqueda por:**
+  - Nombre
+  - SKU
+  - Código de barras
+end note
+
+@enduml

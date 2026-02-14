@@ -10,8 +10,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { useState } from 'react';
-import { SWRConfig } from 'swr';
 import { CurrencyProvider } from '@/shared/contexts/CurrencyContext';
+import { WebSocketProvider } from '@/shared/contexts/WebSocketContext';
 import { SessionTimeoutWrapper } from '@/components/auth/SessionTimeoutWrapper';
 import { Toaster } from 'react-hot-toast';
 
@@ -33,20 +33,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SWRConfig
-        value={{
-          // Global SWR configuration for better performance
-          revalidateOnFocus: false, // Don't refetch on window focus (avoid duplicates)
-          revalidateOnReconnect: true, // Refetch when reconnecting
-          dedupingInterval: 2000, // Dedupe requests within 2s
-          errorRetryCount: 2, // Retry failed requests 2 times
-          errorRetryInterval: 3000, // Wait 3s between retries
-          shouldRetryOnError: true,
-          // Cache provider for persistence (optional)
-          provider: () => new Map(),
-        }}
-      >
-        <CurrencyProvider>
+      <CurrencyProvider>
+        <WebSocketProvider>
           {/* Sistema de cierre automático de sesión por inactividad */}
           <SessionTimeoutWrapper />
           {children}
@@ -74,10 +62,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
               },
             }}
           />
-        </CurrencyProvider>
-        {/* React Query Devtools (only in development) */}
-        <ReactQueryDevtools initialIsOpen={false} />
-      </SWRConfig>
+        </WebSocketProvider>
+      </CurrencyProvider>
+      {/* React Query Devtools (only in development) */}
+      <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }

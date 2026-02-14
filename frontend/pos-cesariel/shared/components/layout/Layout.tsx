@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth, canAccessModule } from '@/lib/auth';
-import { usePOSWebSocket } from '@/lib/websocket';
+import { useWebSocketContext } from '@/shared/contexts/WebSocketContext';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 import { useRouteProtection } from '@/shared/hooks/useRouteProtection';
 import NotificationCenter from '../feedback/NotificationCenter';
@@ -37,16 +37,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const branchId = user?.branch_id || 1;
-  
   const {
     isConnected,
     notifications,
     unreadCount,
     markAllAsRead,
     clearNotifications
-  } = usePOSWebSocket(branchId, token || '', false);
+  } = useWebSocketContext();
 
   useSessionTimeout();
   useRouteProtection();

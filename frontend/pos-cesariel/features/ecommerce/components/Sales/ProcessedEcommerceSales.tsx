@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ecommerceAdvancedApi } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { formatDate } from '@/shared/utils/format/date';
 import {
   ShoppingCartIcon,
   EyeIcon,
@@ -100,15 +101,7 @@ export default function ProcessedEcommerceSales({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-AR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+  // formatDate imported from shared utils
 
   const handleClose = () => {
     setProcessedSales([]);

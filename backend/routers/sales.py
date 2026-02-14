@@ -375,8 +375,12 @@ async def get_dashboard_stats(
         # Get month's date range
         month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-        # Base query for sales (exclude cancelled)
-        sales_query = db.query(Sale).filter(Sale.order_status != OrderStatus.CANCELLED)
+        # Base query for sales (exclude cancelled and pending)
+        # PENDING = e-commerce orders not yet confirmed by vendor
+        sales_query = db.query(Sale).filter(
+            Sale.order_status != OrderStatus.CANCELLED,
+            Sale.order_status != OrderStatus.PENDING
+        )
 
         # Filter by branch
         if current_user.role.value.upper() != "ADMIN":
@@ -451,11 +455,12 @@ async def get_sales_report(
     # Convert end_date to include the entire day
     end_datetime = date_to_datetime_end(end_date)
 
-    # Base query
+    # Base query (exclude cancelled and pending)
     sales_query = db.query(Sale).filter(
         Sale.created_at >= start_date,
         Sale.created_at <= end_datetime,
-        Sale.order_status != OrderStatus.CANCELLED
+        Sale.order_status != OrderStatus.CANCELLED,
+        Sale.order_status != OrderStatus.PENDING
     )
 
     # Filter by branch
@@ -479,7 +484,8 @@ async def get_sales_report(
     ).join(SaleItem).join(Sale).filter(
         Sale.created_at >= start_date,
         Sale.created_at <= end_datetime,
-        Sale.order_status != OrderStatus.CANCELLED
+        Sale.order_status != OrderStatus.CANCELLED,
+        Sale.order_status != OrderStatus.PENDING
     )
     
     if current_user.role.value != "ADMIN":
@@ -499,7 +505,8 @@ async def get_sales_report(
         ).join(Sale).filter(
             Sale.created_at >= start_date,
             Sale.created_at <= end_datetime,
-            Sale.order_status != OrderStatus.CANCELLED
+            Sale.order_status != OrderStatus.CANCELLED,
+            Sale.order_status != OrderStatus.PENDING
         ).group_by(Branch.name).all()
         
         sales_by_branch = [
@@ -546,7 +553,8 @@ async def get_daily_sales(
     ).filter(
         Sale.created_at >= start_date,
         Sale.created_at <= end_datetime,
-        Sale.order_status != OrderStatus.CANCELLED
+        Sale.order_status != OrderStatus.CANCELLED,
+        Sale.order_status != OrderStatus.PENDING
     )
 
     # Filter by branch
@@ -591,7 +599,8 @@ async def get_products_chart_data(
     ).join(SaleItem).join(Sale).filter(
         Sale.created_at >= start_date,
         Sale.created_at <= end_datetime,
-        Sale.order_status != OrderStatus.CANCELLED
+        Sale.order_status != OrderStatus.CANCELLED,
+        Sale.order_status != OrderStatus.PENDING
     )
 
     # Filter by branch
@@ -637,7 +646,8 @@ async def get_branches_chart_data(
     ).join(Sale).filter(
         Sale.created_at >= start_date,
         Sale.created_at <= end_datetime,
-        Sale.order_status != OrderStatus.CANCELLED
+        Sale.order_status != OrderStatus.CANCELLED,
+        Sale.order_status != OrderStatus.PENDING
     ).group_by(Branch.name).all()
     
     return [

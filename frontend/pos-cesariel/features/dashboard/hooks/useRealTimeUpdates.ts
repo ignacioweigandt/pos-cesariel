@@ -1,22 +1,18 @@
 /** Hook para actualizaciones en tiempo real vía WebSocket (new_sale, inventory_change, etc.) */
 
 import { useEffect } from "react";
-import { usePOSWebSocket } from "@/lib/websocket";
+import { useWebSocketContext } from "@/shared/contexts/WebSocketContext";
 
 interface UseRealTimeUpdatesProps {
-  branchId: number;
-  token: string;
   enabled: boolean;
   onUpdate: () => void;
 }
 
 export function useRealTimeUpdates({
-  branchId,
-  token,
   enabled,
   onUpdate,
 }: UseRealTimeUpdatesProps) {
-  const { lastMessage } = usePOSWebSocket(branchId, token, enabled);
+  const { lastMessage } = useWebSocketContext();
 
   useEffect(() => {
     if (!lastMessage || !enabled) return;

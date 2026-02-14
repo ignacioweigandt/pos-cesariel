@@ -14,7 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { MetricCard } from "../cards/MetricCard";
 import { LoadingSkeleton, EmptyState } from "../shared";
-import { ProductsPieChart } from "../Charts/ProductsPieChart";
+import { LazyProductsPieChart as ProductsPieChart } from "../Charts/LazyCharts";
 import { useBrandsChart } from "../../hooks";
 import { BrandsTable } from "../Tables/BrandsTable";
 

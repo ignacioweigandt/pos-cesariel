@@ -13,7 +13,7 @@ import {
   ChartBarIcon,
   ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
-import { WebSocketMessage } from '@/lib/websocket';
+import { WebSocketMessage } from '@/shared/hooks/useWebSocket';
 
 interface NotificationCenterProps {
   notifications: WebSocketMessage[];

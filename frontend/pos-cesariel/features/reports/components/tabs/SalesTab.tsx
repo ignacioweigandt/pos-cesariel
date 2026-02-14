@@ -43,6 +43,7 @@ import { Input } from "@/shared/components/ui/input";
 import { apiClient } from "@/shared/api/client";
 import { LoadingSkeleton, EmptyState } from "../shared";
 import { useDebounce } from "@/shared/hooks/useDebounce";
+import { formatDateOnly, formatTimeOnly } from "@/shared/utils/format/date";
 
 interface SalesTabProps {
   startDate: string;
@@ -188,24 +189,7 @@ export function SalesTab({
     );
   };
 
-  // Format date
-  const formatDate = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  // Format time
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString("es-AR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  // Use shared date formatting utilities (formatDateOnly and formatTimeOnly imported above)
 
   // Get badge color for sale type
   const getSaleTypeBadge = (saleType: string) => {
@@ -508,10 +492,10 @@ export function SalesTab({
                     <TableCell>
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">
-                          {formatDate(sale.created_at)}
+                          {formatDateOnly(sale.created_at)}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {formatTime(sale.created_at)}
+                          {formatTimeOnly(sale.created_at)}
                         </span>
                       </div>
                     </TableCell>

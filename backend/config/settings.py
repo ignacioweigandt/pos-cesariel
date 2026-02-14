@@ -230,8 +230,8 @@ class Settings:
     #
     # IMPORTANTE: Si cambias esta clave, todos los usuarios deben re-autenticarse
     jwt_secret_key: str = os.getenv(
-        "JWT_SECRET_KEY", 
-        "tu_clave_secreta_super_segura_aqui"  # ⚠️ CAMBIAR EN PRODUCCIÓN
+        "SECRET_KEY",
+        "your-secret-key-here-change-in-production"  # ⚠️ CAMBIAR EN PRODUCCIÓN
     )
     
     # Algoritmo utilizado para firmar JWT
@@ -371,7 +371,7 @@ settings = Settings()
 if settings.is_production:
     # En producción, validar que no haya valores por defecto inseguros
     
-    if settings.jwt_secret_key == "tu_clave_secreta_super_segura_aqui":
+    if settings.jwt_secret_key == "your-secret-key-here-change-in-production":
         raise ValueError(
             "⚠️  PRODUCCIÓN: JWT_SECRET_KEY debe ser una clave robusta y única. "
             "Generar con: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
