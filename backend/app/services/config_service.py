@@ -194,10 +194,17 @@ class ConfigService:
         Raises:
             ValueError: If payment method is invalid or not available
         """
-        # Find payment method by code
+        # Find payment method by code (exact match)
         payment_method = self.db.query(PaymentMethod).filter(
             PaymentMethod.code == payment_method_code
         ).first()
+
+        # Fallback: try case-insensitive name match (for legacy frontend compatibility)
+        if not payment_method:
+            from sqlalchemy import func
+            payment_method = self.db.query(PaymentMethod).filter(
+                func.lower(PaymentMethod.name) == payment_method_code.lower()
+            ).first()
 
         if not payment_method:
             raise ValueError(f"Payment method '{payment_method_code}' not found")
