@@ -193,15 +193,39 @@ async def get_products(
     
     products = query.offset(skip).limit(limit).all()
     
-    # Construir respuesta con stock específico de la sucursal
+    # Pre-cargar stock en una sola query para evitar N+1
+    product_ids = [p.id for p in products]
+    
+    # Diccionario para guardar el stock por product_id
+    stock_dict = {}
+    
+    if user_branch_id:
+        # Cargar stock de la sucursal específica
+        branch_stocks = db.query(
+            BranchStock.product_id,
+            func.sum(BranchStock.quantity).label('total_stock')
+        ).filter(
+            BranchStock.product_id.in_(product_ids),
+            BranchStock.branch_id == user_branch_id
+        ).group_by(BranchStock.product_id).all()
+        
+        stock_dict = {bs.product_id: int(bs.total_stock) for bs in branch_stocks}
+    else:
+        # Cargar stock total de todas las sucursales
+        total_stocks = db.query(
+            BranchStock.product_id,
+            func.sum(BranchStock.quantity).label('total_stock')
+        ).filter(
+            BranchStock.product_id.in_(product_ids)
+        ).group_by(BranchStock.product_id).all()
+        
+        stock_dict = {ts.product_id: int(ts.total_stock) for ts in total_stocks}
+    
+    # Construir respuesta con stock pre-cargado
     result = []
     for product in products:
-        if user_branch_id:
-            # Usuario con sucursal - mostrar stock de su sucursal
-            branch_stock = product.get_stock_for_branch(user_branch_id)
-        else:
-            # Admin sin sucursal - mostrar stock total calculado
-            branch_stock = product.calculate_total_stock()
+        # Usar stock pre-cargado o 0 si no existe
+        branch_stock = stock_dict.get(product.id, 0)
         
         # Get brand name from relationship (preferred) or legacy field (fallback)
         brand_name = product.brand_rel.name if product.brand_rel else product.brand
