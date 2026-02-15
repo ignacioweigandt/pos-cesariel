@@ -36,7 +36,7 @@ export function useProducts() {
     setError(null);
     try {
       const response = await api.get('/products/', {
-        params: { limit: 10000 },
+        params: { limit: 500 },
       });
       setProducts(response.data);
     } catch (error) {
