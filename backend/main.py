@@ -112,7 +112,7 @@ from routers import (
 #
 # Ver: backend/alembic/ y MIGRATIONS.md para más información
 
-if os.getenv("ENV", "development") == "development":
+if os.getenv("ENVIRONMENT", "development") == "development":
     # Modo desarrollo: Auto-crear tablas si no existen
     Base.metadata.create_all(bind=engine)
 else:

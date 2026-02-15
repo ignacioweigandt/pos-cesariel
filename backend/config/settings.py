@@ -293,7 +293,7 @@ class Settings:
     # - Error reporting (stack traces vs mensajes genéricos)
     # - API documentation (/docs disponible o no)
     # - Migraciones de BD (auto vs manual con Alembic)
-    environment: str = os.getenv("ENV", "development")
+    environment: str = os.getenv("ENVIRONMENT", "development")
     
     
     # ===== PROPIEDADES DERIVADAS =====
