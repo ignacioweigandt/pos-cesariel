@@ -136,34 +136,32 @@ class StockService:
         
         # Guardar valores para auditoría
         previous_stock = stock.stock_quantity
-        current_version = stock.version
+        # TODO: Re-enable optimistic locking when version column exists in production
+        # current_version = stock.version
         
-        # UPDATE con optimistic locking
-        # Si version cambió, SQLAlchemy lanza StaleDataError
+        # UPDATE stock (without optimistic locking for now)
         from datetime import datetime
         rows_updated = db.execute(
             text("""
             UPDATE branch_stock
             SET stock_quantity = stock_quantity - :quantity,
-                version = version + 1,
                 updated_at = :updated_at
             WHERE id = :stock_id
-              AND version = :expected_version
               AND stock_quantity >= :quantity
             """),
             {
                 "stock_id": stock.id,
                 "quantity": quantity,
-                "expected_version": current_version,
                 "updated_at": datetime.now()
             }
         ).rowcount
         
         if rows_updated == 0:
-            # Version cambió o stock insuficiente
+            # Stock insuficiente
             db.rollback()
-            raise StaleDataError(
-                "Stock modificado por otro usuario simultáneamente"
+            raise InsufficientStockError(
+                f"Stock insuficiente. Disponible: {stock.stock_quantity}, "
+                f"Requerido: {quantity}"
             )
         
         # Crear InventoryMovement para auditoría
@@ -219,33 +217,32 @@ class StockService:
         
         # Guardar valores para auditoría
         previous_stock = stock.stock_quantity
-        current_version = stock.version
+        # TODO: Re-enable optimistic locking when version column exists in production
+        # current_version = stock.version
         
-        # UPDATE con optimistic locking
+        # UPDATE stock (without optimistic locking for now)
         from datetime import datetime
         rows_updated = db.execute(
             text("""
             UPDATE product_sizes
             SET stock_quantity = stock_quantity - :quantity,
-                version = version + 1,
                 updated_at = :updated_at
             WHERE id = :stock_id
-              AND version = :expected_version
               AND stock_quantity >= :quantity
             """),
             {
                 "stock_id": stock.id,
                 "quantity": quantity,
-                "expected_version": current_version,
                 "updated_at": datetime.now()
             }
         ).rowcount
         
         if rows_updated == 0:
-            # Version cambió o stock insuficiente
+            # Stock insuficiente
             db.rollback()
-            raise StaleDataError(
-                f"Stock de talle {size} modificado por otro usuario simultáneamente"
+            raise InsufficientStockError(
+                f"Stock insuficiente de talle {size}. "
+                f"Disponible: {stock.stock_quantity}, Requerido: {quantity}"
             )
         
         # Crear InventoryMovement para auditoría
