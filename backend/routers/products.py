@@ -1221,33 +1221,31 @@ async def get_available_sizes_for_pos(
         ProductSize.stock_quantity > 0
     ).all()
     
-    # Filter by valid sizes for category and sort
-    from utils.size_validators import get_size_display_info, sort_sizes
+    # Simple sorting: numeric first, then alphabetic
+    def sort_key(size_obj):
+        size = size_obj.size
+        try:
+            return (0, int(size))  # Numeric sizes first
+        except ValueError:
+            return (1, size)  # Then alphabetic (XS, S, M, L, etc.)
     
-    size_info = get_size_display_info(product.category.name if product.category else "")
-    valid_sizes = size_info["valid_sizes"]
+    sorted_sizes = sorted(available_sizes, key=sort_key)
     
-    # Filter to only include valid sizes for this category
-    filtered_sizes = []
-    for size in available_sizes:
-        if size.size in valid_sizes:
-            filtered_sizes.append({
-                "size": size.size,
-                "stock_quantity": size.stock_quantity
-            })
-    
-    # Sort sizes appropriately
-    sorted_sizes = sorted(filtered_sizes, key=lambda x: valid_sizes.index(x["size"]) if x["size"] in valid_sizes else 999)
+    # Build response
+    sizes_list = [
+        {
+            "size": size.size,
+            "stock_quantity": size.stock_quantity
+        }
+        for size in sorted_sizes
+    ]
     
     return {
         "product_id": product_id,
         "product_name": product.name,
         "has_sizes": True,
         "category_name": product.category.name if product.category else None,
-        "category_type": size_info["category_type"],
-        "size_type_label": size_info["size_type_label"],
-        "available_sizes": sorted_sizes,
-        "all_valid_sizes": valid_sizes  # Para mostrar todos los talles posibles en el frontend
+        "available_sizes": sizes_list
     }
 
 def calculate_total_stock_from_sizes(db: Session, product_id: int, branch_id: int) -> int:
