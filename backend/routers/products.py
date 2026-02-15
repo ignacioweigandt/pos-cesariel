@@ -195,31 +195,52 @@ async def get_products(
     
     # Pre-cargar stock en una sola query para evitar N+1
     product_ids = [p.id for p in products]
+    products_with_sizes = {p.id: p.has_sizes for p in products}
     
     # Diccionario para guardar el stock por product_id
     stock_dict = {}
     
-    if user_branch_id:
-        # Cargar stock de la sucursal específica
-        branch_stocks = db.query(
-            BranchStock.product_id,
-            func.sum(BranchStock.stock_quantity).label('total_stock')
-        ).filter(
-            BranchStock.product_id.in_(product_ids),
-            BranchStock.branch_id == user_branch_id
-        ).group_by(BranchStock.product_id).all()
+    # Productos SIN talles: usar BranchStock
+    products_without_sizes = [pid for pid, has_sizes in products_with_sizes.items() if not has_sizes]
+    if products_without_sizes:
+        if user_branch_id:
+            branch_stocks = db.query(
+                BranchStock.product_id,
+                func.sum(BranchStock.stock_quantity).label('total_stock')
+            ).filter(
+                BranchStock.product_id.in_(products_without_sizes),
+                BranchStock.branch_id == user_branch_id
+            ).group_by(BranchStock.product_id).all()
+        else:
+            branch_stocks = db.query(
+                BranchStock.product_id,
+                func.sum(BranchStock.stock_quantity).label('total_stock')
+            ).filter(
+                BranchStock.product_id.in_(products_without_sizes)
+            ).group_by(BranchStock.product_id).all()
         
-        stock_dict = {bs.product_id: int(bs.total_stock) for bs in branch_stocks}
-    else:
-        # Cargar stock total de todas las sucursales
-        total_stocks = db.query(
-            BranchStock.product_id,
-            func.sum(BranchStock.stock_quantity).label('total_stock')
-        ).filter(
-            BranchStock.product_id.in_(product_ids)
-        ).group_by(BranchStock.product_id).all()
+        stock_dict.update({bs.product_id: int(bs.total_stock) if bs.total_stock else 0 for bs in branch_stocks})
+    
+    # Productos CON talles: usar ProductSize
+    products_with_sizes_ids = [pid for pid, has_sizes in products_with_sizes.items() if has_sizes]
+    if products_with_sizes_ids:
+        if user_branch_id:
+            size_stocks = db.query(
+                ProductSize.product_id,
+                func.sum(ProductSize.stock_quantity).label('total_stock')
+            ).filter(
+                ProductSize.product_id.in_(products_with_sizes_ids),
+                ProductSize.branch_id == user_branch_id
+            ).group_by(ProductSize.product_id).all()
+        else:
+            size_stocks = db.query(
+                ProductSize.product_id,
+                func.sum(ProductSize.stock_quantity).label('total_stock')
+            ).filter(
+                ProductSize.product_id.in_(products_with_sizes_ids)
+            ).group_by(ProductSize.product_id).all()
         
-        stock_dict = {ts.product_id: int(ts.total_stock) for ts in total_stocks}
+        stock_dict.update({ss.product_id: int(ss.total_stock) if ss.total_stock else 0 for ss in size_stocks})
     
     # Construir respuesta con stock pre-cargado
     result = []
