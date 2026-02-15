@@ -719,12 +719,13 @@ class ProductSize(Base):
     
     # ===== AUDITORÍA Y CONCURRENCIA =====
     
-    version = Column(
-        Integer,
-        default=0,
-        nullable=False,
-        doc="Versión para optimistic locking. Previene race conditions."
-    )
+    # TODO: Re-enable when migration is applied in production
+    # version = Column(
+    #     Integer,
+    #     default=0,
+    #     nullable=False,
+    #     doc="Versión para optimistic locking. Previene race conditions."
+    # )
     
     created_at = Column(
         DateTime, 
