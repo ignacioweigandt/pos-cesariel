@@ -203,7 +203,7 @@ async def get_products(
         # Cargar stock de la sucursal específica
         branch_stocks = db.query(
             BranchStock.product_id,
-            func.sum(BranchStock.quantity).label('total_stock')
+            func.sum(BranchStock.stock_quantity).label('total_stock')
         ).filter(
             BranchStock.product_id.in_(product_ids),
             BranchStock.branch_id == user_branch_id
@@ -214,7 +214,7 @@ async def get_products(
         # Cargar stock total de todas las sucursales
         total_stocks = db.query(
             BranchStock.product_id,
-            func.sum(BranchStock.quantity).label('total_stock')
+            func.sum(BranchStock.stock_quantity).label('total_stock')
         ).filter(
             BranchStock.product_id.in_(product_ids)
         ).group_by(BranchStock.product_id).all()
