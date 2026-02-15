@@ -189,13 +189,14 @@ class BranchStock(Base):
     
     # ===== AUDITORÍA Y CONCURRENCIA =====
     
-    version = Column(
-        Integer,
-        default=0,
-        nullable=False,
-        doc="Versión para optimistic locking. Se incrementa en cada UPDATE "
-            "para prevenir race conditions en ventas concurrentes."
-    )
+    # TODO: Re-enable when migration is applied in production
+    # version = Column(
+    #     Integer,
+    #     default=0,
+    #     nullable=False,
+    #     doc="Versión para optimistic locking. Se incrementa en cada UPDATE "
+    #         "para prevenir race conditions en ventas concurrentes."
+    # )
     
     created_at = Column(
         DateTime, 
