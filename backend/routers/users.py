@@ -5,11 +5,11 @@ Gestión completa de usuarios del sistema con roles y permisos.
 Generación de contraseñas temporales seguras.
 
 Endpoints:
-    GET /users: Lista usuarios (filtro por sucursal y rol)
+    GET /users: Lista usuarios (filtro por sucursal, rol y estado)
     GET /users/{id}: Detalle de usuario
     POST /users: Crear usuario con password temporal (ADMIN)
     PUT /users/{id}: Actualizar usuario (ADMIN)
-    DELETE /users/{id}: Eliminar usuario (ADMIN)
+    DELETE /users/{id}: Eliminar usuario (ADMIN) - Soft delete si tiene registros
     PUT /users/{id}/change-password: Cambiar contraseña propia
     PUT /users/{id}/reset-password: Reset password (ADMIN)
 
@@ -22,7 +22,8 @@ Permisos:
 Características:
     - Generación de passwords temporales seguros (12 chars)
     - Validación de unicidad (username, email)
-    - Filtrado por branch_id y role
+    - Filtrado por branch_id, role y is_active (default: solo activos)
+    - Soft delete automático cuando usuario tiene ventas/notificaciones
     - Hashing bcrypt automático
     - Validación de roles (ADMIN, MANAGER, SELLER, ECOMMERCE)
 
@@ -95,10 +96,14 @@ async def get_users(
     skip: int = 0,
     limit: int = 100,
     branch_id: int = None,
+    is_active: bool = True,  # Por defecto solo mostrar usuarios activos
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     query = db.query(User)
+    
+    # Filtrar por estado activo/inactivo
+    query = query.filter(User.is_active == is_active)
     
     # If not admin, only show users from same branch
     if current_user.role != UserRole.ADMIN:
