@@ -16,6 +16,7 @@ import { WhatsAppSaleForm } from './_forms/WhatsAppSaleForm';
 import { WhatsAppConfigForm } from './_forms/WhatsAppConfigForm';
 import { WhatsAppSaleCard } from './_components/WhatsAppSaleCard';
 import { SimpleSaleDetailsModal } from './_components/SimpleSaleDetailsModal';
+import { usePOSWebSocket } from '@/shared/hooks/useWebSocket';
 
 interface WhatsAppSalesManagerProps {
   isOpen: boolean;
@@ -58,17 +59,31 @@ export default function WhatsAppSalesManager({
   const existingSaleIds = sales.map((s) => s.sale_id);
   const { availableSales, loadAvailableSales } = useAvailableSales(existingSaleIds);
 
-  // Auto-refresh cuando el modal está abierto
+  // WebSocket para actualizaciones en tiempo real
+  const { lastMessage, isConnected } = usePOSWebSocket(branchId, token, isOpen);
+
+  // Reaccionar a eventos WebSocket
+  useEffect(() => {
+    if (lastMessage?.type === 'new_sale' || lastMessage?.type === 'sale_status_change') {
+      // Solo actualizar si es una venta relevante
+      fetchSales();
+      loadAvailableSales();
+    }
+  }, [lastMessage, fetchSales, loadAvailableSales]);
+
+  // Carga inicial cuando se abre el modal
   useEffect(() => {
     if (isOpen) {
       fetchSales();
       loadAvailableSales();
       whatsappConfig.loadConfig();
 
+      // Polling de respaldo SOLO cada 2 minutos (en vez de 10 segundos)
+      // El WebSocket maneja las actualizaciones en tiempo real
       const interval = setInterval(() => {
         fetchSales();
         loadAvailableSales();
-      }, 10000);
+      }, 120000); // 2 minutos en vez de 10 segundos
 
       return () => clearInterval(interval);
     }

@@ -21,6 +21,9 @@ import {
   salesApi,
 } from "@/lib/api";
 
+// WebSocket import for real-time updates
+import { usePOSWebSocket } from "@/shared/hooks/useWebSocket";
+
 // Component imports - Internal to feature
 import DashboardTab from "./Dashboard/DashboardTab";
 import ProductsTab from "./Products/ProductsTab";
@@ -152,19 +155,35 @@ export function EcommerceContainer() {
     loadData();
   }, [router]);
 
-  // Auto-refresh dashboard data every 30 seconds when on dashboard tab
+  // WebSocket for real-time updates
+  const { lastMessage, isConnected } = usePOSWebSocket(
+    userBranchId, 
+    authToken, 
+    activeTab === "dashboard" && mounted
+  );
+
+  // React to WebSocket events for real-time dashboard updates
+  useEffect(() => {
+    if (lastMessage?.type === 'dashboard_update' || 
+        lastMessage?.type === 'new_sale' || 
+        lastMessage?.type === 'product_update') {
+      // Only refresh stats, config changes rarely
+      fetchStats();
+    }
+  }, [lastMessage]);
+
+  // Auto-refresh dashboard data when tab becomes active
   useEffect(() => {
     if (activeTab === "dashboard" && mounted) {
       // Initial load
       fetchStoreConfig();
       fetchStats();
 
-      // Set up polling interval
+      // Polling de respaldo reducido: Config cambia raramente, solo cada 5 minutos
+      // WebSocket maneja actualizaciones de stats en tiempo real
       const interval = setInterval(() => {
-        // console.log("Auto-refreshing dashboard data...");
-        fetchStoreConfig();
-        fetchStats();
-      }, 30000); // 30 seconds
+        fetchStoreConfig(); // Config cambia raramente
+      }, 300000); // 5 minutos en vez de 30 segundos
 
       // Cleanup interval on unmount or tab change
       return () => clearInterval(interval);

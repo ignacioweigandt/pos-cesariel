@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import notificationService, { Notification } from '@/app/lib/notification-service';
 import { BellIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { usePOSWebSocket } from '@/shared/hooks/useWebSocket';
 
 export default function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -10,20 +11,48 @@ export default function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadNotifications();
-    loadUnreadCount();
+  // Get auth from localStorage
+  const [branchId, setBranchId] = useState<number>(1);
+  const [token, setToken] = useState<string>('');
 
-    // Actualizar cada 2 minutos
-    const interval = setInterval(() => {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('token') || '';
+      const userData = localStorage.getItem('user');
+      setToken(storedToken);
+      
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setBranchId(parsedUser.branch_id || 1);
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      }
+    }
+  }, []);
+
+  // WebSocket for real-time notification updates
+  const { lastMessage } = usePOSWebSocket(branchId, token, !!token);
+
+  // React to WebSocket notification events
+  useEffect(() => {
+    if (lastMessage && ['low_stock_alert', 'new_sale', 'system_message', 'user_action'].includes(lastMessage.type)) {
+      // Refresh notifications and count when new notification arrives
       loadUnreadCount();
       if (isOpen) {
         loadNotifications();
       }
-    }, 120000);
+    }
+  }, [lastMessage, isOpen]);
 
-    return () => clearInterval(interval);
-  }, [isOpen]);
+  // Initial load only (no polling)
+  useEffect(() => {
+    if (token) {
+      loadNotifications();
+      loadUnreadCount();
+    }
+  }, [token]); // Solo cargar una vez cuando hay token
 
   const loadNotifications = async () => {
     setLoading(true);
