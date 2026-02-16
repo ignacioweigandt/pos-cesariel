@@ -10,6 +10,7 @@ import { SalesFilters } from "./_components/SalesFilters";
 import { SalesTable } from "./_components/SalesTable";
 import { SaleDetailsModal } from "./_components/SaleDetailsModal";
 import type { WhatsAppSale } from "@/features/ecommerce/hooks/useWhatsAppSales";
+import { usePOSWebSocket } from "@/shared/hooks/useWebSocket";
 
 interface WhatsAppSalesTabProps {
   refreshTrigger?: number;
@@ -34,18 +35,53 @@ export function WhatsAppSalesTab({
 }: WhatsAppSalesTabProps) {
   const [selectedSale, setSelectedSale] = useState<WhatsAppSale | null>(null);
 
+  // Get auth from localStorage
+  const [branchId, setBranchId] = useState<number>(1);
+  const [token, setToken] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('token') || '';
+      const userData = localStorage.getItem('user');
+      setToken(storedToken);
+      
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setBranchId(parsedUser.branch_id || 1);
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      }
+    }
+  }, []);
+
   // Hooks para datos y lógica
   const { sales, loading, fetchSales, updateSaleStatus } = useWhatsAppSales();
   const stats = useWhatsAppStats(sales);
   const { filters, setFilters, filteredSales, clearFilters, hasActiveFilters } =
     useWhatsAppFilters(sales);
 
-  // Auto-refresh cada 10 segundos
+  // WebSocket for real-time updates
+  const { lastMessage } = usePOSWebSocket(branchId, token, !!token);
+
+  // React to WebSocket events
   useEffect(() => {
-    fetchSales();
-    const interval = setInterval(fetchSales, 10000);
-    return () => clearInterval(interval);
-  }, [fetchSales]);
+    if (lastMessage?.type === 'new_sale' || lastMessage?.type === 'sale_status_change') {
+      fetchSales();
+    }
+  }, [lastMessage, fetchSales]);
+
+  // Initial load and polling de respaldo reducido
+  useEffect(() => {
+    if (token) {
+      fetchSales(); // Carga inicial
+      
+      // Polling de respaldo cada 2 minutos (en vez de 10 segundos)
+      const interval = setInterval(fetchSales, 120000);
+      return () => clearInterval(interval);
+    }
+  }, [fetchSales, token]);
 
   // Refresh cuando cambia el trigger externo
   useEffect(() => {

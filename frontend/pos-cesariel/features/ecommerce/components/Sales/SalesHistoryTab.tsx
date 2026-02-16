@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { useEffect, useState } from "react";
 import { salesApi } from "@/lib/api";
+import { usePOSWebSocket } from "@/shared/hooks/useWebSocket";
 
 interface SalesHistoryTabProps {
   refreshTrigger?: number;
@@ -32,16 +33,50 @@ export function SalesHistoryTab({ refreshTrigger }: SalesHistoryTabProps) {
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
+  // Get auth from localStorage
+  const [branchId, setBranchId] = useState<number>(1);
+  const [token, setToken] = useState<string>('');
+
   useEffect(() => {
-    loadSales();
-
-    // Auto-refresh every 15 seconds to detect new sales
-    const interval = setInterval(() => {
-      loadSales(true);
-    }, 15000);
-
-    return () => clearInterval(interval);
+    if (typeof window !== 'undefined') {
+      const storedToken = localStorage.getItem('token') || '';
+      const userData = localStorage.getItem('user');
+      setToken(storedToken);
+      
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setBranchId(parsedUser.branch_id || 1);
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      }
+    }
   }, []);
+
+  // WebSocket for real-time updates
+  const { lastMessage } = usePOSWebSocket(branchId, token, !!token);
+
+  // React to WebSocket new sale events
+  useEffect(() => {
+    if (lastMessage?.type === 'new_sale') {
+      loadSales(true); // Show alert on new sale
+    }
+  }, [lastMessage]);
+
+  // Initial load and polling de respaldo reducido
+  useEffect(() => {
+    if (token) {
+      loadSales(); // Carga inicial
+      
+      // Polling de respaldo cada 2 minutos (en vez de 15 segundos)
+      const interval = setInterval(() => {
+        loadSales(false); // No mostrar alert en polling
+      }, 120000);
+
+      return () => clearInterval(interval);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
