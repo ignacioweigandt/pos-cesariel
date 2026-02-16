@@ -67,7 +67,7 @@ class NotificationService {
     is_read?: boolean;
     type?: string;
   }): Promise<Notification[]> {
-    const response = await api.get('/notifications', { params });
+    const response = await api.get('/notifications/', { params });
     return response.data;
   }
 
