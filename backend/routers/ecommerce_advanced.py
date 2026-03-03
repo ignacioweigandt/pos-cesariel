@@ -83,6 +83,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
+from app.models.enums import can_transition_order_status
+from app.services.inventory_service import adjust_stock_for_sale
+from websocket_manager import notify_new_sale
+import asyncio
 from app.models import (
     ProductImage, StoreBanner, WhatsAppSale, SocialMediaConfig, WhatsAppConfig,
     Product, Sale, User, EcommerceConfig, OrderStatus
@@ -94,6 +98,7 @@ from app.schemas import (
     StoreBannerCreate, StoreBannerUpdate,
     WhatsAppSale as WhatsAppSaleSchema,
     WhatsAppSaleCreate, WhatsAppSaleUpdate,
+    WhatsAppSaleStatusUpdate,
     SocialMediaConfig as SocialMediaConfigSchema,
     SocialMediaConfigCreate, SocialMediaConfigUpdate,
     WhatsAppConfig as WhatsAppConfigSchema,
@@ -959,3 +964,319 @@ def get_ecommerce_dashboard_stats(
             status_code=500,
             detail=f"Error al obtener estadísticas del dashboard: {str(e)}"
         )
+
+
+@router.get("/dashboard/detailed")
+def get_ecommerce_dashboard_detailed(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Dashboard E-commerce completo con datos detallados para visualización.
+    
+    Returns:
+        - stats: Métricas principales (productos online, ventas totales, conversión, etc.)
+        - recent_sales: Últimas 10 ventas (e-commerce + WhatsApp)
+        - sales_by_day: Ventas agregadas por día (últimos 7 días)
+        - orders_by_status: Count de órdenes por estado (PENDING, PROCESSING, etc.)
+        - top_products: Top 5 productos más vendidos (online)
+        - low_stock_alerts: Productos online con stock bajo
+    """
+    try:
+        from sqlalchemy import func, desc
+        from decimal import Decimal
+        from app.models import SaleType, OrderStatus, SaleItem, BranchStock
+        from datetime import datetime, timedelta
+        
+        # ===== 1. MÉTRICAS PRINCIPALES =====
+        total_online_products = db.query(Product).filter(
+            Product.show_in_ecommerce == True,
+            Product.is_active == True
+        ).count()
+        
+        ecommerce_sales_query = db.query(Sale).filter(
+            Sale.sale_type == SaleType.ECOMMERCE
+        )
+        
+        total_online_sales = ecommerce_sales_query.filter(
+            Sale.order_status != OrderStatus.CANCELLED
+        ).with_entities(func.sum(Sale.total_amount)).scalar() or Decimal("0.00")
+        
+        total_online_orders = ecommerce_sales_query.count()
+        
+        pending_orders = ecommerce_sales_query.filter(
+            Sale.order_status == OrderStatus.PENDING
+        ).count()
+        
+        delivered_orders = ecommerce_sales_query.filter(
+            Sale.order_status == OrderStatus.DELIVERED
+        ).count()
+        
+        conversion_rate = 0.0
+        if total_online_orders > 0:
+            conversion_rate = round((delivered_orders / total_online_orders) * 100, 2)
+        
+        # ===== 2. ÚLTIMAS VENTAS (últimas 10) =====
+        recent_sales_raw = db.query(Sale).filter(
+            Sale.sale_type == SaleType.ECOMMERCE
+        ).order_by(desc(Sale.created_at)).limit(10).all()
+        
+        recent_sales = []
+        for sale in recent_sales_raw:
+            # Verificar si tiene WhatsAppSale asociado
+            whatsapp_sale = db.query(WhatsAppSale).filter(
+                WhatsAppSale.sale_id == sale.id
+            ).first()
+            
+            recent_sales.append({
+                "id": sale.id,
+                "sale_number": sale.sale_number,
+                "customer_name": sale.customer_name or (whatsapp_sale.customer_name if whatsapp_sale else "Cliente Web"),
+                "total_amount": float(sale.total_amount),
+                "order_status": sale.order_status.value if sale.order_status else None,
+                "created_at": sale.created_at.isoformat() if sale.created_at else None,
+                "is_whatsapp": whatsapp_sale is not None
+            })
+        
+        # ===== 3. VENTAS POR DÍA (últimos 7 días) =====
+        seven_days_ago = datetime.now() - timedelta(days=7)
+        
+        sales_by_day_raw = db.query(
+            func.date(Sale.created_at).label('date'),
+            func.count(Sale.id).label('count'),
+            func.sum(Sale.total_amount).label('total')
+        ).filter(
+            Sale.sale_type == SaleType.ECOMMERCE,
+            Sale.created_at >= seven_days_ago,
+            Sale.order_status != OrderStatus.CANCELLED
+        ).group_by(
+            func.date(Sale.created_at)
+        ).order_by(
+            func.date(Sale.created_at)
+        ).all()
+        
+        sales_by_day = [
+            {
+                "date": row.date.isoformat(),
+                "count": row.count,
+                "total": float(row.total or 0)
+            }
+            for row in sales_by_day_raw
+        ]
+        
+        # ===== 4. ÓRDENES POR ESTADO =====
+        orders_by_status_raw = db.query(
+            Sale.order_status,
+            func.count(Sale.id).label('count')
+        ).filter(
+            Sale.sale_type == SaleType.ECOMMERCE
+        ).group_by(
+            Sale.order_status
+        ).all()
+        
+        orders_by_status = [
+            {
+                "status": row.order_status.value if row.order_status else "UNKNOWN",
+                "count": row.count
+            }
+            for row in orders_by_status_raw
+        ]
+        
+        # ===== 5. TOP PRODUCTOS MÁS VENDIDOS (últimos 30 días) =====
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        
+        top_products_raw = db.query(
+            SaleItem.product_id,
+            Product.name,
+            func.sum(SaleItem.quantity).label('total_sold'),
+            func.sum(SaleItem.total_price).label('revenue')
+        ).join(
+            Sale, SaleItem.sale_id == Sale.id
+        ).join(
+            Product, SaleItem.product_id == Product.id
+        ).filter(
+            Sale.sale_type == SaleType.ECOMMERCE,
+            Sale.created_at >= thirty_days_ago,
+            Sale.order_status != OrderStatus.CANCELLED,
+            Product.show_in_ecommerce == True
+        ).group_by(
+            SaleItem.product_id,
+            Product.name
+        ).order_by(
+            desc('total_sold')
+        ).limit(5).all()
+        
+        top_products = [
+            {
+                "product_id": row.product_id,
+                "product_name": row.name,
+                "total_sold": row.total_sold,
+                "revenue": float(row.revenue or 0)
+            }
+            for row in top_products_raw
+        ]
+        
+        # ===== 6. ALERTAS DE STOCK BAJO =====
+        low_stock_products_raw = db.query(
+            Product.id,
+            Product.name,
+            BranchStock.stock_quantity,
+            BranchStock.min_stock
+        ).join(
+            BranchStock, Product.id == BranchStock.product_id
+        ).filter(
+            Product.show_in_ecommerce == True,
+            Product.is_active == True,
+            BranchStock.stock_quantity <= BranchStock.min_stock,
+            BranchStock.min_stock > 0
+        ).order_by(
+            BranchStock.stock_quantity
+        ).limit(10).all()
+        
+        low_stock_alerts = [
+            {
+                "product_id": row.id,
+                "product_name": row.name,
+                "current_stock": row.stock_quantity,
+                "min_stock": row.min_stock
+            }
+            for row in low_stock_products_raw
+        ]
+        
+        return {
+            "data": {
+                "stats": {
+                    "total_online_products": total_online_products,
+                    "total_online_sales": float(total_online_sales),
+                    "total_online_orders": total_online_orders,
+                    "pending_orders": pending_orders,
+                    "delivered_orders": delivered_orders,
+                    "conversion_rate": conversion_rate
+                },
+                "recent_sales": recent_sales,
+                "sales_by_day": sales_by_day,
+                "orders_by_status": orders_by_status,
+                "top_products": top_products,
+                "low_stock_alerts": low_stock_alerts
+            }
+        }
+    
+    except Exception as e:
+        print(f"Error getting detailed e-commerce dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener dashboard detallado: {str(e)}"
+        )
+
+
+@router.patch("/whatsapp-sales/{id}/status")
+async def update_whatsapp_sale_status(
+    id: int,
+    status_update: WhatsAppSaleStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Actualiza el estado de una orden de WhatsApp y ejecuta lógica automática.
+    
+    Transiciones y efectos:
+        PENDING → PROCESSING: Descuenta stock, crea InventoryMovement, notifica venta
+        PROCESSING → SHIPPED: Marca como enviado
+        SHIPPED → DELIVERED: Completa orden (estado final)
+        * → CANCELLED: Revierte stock si estaba en PROCESSING+
+    
+    Args:
+        id: ID del registro WhatsAppSale
+        status_update: {new_status: OrderStatus}
+        db: Sesión de BD
+        current_user: Usuario autenticado (requiere ADMIN o MANAGER)
+    
+    Returns:
+        {
+            message: str,
+            sale: Sale object,
+            stock_changes: [{product_id, product_name, size, quantity_adjusted, new_stock}]
+        }
+    
+    Raises:
+        404: WhatsAppSale no encontrada
+        400: Transición inválida o stock insuficiente
+        403: Usuario sin permisos
+    """
+    # 1. Obtener WhatsAppSale + Sale (join)
+    whatsapp_sale = db.query(WhatsAppSale).filter(WhatsAppSale.id == id).first()
+    if not whatsapp_sale:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Venta WhatsApp no encontrada"
+        )
+    
+    sale = whatsapp_sale.sale
+    if not sale:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Venta asociada no encontrada"
+        )
+    
+    # Normalizar a OrderStatus enum (puede venir como string desde Pydantic/SQLAlchemy)
+    current_status = sale.order_status if isinstance(sale.order_status, OrderStatus) else OrderStatus(sale.order_status)
+    new_status = status_update.new_status if isinstance(status_update.new_status, OrderStatus) else OrderStatus(status_update.new_status)
+    
+    # 2. Validar transición
+    if not can_transition_order_status(current_status, new_status):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Transición inválida: {current_status.value} → {new_status.value}"
+        )
+    
+    # 3. Lógica de negocio según transición
+    stock_changes = []
+    
+    try:
+        if current_status == OrderStatus.PENDING and new_status == OrderStatus.PROCESSING:
+            # CONFIRMAR PAGO → Descontar stock
+            stock_changes = adjust_stock_for_sale(
+                db=db,
+                sale=sale,
+                operation="deduct"
+            )
+            
+            # Notificar nueva venta via WebSocket
+            try:
+                await notify_new_sale(
+                    sale_id=sale.id,
+                    total_amount=float(sale.total_amount),
+                    branch_id=sale.branch_id,
+                    user_name=current_user.username if current_user else "Sistema"
+                )
+            except Exception as ws_error:
+                # Log pero no fallar por error de WebSocket
+                print(f"Warning: WebSocket notification failed: {ws_error}")
+        
+        elif new_status == OrderStatus.CANCELLED and current_status in [OrderStatus.PROCESSING, OrderStatus.SHIPPED]:
+            # CANCELAR → Revertir stock (solo si ya se había descontado)
+            stock_changes = adjust_stock_for_sale(
+                db=db,
+                sale=sale,
+                operation="revert"
+            )
+    
+    except ValueError as e:
+        # Stock insuficiente u otro error de validación
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    # 4. Actualizar estado
+    sale.order_status = new_status
+    db.commit()
+    db.refresh(sale)
+    
+    return {
+        "message": f"Estado actualizado a {new_status.value}",
+        "sale": sale,
+        "stock_changes": stock_changes
+    }

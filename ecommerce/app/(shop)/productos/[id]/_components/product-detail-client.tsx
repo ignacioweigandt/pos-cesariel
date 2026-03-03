@@ -10,7 +10,6 @@ import { Label } from '@/src/shared/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/shared/components/ui/select'
 import { Badge } from '@/src/shared/components/ui/badge'
 import SizeSelectionModal from '@/app/components/modals/SizeSelectionModal'
-import ColorSelectionModal from '@/app/components/modals/ColorSelectionModal'
 import AddToCartModal from '@/app/components/modals/AddToCartModal'
 import AlertModal from '@/app/components/modals/AlertModal'
 
@@ -22,12 +21,10 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
   const { cartState, addItem } = useEcommerce()
   const [selectedImage, setSelectedImage] = useState(0)
   const [selectedSize, setSelectedSize] = useState('')
-  const [selectedColor, setSelectedColor] = useState('')
   const [quantity, setQuantity] = useState(1)
 
   // Modal states
   const [showSizeModal, setShowSizeModal] = useState(false)
-  const [showColorModal, setShowColorModal] = useState(false)
   const [showAddToCartModal, setShowAddToCartModal] = useState(false)
   const [showAlertModal, setShowAlertModal] = useState(false)
   const [alertConfig, setAlertConfig] = useState({ title: '', description: '' })
@@ -49,12 +46,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       return
     }
 
-    // Validate color selection
-    if (!selectedColor) {
-      setShowColorModal(true)
-      return
-    }
-
     addItem({
       id: product.id,
       name: product.name,
@@ -62,7 +53,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
       image: product.images[0] || '/placeholder.svg',
       quantity,
       size: selectedSize || undefined,
-      color: selectedColor,
       productId: parseInt(product.id),
     })
 
@@ -71,16 +61,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
 
   const handleSizeConfirm = (size: string) => {
     setSelectedSize(size)
-    if (!selectedColor) {
-      setShowColorModal(true)
-    }
-  }
-
-  const handleColorConfirm = (color: string) => {
-    setSelectedColor(color)
-    if (product?.has_sizes && !selectedSize) {
-      setShowSizeModal(true)
-    }
   }
 
   return (
@@ -166,28 +146,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <div>
               <h3 className="text-lg font-semibold mb-2">Descripción</h3>
               <p className="text-gray-600">{product.description}</p>
-            </div>
-
-            {/* Color Selection */}
-            <div>
-              <Label className="text-base font-medium mb-3 block">
-                Color: {selectedColor && <span className="font-normal">({selectedColor})</span>}
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {product.colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={`px-4 py-2 border rounded-md ${
-                      selectedColor === color
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    {color}
-                  </button>
-                ))}
-              </div>
             </div>
 
             {/* Size Selection - Only show if product has sizes */}
@@ -286,14 +244,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
         selectedSize={selectedSize}
       />
 
-      <ColorSelectionModal
-        isOpen={showColorModal}
-        onClose={() => setShowColorModal(false)}
-        onConfirm={handleColorConfirm}
-        colors={product.colors}
-        selectedColor={selectedColor}
-      />
-
       <AddToCartModal
         isOpen={showAddToCartModal}
         onClose={() => setShowAddToCartModal(false)}
@@ -301,7 +251,6 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
           name: product.name,
           price: product.price,
           image: product.images[0] || '/placeholder.svg',
-          color: selectedColor,
           size: selectedSize,
           quantity,
         }}

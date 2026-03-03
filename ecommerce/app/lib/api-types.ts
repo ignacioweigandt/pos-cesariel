@@ -203,7 +203,6 @@ export const mapApiProductToFrontend = (apiProduct: ApiProduct): Product => {
     category,
     brand,
     sizes,
-    colors: ['Negro', 'Blanco'],
     featured: false,
     inStock: (apiProduct.stock_quantity || apiProduct.stock || 0) > 0,
     rating: 4.5,
@@ -237,7 +236,6 @@ export interface Product {
   category: string;
   brand: string;
   sizes: string[];
-  colors: string[];
   featured: boolean;
   inStock: boolean;
   rating: number;

@@ -7,10 +7,8 @@ import {
   ChartBarIcon,
   ChatBubbleLeftRightIcon,
   ComputerDesktopIcon,
-  CurrencyDollarIcon,
   RectangleStackIcon,
   ShoppingBagIcon,
-  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 
 // API imports
@@ -29,8 +27,6 @@ import DashboardTab from "./Dashboard/DashboardTab";
 import ProductsTab from "./Products/ProductsTab";
 import { ProductEditModal } from "./Products/ProductEditModal";
 import { ProductViewModal } from "./Products/ProductViewModal";
-import SalesTab from "./Sales/SalesTab";
-import { SalesHistoryTab } from "./Sales/SalesHistoryTab";
 import { WhatsAppSalesTab } from "./WhatsApp/WhatsAppSalesTab";
 import { ContentTab } from "./Content/ContentTab";
 
@@ -124,11 +120,6 @@ export function EcommerceContainer() {
 
   // Sales refresh trigger
   const [salesRefreshTrigger, setSalesRefreshTrigger] = useState<number>(0);
-
-  // Refresh sales history callback
-  const refreshSalesHistory = () => {
-    setSalesRefreshTrigger((prev) => prev + 1);
-  };
 
   // Initial mount and authentication
   useEffect(() => {
@@ -335,8 +326,6 @@ export function EcommerceContainer() {
   const tabs = [
     { id: "dashboard", name: "Dashboard", icon: ChartBarIcon },
     { id: "products", name: "Productos Online", icon: ShoppingBagIcon },
-    { id: "sales", name: "Ventas", icon: CurrencyDollarIcon },
-    { id: "sales-history", name: "Historial de Ventas", icon: UserGroupIcon },
     {
       id: "whatsapp-sales",
       name: "Ventas WhatsApp",
@@ -426,14 +415,6 @@ export function EcommerceContainer() {
                     setShowImageManager(true);
                   }}
                 />
-              )}
-
-              {activeTab === "sales" && (
-                <SalesTab onSaleCompleted={refreshSalesHistory} />
-              )}
-
-              {activeTab === "sales-history" && (
-                <SalesHistoryTab refreshTrigger={salesRefreshTrigger} />
               )}
 
               {activeTab === "whatsapp-sales" && (

@@ -144,7 +144,8 @@ from app.schemas.whatsapp import (
     WhatsAppSaleCreate,
     WhatsAppSaleUpdate,
     WhatsAppSale,
-    WhatsAppSaleWithDetails
+    WhatsAppSaleWithDetails,
+    WhatsAppSaleStatusUpdate
 )
 
 # Import dashboard schemas (legacy - kept for backward compatibility)
@@ -330,6 +331,7 @@ __all__ = [
     "WhatsAppSaleUpdate",
     "WhatsAppSale",
     "WhatsAppSaleWithDetails",
+    "WhatsAppSaleStatusUpdate",
     
     # Dashboard & Reports (new with strong typing)
     "TopProduct",

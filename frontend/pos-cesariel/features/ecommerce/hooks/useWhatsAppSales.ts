@@ -76,11 +76,25 @@ export function useWhatsAppSales() {
     }
   }, [fetchSales]);
 
+  const updateWhatsAppSaleStatus = useCallback(async (id: number, newStatus: string) => {
+    try {
+      const result = await ecommerceAdvancedApi.updateWhatsAppSaleStatus(id, newStatus);
+      await fetchSales(); // Refresh list
+      return result;
+    } catch (err) {
+      const apiError = err as ApiErrorResponse;
+      const errorMessage = apiError.response?.data?.detail || 'Error al actualizar estado';
+      console.error('Error updating WhatsApp sale status:', errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, [fetchSales]);
+
   return {
     sales,
     loading,
     error,
     fetchSales,
     updateSaleStatus,
+    updateWhatsAppSaleStatus,
   };
 }

@@ -18,7 +18,6 @@ export interface Product {
   category: string;
   brand: Brand | null;
   sizes: string[];
-  colors: string[];
   featured: boolean;
   inStock: boolean;
   rating: number;
@@ -46,7 +45,6 @@ export interface CartItem {
   product: Product;
   quantity: number;
   selectedSize?: string;
-  selectedColor?: string;
 }
 
 export interface CartState {

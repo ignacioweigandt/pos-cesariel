@@ -57,7 +57,7 @@ export function WhatsAppSalesTab({
   }, []);
 
   // Hooks para datos y lógica
-  const { sales, loading, fetchSales, updateSaleStatus } = useWhatsAppSales();
+  const { sales, loading, fetchSales, updateSaleStatus, updateWhatsAppSaleStatus } = useWhatsAppSales();
   const stats = useWhatsAppStats(sales);
   const { filters, setFilters, filteredSales, clearFilters, hasActiveFilters } =
     useWhatsAppFilters(sales);
@@ -145,6 +145,7 @@ export function WhatsAppSalesTab({
             loading={loading}
             onUpdateStatus={updateSaleStatus}
             onViewDetails={setSelectedSale}
+            onUpdateWhatsAppStatus={updateWhatsAppSaleStatus}
           />
         </div>
       </div>

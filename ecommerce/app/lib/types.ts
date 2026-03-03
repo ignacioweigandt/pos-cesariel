@@ -8,7 +8,6 @@ export interface Product {
   category: string
   brand: string
   sizes: string[]
-  colors: string[]
   featured: boolean
   inStock: boolean
   rating: number
