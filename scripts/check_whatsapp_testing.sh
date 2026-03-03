@@ -31,7 +31,7 @@ case "${1:-help}" in
   movements)
     echo "=== MOVIMIENTOS DE INVENTARIO - Producto 196 ==="
     $DB_EXEC "
-    SELECT id, quantity_change, movement_type, reason, created_at
+    SELECT id, quantity, movement_type, notes, created_at
     FROM inventory_movements
     WHERE product_id = 196
     ORDER BY created_at DESC
