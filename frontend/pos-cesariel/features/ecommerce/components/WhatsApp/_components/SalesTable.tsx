@@ -188,7 +188,7 @@ export function SalesTable({
                               'PROCESSING', 
                               `¿Confirmar pago recibido?\n\n` +
                               `Cliente: ${sale.customer_name}\n` +
-                              `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                              `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
                               `⚠️ IMPORTANTE: Esta acción descontará automáticamente el stock de los productos.`
                             )}
                             disabled={updatingId === sale.id}
@@ -203,7 +203,7 @@ export function SalesTable({
                               'CANCELLED', 
                               `¿Cancelar pedido?\n\n` +
                               `Cliente: ${sale.customer_name}\n` +
-                              `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                              `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
                               `Esta acción NO afectará el stock ya que el pago aún no fue confirmado.`
                             )}
                             disabled={updatingId === sale.id}
@@ -239,7 +239,7 @@ export function SalesTable({
                               'CANCELLED', 
                               `⚠️ CANCELAR PEDIDO Y REVERTIR STOCK\n\n` +
                               `Cliente: ${sale.customer_name}\n` +
-                              `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                              `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
                               `IMPORTANTE: Esta acción revertirá automáticamente el stock que fue descontado.\n\n` +
                               `¿Estás seguro de cancelar este pedido?`
                             )}
@@ -259,7 +259,7 @@ export function SalesTable({
                             'DELIVERED', 
                             `¿Confirmar entrega del pedido?\n\n` +
                             `Cliente: ${sale.customer_name}\n` +
-                            `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                            `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
                             `Confirma que el cliente recibió el pedido o lo retiró correctamente.\n` +
                             `Esta acción marcará el pedido como completado.`
                           )}
