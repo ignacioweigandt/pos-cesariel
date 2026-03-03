@@ -20,7 +20,7 @@ Notas Importantes:
 Este servicio reemplaza métodos de negocio que antes estaban en Product model.
 """
 
-from typing import Optional, List
+from typing import Optional, List, Literal, Dict
 from sqlalchemy.orm import Session
 from app.repositories.inventory import (
     BranchStockRepository,
@@ -262,3 +262,140 @@ class InventoryService:
         except ValueError:
             # Producto no existe u otro error de validación
             return False
+
+
+def adjust_stock_for_sale(
+    db: Session,
+    sale: "Sale",
+    operation: Literal["deduct", "revert"]
+) -> List[Dict]:
+    """
+    Ajusta el stock para todos los items de una venta.
+    
+    Función helper para workflow de ventas WhatsApp/E-commerce.
+    Maneja automáticamente productos con/sin talles.
+    
+    Args:
+        db: Sesión de base de datos
+        sale: Venta con sale_items cargados (eager loading recomendado)
+        operation: 
+            - "deduct": Descuenta stock (PENDING → PROCESSING)
+            - "revert": Revierte stock (cancelación)
+    
+    Returns:
+        Lista de cambios de stock realizados:
+        [
+            {
+                "product_id": 10,
+                "product_name": "Remera Negra",
+                "size": "M",
+                "quantity_adjusted": -2,  # Negativo = descuento, Positivo = reversión
+                "new_stock": 48
+            }
+        ]
+    
+    Raises:
+        ValueError: Si no hay stock suficiente (solo en operation="deduct")
+    
+    Effects:
+        - Actualiza BranchStock.stock_quantity o ProductSize.stock_quantity
+        - Crea InventoryMovement por cada item para auditoría
+    
+    Example:
+        >>> from app.models import Sale
+        >>> sale = db.query(Sale).filter(Sale.id == 123).first()
+        >>> # Confirmar pago (descuenta stock)
+        >>> changes = adjust_stock_for_sale(db, sale, operation="deduct")
+        >>> # Cancelar (revierte stock)
+        >>> changes = adjust_stock_for_sale(db, sale, operation="revert")
+    """
+    from app.models import Sale, BranchStock, ProductSize, InventoryMovement
+    
+    multiplier = -1 if operation == "deduct" else +1
+    stock_changes = []
+    
+    # 1. Validar stock disponible (solo si es deduct)
+    if operation == "deduct":
+        for item in sale.sale_items:
+            product = item.product
+            
+            if product.has_sizes and item.size:
+                # Producto con talle
+                product_size = db.query(ProductSize).filter(
+                    ProductSize.product_id == item.product_id,
+                    ProductSize.branch_id == sale.branch_id,
+                    ProductSize.size == item.size
+                ).first()
+                
+                if not product_size or product_size.stock_quantity < item.quantity:
+                    raise ValueError(
+                        f"Stock insuficiente para {product.name} talle {item.size}: "
+                        f"disponible {product_size.stock_quantity if product_size else 0}, "
+                        f"requerido {item.quantity}"
+                    )
+            else:
+                # Producto sin talle
+                branch_stock = db.query(BranchStock).filter(
+                    BranchStock.product_id == item.product_id,
+                    BranchStock.branch_id == sale.branch_id
+                ).first()
+                
+                if not branch_stock or branch_stock.stock_quantity < item.quantity:
+                    raise ValueError(
+                        f"Stock insuficiente para {product.name}: "
+                        f"disponible {branch_stock.stock_quantity if branch_stock else 0}, "
+                        f"requerido {item.quantity}"
+                    )
+    
+    # 2. Ajustar stock
+    for item in sale.sale_items:
+        product = item.product
+        quantity_change = item.quantity * multiplier
+        
+        if product.has_sizes and item.size:
+            # Producto con talle
+            product_size = db.query(ProductSize).filter(
+                ProductSize.product_id == item.product_id,
+                ProductSize.branch_id == sale.branch_id,
+                ProductSize.size == item.size
+            ).first()
+            
+            product_size.stock_quantity += quantity_change
+            new_stock = product_size.stock_quantity
+        else:
+            # Producto sin talle
+            branch_stock = db.query(BranchStock).filter(
+                BranchStock.product_id == item.product_id,
+                BranchStock.branch_id == sale.branch_id
+            ).first()
+            
+            branch_stock.stock_quantity += quantity_change
+            new_stock = branch_stock.stock_quantity
+        
+        # 3. Crear InventoryMovement para auditoría
+        reason = (
+            f"Venta WhatsApp #{sale.sale_number} confirmada"
+            if operation == "deduct"
+            else f"Cancelación venta WhatsApp #{sale.sale_number}"
+        )
+        
+        movement = InventoryMovement(
+            product_id=item.product_id,
+            branch_id=sale.branch_id,
+            quantity=quantity_change,  # Negativo si deduct, positivo si revert
+            movement_type="sale" if operation == "deduct" else "adjustment",
+            reason=reason,
+            user_id=sale.user_id  # Puede ser None para ventas e-commerce
+        )
+        db.add(movement)
+        
+        # 4. Registrar cambio para respuesta
+        stock_changes.append({
+            "product_id": item.product_id,
+            "product_name": product.name,
+            "size": item.size,
+            "quantity_adjusted": quantity_change,
+            "new_stock": new_stock
+        })
+    
+    return stock_changes

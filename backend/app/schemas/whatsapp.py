@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
 from decimal import Decimal
+from app.models.enums import OrderStatus
 
 
 # WhatsApp Config Schemas
@@ -81,6 +82,17 @@ class WhatsAppSale(WhatsAppSaleBase):
 # WhatsApp Sale with Full Details
 class WhatsAppSaleWithDetails(WhatsAppSale):
     sale: "Sale"
+
+
+# WhatsApp Sale Status Update
+class WhatsAppSaleStatusUpdate(BaseModel):
+    """
+    Schema para actualizar el estado de una venta WhatsApp.
+    """
+    new_status: OrderStatus
+    
+    class Config:
+        use_enum_values = True  # Permite strings como "PROCESSING"
 
 
 # Forward reference resolution

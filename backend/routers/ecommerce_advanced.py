@@ -83,6 +83,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from database import get_db
+from app.models.enums import can_transition_order_status
+from app.services.inventory_service import adjust_stock_for_sale
+from websocket_manager import notify_new_sale
+import asyncio
 from app.models import (
     ProductImage, StoreBanner, WhatsAppSale, SocialMediaConfig, WhatsAppConfig,
     Product, Sale, User, EcommerceConfig, OrderStatus
@@ -94,6 +98,7 @@ from app.schemas import (
     StoreBannerCreate, StoreBannerUpdate,
     WhatsAppSale as WhatsAppSaleSchema,
     WhatsAppSaleCreate, WhatsAppSaleUpdate,
+    WhatsAppSaleStatusUpdate,
     SocialMediaConfig as SocialMediaConfigSchema,
     SocialMediaConfigCreate, SocialMediaConfigUpdate,
     WhatsAppConfig as WhatsAppConfigSchema,
@@ -959,3 +964,113 @@ def get_ecommerce_dashboard_stats(
             status_code=500,
             detail=f"Error al obtener estadísticas del dashboard: {str(e)}"
         )
+
+
+@router.patch("/whatsapp-sales/{id}/status")
+async def update_whatsapp_sale_status(
+    id: int,
+    status_update: WhatsAppSaleStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Actualiza el estado de una orden de WhatsApp y ejecuta lógica automática.
+    
+    Transiciones y efectos:
+        PENDING → PROCESSING: Descuenta stock, crea InventoryMovement, notifica venta
+        PROCESSING → SHIPPED: Marca como enviado
+        SHIPPED → DELIVERED: Completa orden (estado final)
+        * → CANCELLED: Revierte stock si estaba en PROCESSING+
+    
+    Args:
+        id: ID del registro WhatsAppSale
+        status_update: {new_status: OrderStatus}
+        db: Sesión de BD
+        current_user: Usuario autenticado (requiere ADMIN o MANAGER)
+    
+    Returns:
+        {
+            message: str,
+            sale: Sale object,
+            stock_changes: [{product_id, product_name, size, quantity_adjusted, new_stock}]
+        }
+    
+    Raises:
+        404: WhatsAppSale no encontrada
+        400: Transición inválida o stock insuficiente
+        403: Usuario sin permisos
+    """
+    # 1. Obtener WhatsAppSale + Sale (join)
+    whatsapp_sale = db.query(WhatsAppSale).filter(WhatsAppSale.id == id).first()
+    if not whatsapp_sale:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Venta WhatsApp no encontrada"
+        )
+    
+    sale = whatsapp_sale.sale
+    if not sale:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Venta asociada no encontrada"
+        )
+    
+    current_status = sale.order_status
+    new_status = status_update.new_status
+    
+    # 2. Validar transición
+    if not can_transition_order_status(current_status, new_status):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Transición inválida: {current_status.value} → {new_status.value}"
+        )
+    
+    # 3. Lógica de negocio según transición
+    stock_changes = []
+    
+    try:
+        if current_status == OrderStatus.PENDING and new_status == OrderStatus.PROCESSING:
+            # CONFIRMAR PAGO → Descontar stock
+            stock_changes = adjust_stock_for_sale(
+                db=db,
+                sale=sale,
+                operation="deduct"
+            )
+            
+            # Notificar nueva venta via WebSocket
+            try:
+                await notify_new_sale(
+                    sale_id=sale.id,
+                    total_amount=float(sale.total_amount),
+                    branch_id=sale.branch_id,
+                    user_name=current_user.username if current_user else "Sistema"
+                )
+            except Exception as ws_error:
+                # Log pero no fallar por error de WebSocket
+                print(f"Warning: WebSocket notification failed: {ws_error}")
+        
+        elif new_status == OrderStatus.CANCELLED and current_status in [OrderStatus.PROCESSING, OrderStatus.SHIPPED]:
+            # CANCELAR → Revertir stock (solo si ya se había descontado)
+            stock_changes = adjust_stock_for_sale(
+                db=db,
+                sale=sale,
+                operation="revert"
+            )
+    
+    except ValueError as e:
+        # Stock insuficiente u otro error de validación
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    
+    # 4. Actualizar estado
+    sale.order_status = new_status
+    db.commit()
+    db.refresh(sale)
+    
+    return {
+        "message": f"Estado actualizado a {new_status.value}",
+        "sale": sale,
+        "stock_changes": stock_changes
+    }
