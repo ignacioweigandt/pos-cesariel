@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import {
   ChatBubbleLeftRightIcon,
   CheckIcon,
   EyeIcon,
+  XMarkIcon,
+  TruckIcon,
 } from '@heroicons/react/24/outline';
 import { OrderStatusBadge } from '@/shared/utils/format/status';
 import { formatDate } from '@/shared/utils/format/date';
@@ -12,6 +15,7 @@ interface SalesTableProps {
   loading: boolean;
   onUpdateStatus: (saleId: number, status: string) => Promise<boolean>;
   onViewDetails: (sale: WhatsAppSale) => void;
+  onUpdateWhatsAppStatus?: (id: number, newStatus: string) => Promise<any>;
 }
 
 /**
@@ -22,7 +26,10 @@ export function SalesTable({
   loading,
   onUpdateStatus,
   onViewDetails,
+  onUpdateWhatsAppStatus,
 }: SalesTableProps) {
+  const [updatingId, setUpdatingId] = useState<number | null>(null);
+
   const openWhatsApp = (whatsappUrl: string) => {
     if (whatsappUrl) {
       window.open(whatsappUrl, '_blank');
@@ -34,6 +41,24 @@ export function SalesTable({
       await onUpdateStatus(saleId, 'DELIVERED');
     } catch (error) {
       console.error('Error marking as completed:', error);
+    }
+  };
+
+  const handleUpdateStatus = async (whatsappSaleId: number, newStatus: string, confirmMessage: string) => {
+    if (!onUpdateWhatsAppStatus) return;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setUpdatingId(whatsappSaleId);
+    try {
+      await onUpdateWhatsAppStatus(whatsappSaleId, newStatus);
+      // Success message could be shown here with toast
+    } catch (error: any) {
+      alert(error.message || 'Error al actualizar estado');
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -131,31 +156,97 @@ export function SalesTable({
               </td>
 
               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div className="flex space-x-2">
-                  {sale.whatsapp_chat_url && (
+                <div className="flex flex-col space-y-2">
+                  {/* Quick actions row */}
+                  <div className="flex space-x-2">
+                    {sale.whatsapp_chat_url && (
+                      <button
+                        onClick={() => openWhatsApp(sale.whatsapp_chat_url!)}
+                        className="text-green-600 hover:text-green-900"
+                        title="Abrir WhatsApp"
+                      >
+                        <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => openWhatsApp(sale.whatsapp_chat_url!)}
-                      className="text-green-600 hover:text-green-900"
-                      title="Abrir WhatsApp"
+                      onClick={() => onViewDetails(sale)}
+                      className="text-blue-600 hover:text-blue-900"
+                      title="Ver detalles"
                     >
-                      <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                      <EyeIcon className="h-4 w-4" />
                     </button>
-                  )}
-                  <button
-                    onClick={() => onViewDetails(sale)}
-                    className="text-blue-600 hover:text-blue-900"
-                    title="Ver detalles"
-                  >
-                    <EyeIcon className="h-4 w-4" />
-                  </button>
-                  {sale.sale?.order_status === 'PENDING' && (
-                    <button
-                      onClick={() => handleMarkAsCompleted(sale.sale!.id)}
-                      className="text-green-600 hover:text-green-900"
-                      title="Marcar como completado"
-                    >
-                      <CheckIcon className="h-4 w-4" />
-                    </button>
+                  </div>
+
+                  {/* Status action buttons (contextual) */}
+                  {onUpdateWhatsAppStatus && (
+                    <div className="flex flex-col space-y-1">
+                      {sale.sale?.order_status === 'PENDING' && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(sale.id, 'PROCESSING', '¿Confirmar pago? Esto descontará el stock.')}
+                            disabled={updatingId === sale.id}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                          >
+                            <CheckIcon className="h-3 w-3 mr-1" />
+                            Confirmar Pago
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(sale.id, 'CANCELLED', '¿Cancelar pedido?')}
+                            disabled={updatingId === sale.id}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                          >
+                            <XMarkIcon className="h-3 w-3 mr-1" />
+                            Cancelar
+                          </button>
+                        </>
+                      )}
+
+                      {sale.sale?.order_status === 'PROCESSING' && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(sale.id, 'SHIPPED', '¿Marcar como enviado?')}
+                            disabled={updatingId === sale.id}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+                          >
+                            <TruckIcon className="h-3 w-3 mr-1" />
+                            Marcar como Enviado
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(sale.id, 'CANCELLED', '¿Cancelar? Esto revertirá el stock.')}
+                            disabled={updatingId === sale.id}
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
+                          >
+                            <XMarkIcon className="h-3 w-3 mr-1" />
+                            Cancelar (Revertir Stock)
+                          </button>
+                        </>
+                      )}
+
+                      {sale.sale?.order_status === 'SHIPPED' && (
+                        <button
+                          onClick={() => handleUpdateStatus(sale.id, 'DELIVERED', '¿Marcar como entregado?')}
+                          disabled={updatingId === sale.id}
+                          className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                        >
+                          <CheckIcon className="h-3 w-3 mr-1" />
+                          Marcar como Entregado
+                        </button>
+                      )}
+
+                      {sale.sale?.order_status === 'DELIVERED' && (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-green-800 bg-green-100">
+                          <CheckIcon className="h-3 w-3 mr-1" />
+                          Entregado
+                        </span>
+                      )}
+
+                      {sale.sale?.order_status === 'CANCELLED' && (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-red-800 bg-red-100">
+                          <XMarkIcon className="h-3 w-3 mr-1" />
+                          Cancelado
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </td>

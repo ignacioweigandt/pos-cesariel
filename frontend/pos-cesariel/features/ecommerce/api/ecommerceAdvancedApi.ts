@@ -177,4 +177,15 @@ export const ecommerceAdvancedApi = {
 
   updateSaleStatus: (saleId: number, status: string) =>
     apiClient.put(`/ecommerce-advanced/sales/${saleId}/status`, { new_status: status }),
+
+  updateWhatsAppSaleStatus: async (
+    id: number,
+    newStatus: string
+  ): Promise<{ message: string; sale: any; stock_changes: any[] }> => {
+    const response = await apiClient.patch(
+      `/ecommerce-advanced/whatsapp-sales/${id}/status`,
+      { new_status: newStatus }
+    );
+    return response.data;
+  },
 };
