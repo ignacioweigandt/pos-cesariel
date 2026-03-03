@@ -6,10 +6,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 POS Cesariel is a Point of Sale system with dual frontends: an administrative POS interface and a customer-facing e-commerce store. FastAPI backend with PostgreSQL, deployed using Docker.
 
+**Status:** ✅ EN PRODUCCIÓN ACTIVA - Railway deployment
+
 **Applications:**
 - **Backend**: FastAPI REST API (port 8000) - `backend/`
 - **POS Admin**: Next.js 15 admin interface (port 3000) - `frontend/pos-cesariel/`
 - **E-commerce**: Next.js 15 public storefront (port 3001) - `ecommerce/`
+
+**Production URLs:**
+- Backend: https://backend-production-c20a.up.railway.app
+- POS Admin: https://frontend-pos-production.up.railway.app
+- E-commerce: https://e-commerce-production-3634.up.railway.app
+
+## 🔧 Maintenance & Changes
+
+**IMPORTANTE:** Este proyecto usa **Spec-Driven Development (SDD)** para gestionar cambios en producción.
+
+**Antes de hacer CUALQUIER cambio:**
+1. Lee `openspec/README.md` - Workflow completo
+2. Lee `SDD_QUICK_START.md` - Guía rápida
+3. Revisa `openspec/changes/example-001-add-product-rating/` - Ejemplo de referencia
+
+**Para cambios urgentes (hotfix):**
+```bash
+# Ver SDD_QUICK_START.md para workflow completo
+cp openspec/templates/PROPOSAL_TEMPLATE.md openspec/changes/XXX-hotfix-name/proposal.md
+# Completar propuesta, diseño, implementar, verificar
+```
+
+**Memoria persistente:**
+- Usa Engram MCP para capturar learnings de cada cambio
+- Busca conocimiento previo: `mcp_engram_mem_search` antes de implementar
+- Guarda decisiones: `mcp_engram_mem_save` después de completar cambios
 
 ## Quick Reference
 
