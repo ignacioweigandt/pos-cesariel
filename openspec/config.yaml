@@ -1,0 +1,155 @@
+# POS Cesariel - SDD Production Maintenance Config
+schema: spec-driven
+version: 1.0
+
+# Project Context
+context: |
+  POS Cesariel - Sistema de Punto de Venta + E-commerce en producción
+  Stack: FastAPI (Python 3.9), Next.js 15 (React 19, TypeScript), PostgreSQL 15
+  Architecture: Clean Architecture (Repositories, Services, Routers)
+  Deployment: Railway (Docker containers)
+  Estado: PRODUCCIÓN ACTIVA - Requiere mantenimiento cuidadoso
+  
+  URLs Producción:
+  - Backend: https://backend-production-c20a.up.railway.app
+  - POS Admin: https://frontend-pos-production.up.railway.app
+  - E-commerce: https://e-commerce-production-3634.up.railway.app
+
+# Categorías de Cambios en Producción
+change_types:
+  hotfix:
+    description: "Bug crítico en producción - requiere fix inmediato"
+    severity: critical
+    approval_required: false
+    testing_required: true
+    rollback_plan_required: true
+  
+  bugfix:
+    description: "Bug no crítico - puede esperar ventana de deploy"
+    severity: high
+    approval_required: false
+    testing_required: true
+    rollback_plan_required: true
+  
+  feature:
+    description: "Nueva funcionalidad solicitada por cliente"
+    severity: medium
+    approval_required: true
+    testing_required: true
+    rollback_plan_required: true
+  
+  optimization:
+    description: "Mejora de performance o eficiencia"
+    severity: low
+    approval_required: false
+    testing_required: true
+    rollback_plan_required: false
+  
+  config:
+    description: "Cambio de configuración (env vars, settings)"
+    severity: medium
+    approval_required: true
+    testing_required: false
+    rollback_plan_required: true
+
+# Rules para cada fase del SDD
+rules:
+  proposal:
+    - Identificar tipo de cambio (hotfix, bugfix, feature, optimization, config)
+    - Incluir severidad y prioridad
+    - Describir impacto en usuarios y sistema
+    - Identificar componentes afectados (backend, frontend-pos, ecommerce)
+    - Incluir rollback plan si severity >= medium
+    - Listar dependencias y riesgos
+  
+  specs:
+    - Usar formato Given/When/Then para escenarios
+    - Usar RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+    - Incluir casos edge y error handling
+    - Especificar comportamiento esperado en producción
+    - Documentar backward compatibility requirements
+  
+  design:
+    - Documentar decisiones de diseño con rationale
+    - Incluir diagramas de secuencia para flujos complejos
+    - Especificar cambios en base de datos (migraciones Alembic)
+    - Documentar impacto en performance
+    - Deployment runbook: pasos exactos para deployar
+    - Rollback procedure: cómo volver atrás si falla
+    - Monitoring checklist: qué verificar post-deploy
+  
+  tasks:
+    - Agrupar por fase: preparación, implementación, testing, deployment, monitoring
+    - Usar numeración jerárquica (1.1, 1.2, etc.)
+    - Tasks deben ser atómicas (completables en una sesión)
+    - Incluir comandos exactos de deployment
+    - Incluir queries SQL de verificación
+  
+  apply:
+    - Seguir patrones existentes del proyecto
+    - Mantener Clean Architecture (Repository → Service → Router)
+    - NUNCA modificar Product.stock_quantity directamente (usar BranchStock)
+    - Usar Alembic para migraciones de BD
+    - Tests obligatorios para bugfix y feature
+    - Linting antes de commit (pylint backend, eslint frontend)
+  
+  verify:
+    - Correr tests unitarios e integración
+    - Verificar specs contra implementación
+    - Testing en local antes de deploy
+    - Verificar en producción post-deploy
+    - Monitoring de métricas Railway (CPU, memory, requests)
+  
+  archive:
+    - Capturar learnings en Engram (mcp_engram_mem_save)
+    - Documentar problemas encontrados y soluciones
+    - Actualizar CLAUDE.md si hay cambios arquitectónicos
+    - Mergear delta specs a specs principales
+
+# Deployment Procedures
+deployment:
+  development:
+    - Correr docker compose up localmente
+    - Verificar en http://localhost:8000 (backend), :3000 (pos), :3001 (ecommerce)
+  
+  production:
+    - Railway auto-deploy desde main branch
+    - Verificar health check: curl https://backend-production-c20a.up.railway.app/health
+    - Monitorear logs: railway logs -s backend
+    - Rollback: railway rollback -s <service>
+  
+  migrations:
+    - Backend: make migrate-create MSG="description"
+    - Backend: make migrate-upgrade (en producción con cuidado)
+    - Backup DB antes de migraciones: make backup-db
+
+# Critical Constraints
+constraints:
+  - Stock SIEMPRE se maneja vía BranchStock, NUNCA Product.stock_quantity
+  - API endpoints SIN trailing slashes (/products NO /products/)
+  - Multi-tenant: filtrar por branch_id según rol de usuario
+  - CORS en producción: dominios específicos, NO wildcard "*"
+  - JWT expira en 8 horas
+  - PostgreSQL connection pool limitado (evitar N+1 queries)
+
+# Known Issues & Workarounds
+known_issues:
+  - Optimistic locking deshabilitado: columna "version" no existe en BranchStock/ProductSize
+  - Workaround: aceptar race conditions hasta migration
+  - Payment methods: lookup case-insensitive (frontend envía minúsculas, DB tiene mayúsculas)
+  - Products limit: máximo 500 por request (Railway timeout >500)
+
+# Testing Strategy
+testing:
+  unit:
+    - Backend: pytest tests/unit/ (80% coverage mínimo)
+    - Frontend: npm test (en futuro)
+  
+  integration:
+    - Backend: pytest tests/integration/
+    - E2E: manual testing en staging antes de producción
+  
+  performance:
+    - Lighthouse CI para POS frontend
+    - Artillery load testing
+    - Monitorear Railway metrics post-deploy
