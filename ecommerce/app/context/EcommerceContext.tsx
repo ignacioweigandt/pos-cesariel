@@ -12,7 +12,6 @@ export interface CartItem {
   image: string
   quantity: number
   size?: string
-  color?: string
   productId: number // ID numérico para el backend
 }
 
@@ -44,8 +43,8 @@ interface EcommerceContextValue {
   
   // Cart actions
   addItem: (item: CartItem) => Promise<boolean>
-  removeItem: (id: string, size?: string, color?: string) => void
-  updateQuantity: (id: string, quantity: number, size?: string, color?: string) => Promise<boolean>
+  removeItem: (id: string, size?: string) => void
+  updateQuantity: (id: string, quantity: number, size?: string) => Promise<boolean>
   clearCart: () => void
   
   // Customer info
@@ -80,11 +79,10 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
   }
 
   // Utility function to find item
-  const findItem = (items: CartItem[], id: string, size?: string, color?: string) => {
+  const findItem = (items: CartItem[], id: string, size?: string) => {
     return items.find(item => 
       item.id === id && 
-      item.size === size && 
-      item.color === color
+      item.size === size
     )
   }
 
@@ -97,14 +95,14 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
       // Stock validation requires authentication which e-commerce doesn't have
 
       setCartState(prev => {
-        const existingItem = findItem(prev.items, newItem.id, newItem.size, newItem.color)
+        const existingItem = findItem(prev.items, newItem.id, newItem.size)
         
         let newItems: CartItem[]
         
         if (existingItem) {
           // Update quantity of existing item
           newItems = prev.items.map(item =>
-            findItem([item], newItem.id, newItem.size, newItem.color)
+            findItem([item], newItem.id, newItem.size)
               ? { ...item, quantity: item.quantity + newItem.quantity }
               : item
           )
@@ -129,10 +127,10 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
   }
 
   // React 19: No useCallback needed - React Compiler optimizes automatically
-  const removeItem = (id: string, size?: string, color?: string) => {
+  const removeItem = (id: string, size?: string) => {
     setCartState(prev => {
       const newItems = prev.items.filter(item => 
-        !(item.id === id && item.size === size && item.color === color)
+        !(item.id === id && item.size === size)
       )
       
       return {
@@ -144,17 +142,17 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
   }
 
   // React 19: No useCallback needed - React Compiler optimizes automatically
-  const updateQuantity = async (id: string, quantity: number, size?: string, color?: string): Promise<boolean> => {
+  const updateQuantity = async (id: string, quantity: number, size?: string): Promise<boolean> => {
     try {
       setError(null)
       
       if (quantity <= 0) {
-        removeItem(id, size, color)
+        removeItem(id, size)
         return true
       }
 
       // Find the item to validate stock
-      const item = findItem(cartState.items, id, size, color)
+      const item = findItem(cartState.items, id, size)
       if (!item) return false
 
       // Skip stock validation for e-commerce - will be validated at checkout
@@ -162,7 +160,7 @@ export function EcommerceProvider({ children }: { children: ReactNode }) {
 
       setCartState(prev => {
         const newItems = prev.items.map(item =>
-          findItem([item], id, size, color)
+          findItem([item], id, size)
             ? { ...item, quantity }
             : item
         )
