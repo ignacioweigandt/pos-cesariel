@@ -9,6 +9,7 @@ import {
 import { OrderStatusBadge } from '@/shared/utils/format/status';
 import { formatDate } from '@/shared/utils/format/date';
 import type { WhatsAppSale } from '@/features/ecommerce/hooks/useWhatsAppSales';
+import ConfirmationModal from './ConfirmationModal';
 
 interface SalesTableProps {
   sales: WhatsAppSale[];
@@ -16,6 +17,15 @@ interface SalesTableProps {
   onUpdateStatus: (saleId: number, status: string) => Promise<boolean>;
   onViewDetails: (sale: WhatsAppSale) => void;
   onUpdateWhatsAppStatus?: (id: number, newStatus: string) => Promise<any>;
+}
+
+interface ConfirmationState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  type: 'warning' | 'success' | 'danger' | 'info';
+  confirmText: string;
+  onConfirm: () => void;
 }
 
 /**
@@ -29,6 +39,14 @@ export function SalesTable({
   onUpdateWhatsAppStatus,
 }: SalesTableProps) {
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [confirmation, setConfirmation] = useState<ConfirmationState>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'info',
+    confirmText: 'Confirmar',
+    onConfirm: () => {},
+  });
 
   const openWhatsApp = (whatsappUrl: string) => {
     if (whatsappUrl) {
@@ -44,22 +62,47 @@ export function SalesTable({
     }
   };
 
-  const handleUpdateStatus = async (whatsappSaleId: number, newStatus: string, confirmMessage: string) => {
-    if (!onUpdateWhatsAppStatus) return;
-    
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
+  const showConfirmation = (
+    title: string,
+    message: string,
+    type: 'warning' | 'success' | 'danger' | 'info',
+    confirmText: string,
+    onConfirm: () => void
+  ) => {
+    setConfirmation({
+      isOpen: true,
+      title,
+      message,
+      type,
+      confirmText,
+      onConfirm,
+    });
+  };
 
-    setUpdatingId(whatsappSaleId);
-    try {
-      await onUpdateWhatsAppStatus(whatsappSaleId, newStatus);
-      // Success message could be shown here with toast
-    } catch (error: any) {
-      alert(error.message || 'Error al actualizar estado');
-    } finally {
-      setUpdatingId(null);
-    }
+  const closeConfirmation = () => {
+    setConfirmation((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  const handleUpdateStatus = async (
+    whatsappSaleId: number,
+    newStatus: string,
+    title: string,
+    message: string,
+    type: 'warning' | 'success' | 'danger' | 'info',
+    confirmText: string
+  ) => {
+    if (!onUpdateWhatsAppStatus) return;
+
+    showConfirmation(title, message, type, confirmText, async () => {
+      setUpdatingId(whatsappSaleId);
+      try {
+        await onUpdateWhatsAppStatus(whatsappSaleId, newStatus);
+      } catch (error: any) {
+        alert(error.message || 'Error al actualizar estado');
+      } finally {
+        setUpdatingId(null);
+      }
+    });
   };
 
   if (sales.length === 0) {
@@ -185,11 +228,11 @@ export function SalesTable({
                           <button
                             onClick={() => handleUpdateStatus(
                               sale.id, 
-                              'PROCESSING', 
-                              `¿Confirmar pago recibido?\n\n` +
-                              `Cliente: ${sale.customer_name}\n` +
-                              `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
-                              `⚠️ IMPORTANTE: Esta acción descontará automáticamente el stock de los productos.`
+                              'PROCESSING',
+                              'Confirmar Pago Recibido',
+                              `Cliente: ${sale.customer_name}\nMonto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n⚠️ IMPORTANTE: Esta acción descontará automáticamente el stock de los productos.`,
+                              'warning',
+                              'Confirmar Pago'
                             )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
@@ -200,11 +243,11 @@ export function SalesTable({
                           <button
                             onClick={() => handleUpdateStatus(
                               sale.id, 
-                              'CANCELLED', 
-                              `¿Cancelar pedido?\n\n` +
-                              `Cliente: ${sale.customer_name}\n` +
-                              `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
-                              `Esta acción NO afectará el stock ya que el pago aún no fue confirmado.`
+                              'CANCELLED',
+                              'Cancelar Pedido',
+                              `Cliente: ${sale.customer_name}\nMonto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\nEsta acción NO afectará el stock ya que el pago aún no fue confirmado.`,
+                              'danger',
+                              'Cancelar Pedido'
                             )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
@@ -220,12 +263,11 @@ export function SalesTable({
                           <button
                             onClick={() => handleUpdateStatus(
                               sale.id, 
-                              'SHIPPED', 
-                              `¿Marcar pedido como enviado?\n\n` +
-                              `Cliente: ${sale.customer_name}\n` +
-                              `Método: ${sale.shipping_method || 'No especificado'}\n` +
-                              `Dirección: ${sale.customer_address || 'No especificada'}\n\n` +
-                              `Confirma que el pedido fue despachado o está listo para retiro.`
+                              'SHIPPED',
+                              'Marcar como Enviado',
+                              `Cliente: ${sale.customer_name}\nMétodo: ${sale.shipping_method || 'No especificado'}\nDirección: ${sale.customer_address || 'No especificada'}\n\nConfirma que el pedido fue despachado o está listo para retiro.`,
+                              'info',
+                              'Marcar como Enviado'
                             )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
@@ -236,12 +278,11 @@ export function SalesTable({
                           <button
                             onClick={() => handleUpdateStatus(
                               sale.id, 
-                              'CANCELLED', 
-                              `⚠️ CANCELAR PEDIDO Y REVERTIR STOCK\n\n` +
-                              `Cliente: ${sale.customer_name}\n` +
-                              `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
-                              `IMPORTANTE: Esta acción revertirá automáticamente el stock que fue descontado.\n\n` +
-                              `¿Estás seguro de cancelar este pedido?`
+                              'CANCELLED',
+                              '⚠️ Cancelar y Revertir Stock',
+                              `Cliente: ${sale.customer_name}\nMonto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n⚠️ IMPORTANTE: Esta acción revertirá automáticamente el stock que fue descontado.\n\n¿Estás seguro de cancelar este pedido?`,
+                              'danger',
+                              'Sí, Cancelar Pedido'
                             )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
@@ -256,12 +297,11 @@ export function SalesTable({
                         <button
                           onClick={() => handleUpdateStatus(
                             sale.id, 
-                            'DELIVERED', 
-                            `¿Confirmar entrega del pedido?\n\n` +
-                            `Cliente: ${sale.customer_name}\n` +
-                            `Monto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\n` +
-                            `Confirma que el cliente recibió el pedido o lo retiró correctamente.\n` +
-                            `Esta acción marcará el pedido como completado.`
+                            'DELIVERED',
+                            'Confirmar Entrega',
+                            `Cliente: ${sale.customer_name}\nMonto: $${Number(sale.sale?.total_amount || 0).toFixed(2)}\n\nConfirma que el cliente recibió el pedido o lo retiró correctamente.\nEsta acción marcará el pedido como completado.`,
+                            'success',
+                            'Confirmar Entrega'
                           )}
                           disabled={updatingId === sale.id}
                           className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
@@ -292,6 +332,19 @@ export function SalesTable({
           ))}
         </tbody>
       </table>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmation.isOpen}
+        onClose={closeConfirmation}
+        onConfirm={confirmation.onConfirm}
+        title={confirmation.title}
+        message={confirmation.message}
+        type={confirmation.type}
+        confirmText={confirmation.confirmText}
+        cancelText="Cancelar"
+        isLoading={updatingId !== null}
+      />
     </div>
   );
 }
