@@ -51,7 +51,6 @@ export function mapApiProductToFrontend(apiProduct: ApiProduct): Product {
     category,
     brand,
     sizes,
-    colors: ['Negro', 'Blanco'], // Por defecto, se puede expandir más tarde
     featured: false,
     inStock: (apiProduct.stock_quantity || apiProduct.stock || 0) > 0,
     rating: 4.5,
@@ -116,7 +115,6 @@ export function mapApiPublicProductToFrontend(apiProduct: ApiPublicProduct): Pro
     category,
     brand,
     sizes,
-    colors: ['Negro', 'Blanco'],
     featured: apiProduct.featured,
     inStock: apiProduct.stock > 0,
     rating: 4.5,

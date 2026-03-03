@@ -21,8 +21,7 @@ interface AddToCartModalProps {
     name: string
     price: number
     image: string
-    color: string
-    size: string
+    size?: string
     quantity: number
   }
   cartItemsCount: number
@@ -57,10 +56,12 @@ export default function AddToCartModal({ isOpen, onClose, product, cartItemsCoun
             <div className="flex-1">
               <h4 className="font-semibold">{product.name}</h4>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <span>Color: {product.color}</span>
-                <span>•</span>
-                <span>Talle: {product.size}</span>
-                <span>•</span>
+                {product.size && (
+                  <>
+                    <span>Talle: {product.size}</span>
+                    <span>•</span>
+                  </>
+                )}
                 <span>Cant: {product.quantity}</span>
               </div>
               <p className="font-bold text-lg">${product.price.toLocaleString()}</p>

@@ -25,7 +25,7 @@ export default function CartPage() {
   } = useEcommerce()
 
   const [showRemoveModal, setShowRemoveModal] = useState(false)
-  const [productToRemove, setProductToRemove] = useState<{ id: string; name: string; size?: string; color?: string } | null>(null)
+  const [productToRemove, setProductToRemove] = useState<{ id: string; name: string; size?: string } | null>(null)
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [errorConfig, setErrorConfig] = useState<{ title: string; message: string; missingFields: string[] }>({ title: "", message: "", missingFields: [] })
   const [showLoadingModal, setShowLoadingModal] = useState(false)
@@ -72,22 +72,22 @@ export default function CartPage() {
     })
   }
 
-  const handleUpdateQuantity = async (id: string, newQuantity: number, size?: string, color?: string) => {
+  const handleUpdateQuantity = async (id: string, newQuantity: number, size?: string) => {
     if (newQuantity <= 0) {
-      removeItem(id, size, color)
+      removeItem(id, size)
     } else {
-      await updateQuantity(id, newQuantity, size, color)
+      await updateQuantity(id, newQuantity, size)
     }
   }
 
-  const handleRemoveClick = (item: { id: string; name: string; size?: string; color?: string }) => {
+  const handleRemoveClick = (item: { id: string; name: string; size?: string }) => {
     setProductToRemove(item)
     setShowRemoveModal(true)
   }
 
   const confirmRemoveItem = () => {
     if (productToRemove) {
-      removeItem(productToRemove.id, productToRemove.size, productToRemove.color)
+      removeItem(productToRemove.id, productToRemove.size)
       setShowRemoveModal(false)
       setProductToRemove(null)
     }
@@ -189,7 +189,7 @@ export default function CartPage() {
       const orderDetails = cart.items
         .map(
           (item) =>
-            `• ${item.name} (${item.color}, Talle: ${item.size}) - Cantidad: ${item.quantity} - $${(item.price * item.quantity).toLocaleString()}`,
+            `• ${item.name}${item.size ? ` - Talle: ${item.size}` : ''} - Cantidad: ${item.quantity} - $${(item.price * item.quantity).toLocaleString()}`,
         )
         .join("\n")
 
@@ -231,7 +231,7 @@ El pedido ya está registrado en el sistema ✅
       const orderDetails = cart.items
         .map(
           (item) =>
-            `• ${item.name} (${item.color}, Talle: ${item.size}) - Cantidad: ${item.quantity} - $${(item.price * item.quantity).toLocaleString()}`,
+            `• ${item.name}${item.size ? ` - Talle: ${item.size}` : ''} - Cantidad: ${item.quantity} - $${(item.price * item.quantity).toLocaleString()}`,
         )
         .join("\n")
 
@@ -301,7 +301,7 @@ El pedido ya está registrado en el sistema ✅
             {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
               {cartState.items.map((item) => (
-            <div key={`${item.id}-${item.size}-${item.color}`} className="bg-white rounded-lg shadow-md p-6">
+            <div key={`${item.id}-${item.size || 'no-size'}`} className="bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center space-x-4">
                 <Image
                   src={item.image || "/placeholder.svg"}
@@ -313,17 +313,16 @@ El pedido ya está registrado en el sistema ✅
 
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg">{item.name}</h3>
-                  <p className="text-gray-600">Color: {item.color}</p>
-                  <p className="text-gray-600">Talle: {item.size}</p>
+                  {item.size && <p className="text-gray-600">Talle: {item.size}</p>}
                   <p className="text-lg font-bold">${item.price.toLocaleString()}</p>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => handleUpdateQuantity(item.id, item.quantity - 1, item.size, item.color)}>
+                  <Button variant="outline" size="sm" onClick={() => handleUpdateQuantity(item.id, item.quantity - 1, item.size)}>
                     <Minus className="h-4 w-4" />
                   </Button>
                   <span className="w-12 text-center font-medium">{item.quantity}</span>
-                  <Button variant="outline" size="sm" onClick={() => handleUpdateQuantity(item.id, item.quantity + 1, item.size, item.color)}>
+                  <Button variant="outline" size="sm" onClick={() => handleUpdateQuantity(item.id, item.quantity + 1, item.size)}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
