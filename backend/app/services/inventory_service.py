@@ -360,6 +360,7 @@ def adjust_stock_for_sale(
                 ProductSize.size == item.size
             ).first()
             
+            previous_stock = product_size.stock_quantity
             product_size.stock_quantity += quantity_change
             new_stock = product_size.stock_quantity
         else:
@@ -369,11 +370,12 @@ def adjust_stock_for_sale(
                 BranchStock.branch_id == sale.branch_id
             ).first()
             
+            previous_stock = branch_stock.stock_quantity
             branch_stock.stock_quantity += quantity_change
             new_stock = branch_stock.stock_quantity
         
         # 3. Crear InventoryMovement para auditoría
-        reason = (
+        notes_text = (
             f"Venta WhatsApp #{sale.sale_number} confirmada"
             if operation == "deduct"
             else f"Cancelación venta WhatsApp #{sale.sale_number}"
@@ -382,10 +384,13 @@ def adjust_stock_for_sale(
         movement = InventoryMovement(
             product_id=item.product_id,
             branch_id=sale.branch_id,
+            movement_type="OUT" if operation == "deduct" else "ADJUSTMENT",
             quantity=quantity_change,  # Negativo si deduct, positivo si revert
-            movement_type="sale" if operation == "deduct" else "adjustment",
-            reason=reason,
-            user_id=sale.user_id  # Puede ser None para ventas e-commerce
+            previous_stock=previous_stock,
+            new_stock=new_stock,
+            reference_type="SALE",
+            reference_id=sale.id,
+            notes=notes_text
         )
         db.add(movement)
         
