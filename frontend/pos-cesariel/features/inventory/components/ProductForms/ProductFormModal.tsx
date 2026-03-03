@@ -232,9 +232,10 @@ export function ProductFormModal({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Categoría
+                  Categoría *
                 </label>
                 <select
+                  required
                   value={formData.category_id}
                   onChange={(e) =>
                     setFormData({
@@ -244,7 +245,7 @@ export function ProductFormModal({
                   }
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 >
-                  <option value="">Sin categoría</option>
+                  <option value="">Seleccionar categoría</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id.toString()}>
                       {category.name}
@@ -256,7 +257,7 @@ export function ProductFormModal({
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-sm font-medium text-gray-700">
-                    Marca
+                    Marca *
                   </label>
                   <button
                     type="button"
@@ -268,6 +269,7 @@ export function ProductFormModal({
                   </button>
                 </div>
                 <select
+                  required
                   value={formData.brand_id}
                   onChange={(e) =>
                     setFormData({
@@ -277,7 +279,7 @@ export function ProductFormModal({
                   }
                   className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 >
-                  <option value="">Sin marca</option>
+                  <option value="">Seleccionar marca</option>
                   {brands.map((brand) => (
                     <option key={brand.id} value={brand.id.toString()}>
                       {brand.name}

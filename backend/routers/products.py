@@ -459,6 +459,36 @@ async def create_product(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_manager_or_admin)
 ):
+    # Validate category_id is provided
+    if not product.category_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Category is required"
+        )
+    
+    # Validate brand_id is provided
+    if not product.brand_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Brand is required"
+        )
+    
+    # Validate category exists
+    category = db.query(Category).filter(Category.id == product.category_id).first()
+    if not category:
+        raise HTTPException(
+            status_code=404,
+            detail="Category not found"
+        )
+    
+    # Validate brand exists
+    brand = db.query(Brand).filter(Brand.id == product.brand_id).first()
+    if not brand:
+        raise HTTPException(
+            status_code=404,
+            detail="Brand not found"
+        )
+    
     # Check if SKU already exists
     if db.query(Product).filter(Product.sku == product.sku).first():
         raise HTTPException(

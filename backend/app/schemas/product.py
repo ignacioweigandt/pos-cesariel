@@ -30,7 +30,8 @@ class ProductBase(BaseModel):
 
 
 class ProductCreate(ProductBase):
-    pass
+    category_id: int  # Required: override Optional from base
+    brand_id: int     # Required: override Optional from base
 
 
 class ProductUpdate(BaseModel):
