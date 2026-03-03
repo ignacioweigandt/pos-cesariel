@@ -183,7 +183,14 @@ export function SalesTable({
                       {sale.sale?.order_status === 'PENDING' && (
                         <>
                           <button
-                            onClick={() => handleUpdateStatus(sale.id, 'PROCESSING', '¿Confirmar pago? Esto descontará el stock.')}
+                            onClick={() => handleUpdateStatus(
+                              sale.id, 
+                              'PROCESSING', 
+                              `¿Confirmar pago recibido?\n\n` +
+                              `Cliente: ${sale.customer_name}\n` +
+                              `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                              `⚠️ IMPORTANTE: Esta acción descontará automáticamente el stock de los productos.`
+                            )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
                           >
@@ -191,7 +198,14 @@ export function SalesTable({
                             Confirmar Pago
                           </button>
                           <button
-                            onClick={() => handleUpdateStatus(sale.id, 'CANCELLED', '¿Cancelar pedido?')}
+                            onClick={() => handleUpdateStatus(
+                              sale.id, 
+                              'CANCELLED', 
+                              `¿Cancelar pedido?\n\n` +
+                              `Cliente: ${sale.customer_name}\n` +
+                              `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                              `Esta acción NO afectará el stock ya que el pago aún no fue confirmado.`
+                            )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
                           >
@@ -204,7 +218,15 @@ export function SalesTable({
                       {sale.sale?.order_status === 'PROCESSING' && (
                         <>
                           <button
-                            onClick={() => handleUpdateStatus(sale.id, 'SHIPPED', '¿Marcar como enviado?')}
+                            onClick={() => handleUpdateStatus(
+                              sale.id, 
+                              'SHIPPED', 
+                              `¿Marcar pedido como enviado?\n\n` +
+                              `Cliente: ${sale.customer_name}\n` +
+                              `Método: ${sale.shipping_method || 'No especificado'}\n` +
+                              `Dirección: ${sale.customer_address || 'No especificada'}\n\n` +
+                              `Confirma que el pedido fue despachado o está listo para retiro.`
+                            )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                           >
@@ -212,7 +234,15 @@ export function SalesTable({
                             Marcar como Enviado
                           </button>
                           <button
-                            onClick={() => handleUpdateStatus(sale.id, 'CANCELLED', '¿Cancelar? Esto revertirá el stock.')}
+                            onClick={() => handleUpdateStatus(
+                              sale.id, 
+                              'CANCELLED', 
+                              `⚠️ CANCELAR PEDIDO Y REVERTIR STOCK\n\n` +
+                              `Cliente: ${sale.customer_name}\n` +
+                              `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                              `IMPORTANTE: Esta acción revertirá automáticamente el stock que fue descontado.\n\n` +
+                              `¿Estás seguro de cancelar este pedido?`
+                            )}
                             disabled={updatingId === sale.id}
                             className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-600 hover:bg-red-700 disabled:opacity-50"
                           >
@@ -224,7 +254,15 @@ export function SalesTable({
 
                       {sale.sale?.order_status === 'SHIPPED' && (
                         <button
-                          onClick={() => handleUpdateStatus(sale.id, 'DELIVERED', '¿Marcar como entregado?')}
+                          onClick={() => handleUpdateStatus(
+                            sale.id, 
+                            'DELIVERED', 
+                            `¿Confirmar entrega del pedido?\n\n` +
+                            `Cliente: ${sale.customer_name}\n` +
+                            `Monto: $${sale.sale?.total_amount.toFixed(2)}\n\n` +
+                            `Confirma que el cliente recibió el pedido o lo retiró correctamente.\n` +
+                            `Esta acción marcará el pedido como completado.`
+                          )}
                           disabled={updatingId === sale.id}
                           className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
                         >
