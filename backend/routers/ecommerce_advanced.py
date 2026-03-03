@@ -966,6 +966,211 @@ def get_ecommerce_dashboard_stats(
         )
 
 
+@router.get("/dashboard/detailed")
+def get_ecommerce_dashboard_detailed(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Dashboard E-commerce completo con datos detallados para visualización.
+    
+    Returns:
+        - stats: Métricas principales (productos online, ventas totales, conversión, etc.)
+        - recent_sales: Últimas 10 ventas (e-commerce + WhatsApp)
+        - sales_by_day: Ventas agregadas por día (últimos 7 días)
+        - orders_by_status: Count de órdenes por estado (PENDING, PROCESSING, etc.)
+        - top_products: Top 5 productos más vendidos (online)
+        - low_stock_alerts: Productos online con stock bajo
+    """
+    try:
+        from sqlalchemy import func, desc
+        from decimal import Decimal
+        from app.models import SaleType, OrderStatus, SaleItem, BranchStock
+        from datetime import datetime, timedelta
+        
+        # ===== 1. MÉTRICAS PRINCIPALES =====
+        total_online_products = db.query(Product).filter(
+            Product.show_in_ecommerce == True,
+            Product.is_active == True
+        ).count()
+        
+        ecommerce_sales_query = db.query(Sale).filter(
+            Sale.sale_type == SaleType.ECOMMERCE
+        )
+        
+        total_online_sales = ecommerce_sales_query.filter(
+            Sale.order_status != OrderStatus.CANCELLED
+        ).with_entities(func.sum(Sale.total_amount)).scalar() or Decimal("0.00")
+        
+        total_online_orders = ecommerce_sales_query.count()
+        
+        pending_orders = ecommerce_sales_query.filter(
+            Sale.order_status == OrderStatus.PENDING
+        ).count()
+        
+        delivered_orders = ecommerce_sales_query.filter(
+            Sale.order_status == OrderStatus.DELIVERED
+        ).count()
+        
+        conversion_rate = 0.0
+        if total_online_orders > 0:
+            conversion_rate = round((delivered_orders / total_online_orders) * 100, 2)
+        
+        # ===== 2. ÚLTIMAS VENTAS (últimas 10) =====
+        recent_sales_raw = db.query(Sale).filter(
+            Sale.sale_type == SaleType.ECOMMERCE
+        ).order_by(desc(Sale.created_at)).limit(10).all()
+        
+        recent_sales = []
+        for sale in recent_sales_raw:
+            # Verificar si tiene WhatsAppSale asociado
+            whatsapp_sale = db.query(WhatsAppSale).filter(
+                WhatsAppSale.sale_id == sale.id
+            ).first()
+            
+            recent_sales.append({
+                "id": sale.id,
+                "sale_number": sale.sale_number,
+                "customer_name": sale.customer_name or (whatsapp_sale.customer_name if whatsapp_sale else "Cliente Web"),
+                "total_amount": float(sale.total_amount),
+                "order_status": sale.order_status.value if sale.order_status else None,
+                "created_at": sale.created_at.isoformat() if sale.created_at else None,
+                "is_whatsapp": whatsapp_sale is not None
+            })
+        
+        # ===== 3. VENTAS POR DÍA (últimos 7 días) =====
+        seven_days_ago = datetime.now() - timedelta(days=7)
+        
+        sales_by_day_raw = db.query(
+            func.date(Sale.created_at).label('date'),
+            func.count(Sale.id).label('count'),
+            func.sum(Sale.total_amount).label('total')
+        ).filter(
+            Sale.sale_type == SaleType.ECOMMERCE,
+            Sale.created_at >= seven_days_ago,
+            Sale.order_status != OrderStatus.CANCELLED
+        ).group_by(
+            func.date(Sale.created_at)
+        ).order_by(
+            func.date(Sale.created_at)
+        ).all()
+        
+        sales_by_day = [
+            {
+                "date": row.date.isoformat(),
+                "count": row.count,
+                "total": float(row.total or 0)
+            }
+            for row in sales_by_day_raw
+        ]
+        
+        # ===== 4. ÓRDENES POR ESTADO =====
+        orders_by_status_raw = db.query(
+            Sale.order_status,
+            func.count(Sale.id).label('count')
+        ).filter(
+            Sale.sale_type == SaleType.ECOMMERCE
+        ).group_by(
+            Sale.order_status
+        ).all()
+        
+        orders_by_status = [
+            {
+                "status": row.order_status.value if row.order_status else "UNKNOWN",
+                "count": row.count
+            }
+            for row in orders_by_status_raw
+        ]
+        
+        # ===== 5. TOP PRODUCTOS MÁS VENDIDOS (últimos 30 días) =====
+        thirty_days_ago = datetime.now() - timedelta(days=30)
+        
+        top_products_raw = db.query(
+            SaleItem.product_id,
+            Product.name,
+            func.sum(SaleItem.quantity).label('total_sold'),
+            func.sum(SaleItem.total_price).label('revenue')
+        ).join(
+            Sale, SaleItem.sale_id == Sale.id
+        ).join(
+            Product, SaleItem.product_id == Product.id
+        ).filter(
+            Sale.sale_type == SaleType.ECOMMERCE,
+            Sale.created_at >= thirty_days_ago,
+            Sale.order_status != OrderStatus.CANCELLED,
+            Product.show_in_ecommerce == True
+        ).group_by(
+            SaleItem.product_id,
+            Product.name
+        ).order_by(
+            desc('total_sold')
+        ).limit(5).all()
+        
+        top_products = [
+            {
+                "product_id": row.product_id,
+                "product_name": row.name,
+                "total_sold": row.total_sold,
+                "revenue": float(row.revenue or 0)
+            }
+            for row in top_products_raw
+        ]
+        
+        # ===== 6. ALERTAS DE STOCK BAJO =====
+        low_stock_products_raw = db.query(
+            Product.id,
+            Product.name,
+            BranchStock.stock_quantity,
+            BranchStock.min_stock
+        ).join(
+            BranchStock, Product.id == BranchStock.product_id
+        ).filter(
+            Product.show_in_ecommerce == True,
+            Product.is_active == True,
+            BranchStock.stock_quantity <= BranchStock.min_stock,
+            BranchStock.min_stock > 0
+        ).order_by(
+            BranchStock.stock_quantity
+        ).limit(10).all()
+        
+        low_stock_alerts = [
+            {
+                "product_id": row.id,
+                "product_name": row.name,
+                "current_stock": row.stock_quantity,
+                "min_stock": row.min_stock
+            }
+            for row in low_stock_products_raw
+        ]
+        
+        return {
+            "data": {
+                "stats": {
+                    "total_online_products": total_online_products,
+                    "total_online_sales": float(total_online_sales),
+                    "total_online_orders": total_online_orders,
+                    "pending_orders": pending_orders,
+                    "delivered_orders": delivered_orders,
+                    "conversion_rate": conversion_rate
+                },
+                "recent_sales": recent_sales,
+                "sales_by_day": sales_by_day,
+                "orders_by_status": orders_by_status,
+                "top_products": top_products,
+                "low_stock_alerts": low_stock_alerts
+            }
+        }
+    
+    except Exception as e:
+        print(f"Error getting detailed e-commerce dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener dashboard detallado: {str(e)}"
+        )
+
+
 @router.patch("/whatsapp-sales/{id}/status")
 async def update_whatsapp_sale_status(
     id: int,

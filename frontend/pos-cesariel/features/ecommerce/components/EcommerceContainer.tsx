@@ -9,7 +9,6 @@ import {
   ComputerDesktopIcon,
   RectangleStackIcon,
   ShoppingBagIcon,
-  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 
 // API imports
@@ -28,7 +27,6 @@ import DashboardTab from "./Dashboard/DashboardTab";
 import ProductsTab from "./Products/ProductsTab";
 import { ProductEditModal } from "./Products/ProductEditModal";
 import { ProductViewModal } from "./Products/ProductViewModal";
-import { SalesHistoryTab } from "./Sales/SalesHistoryTab";
 import { WhatsAppSalesTab } from "./WhatsApp/WhatsAppSalesTab";
 import { ContentTab } from "./Content/ContentTab";
 
@@ -328,7 +326,6 @@ export function EcommerceContainer() {
   const tabs = [
     { id: "dashboard", name: "Dashboard", icon: ChartBarIcon },
     { id: "products", name: "Productos Online", icon: ShoppingBagIcon },
-    { id: "sales-history", name: "Historial de Ventas", icon: UserGroupIcon },
     {
       id: "whatsapp-sales",
       name: "Ventas WhatsApp",
@@ -418,10 +415,6 @@ export function EcommerceContainer() {
                     setShowImageManager(true);
                   }}
                 />
-              )}
-
-              {activeTab === "sales-history" && (
-                <SalesHistoryTab refreshTrigger={salesRefreshTrigger} />
               )}
 
               {activeTab === "whatsapp-sales" && (
