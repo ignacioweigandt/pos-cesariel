@@ -1015,8 +1015,9 @@ async def update_whatsapp_sale_status(
             detail="Venta asociada no encontrada"
         )
     
-    current_status = sale.order_status
-    new_status = status_update.new_status
+    # Normalizar a OrderStatus enum (puede venir como string desde Pydantic/SQLAlchemy)
+    current_status = sale.order_status if isinstance(sale.order_status, OrderStatus) else OrderStatus(sale.order_status)
+    new_status = status_update.new_status if isinstance(status_update.new_status, OrderStatus) else OrderStatus(status_update.new_status)
     
     # 2. Validar transición
     if not can_transition_order_status(current_status, new_status):
