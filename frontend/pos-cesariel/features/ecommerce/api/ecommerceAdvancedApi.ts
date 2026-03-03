@@ -188,4 +188,7 @@ export const ecommerceAdvancedApi = {
     );
     return response.data;
   },
+
+  getDetailedDashboard: () =>
+    apiClient.get('/ecommerce-advanced/dashboard/detailed'),
 };
