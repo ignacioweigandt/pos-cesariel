@@ -1270,12 +1270,20 @@ async def get_available_sizes_for_pos(
         for size in sorted_sizes
     ]
     
+    # Get all valid sizes for this category
+    from utils.size_validators import get_valid_sizes_for_product, get_size_display_info
+    all_valid_sizes = get_valid_sizes_for_product(db, product_id)
+    size_info = get_size_display_info(product.category.name if product.category else "")
+    
     return {
         "product_id": product_id,
         "product_name": product.name,
         "has_sizes": True,
         "category_name": product.category.name if product.category else None,
-        "available_sizes": sizes_list
+        "category_type": size_info.get("category_type"),
+        "size_type_label": size_info.get("size_type_label"),
+        "available_sizes": sizes_list,
+        "all_valid_sizes": all_valid_sizes
     }
 
 def calculate_total_stock_from_sizes(db: Session, product_id: int, branch_id: int) -> int:
